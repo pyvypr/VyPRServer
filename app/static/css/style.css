@@ -1,0 +1,99 @@
+/* Stylesheet for the VyPR visualisation tool */
+
+body {
+	font-family: arial;
+}
+
+.logo-wrapper {
+	background: white;
+	height: 50px;
+	float: right;
+	padding: 5px;
+}
+
+.selection {
+	padding-left: 0px!important;
+	padding-right: 0px!important;
+}
+
+.selection .panel {
+	border-radius: 0px!important;
+	margin-bottom: 0px!important;
+}
+
+.col-md-4.selection .panel-title:hover {
+	text-decoration: underline;
+}
+
+.selection .panel-body {
+	padding: 0px!important;
+}
+
+.selection .list-group-item {
+	border: none!important;
+}
+
+div.please-select {
+	padding: 10px;
+}
+
+#verdict-list span.badge {
+	margin-left: 10px!important;
+}
+
+#verdict-list span.badge.No.Violation {
+	background: green!important;
+}
+
+#verdict-list span.badge.Violation {
+	background: red!important;
+}
+
+#function-list-data {
+	visibility: hidden;
+	display: none;
+}
+
+#function-list {
+	margin-bottom: 0px!important;
+}
+
+#function-list .list-group {
+	margin-bottom: 0px!important;
+}
+
+#function-list .panel-default {
+	border: none;
+	border-radius: none;
+}
+
+#function-list .panel-heading {
+	background: #d6e9c6;
+	color: black;
+	font-style: italic;
+	border-radius: none;
+}
+
+#function-list .panel-heading .panel-title {
+	font-size: 12px!important;
+}
+
+#link-wrapper .panel:hover {
+	border: 1px solid grey;
+}
+
+label#violating {
+	color: red;
+	padding: 10px;
+	border-radius: 20px 20px 20px 20px;
+}
+
+label#not-violating {
+	color: green;
+	padding: 10px;
+	border-radius: 20px 20px 20px 20px;
+}
+
+#function-list input[type=radio] {
+	margin-right: 10px;
+}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block js_import %}
+<script type="text/javascript" src="{{ url_for('static', filename='js/by_specification.js') }}"></script>
+{% endblock %}
+
+{% block body %}
+
+<div class="container-fluid">
+
+	<div class="row">
+
+	<div class="panel panel-default">
+	  <div class="panel-heading">
+	    <h3 class="panel-title">Criteria</h3>
+	  </div>
+	  <div class="panel-body">
+	    <p>To see verdict data, you must specify the function whose verification results in verdicts,
+	    the http request to take calls of the function from, and a specific call of the function.</p>
+	  </div>
+	</div>
+
+	  <div class="col-md-4 selection">
+
+	  	<div class="fluid-container">
+
+	  	<div class="panel panel-success">
+		  <div class="panel-heading">
+		    <h3 class="panel-title" id="function-title">Function / Property</h3>
+		  </div>
+		  <div class="panel-body">
+		    <div class="list-group" id="function-list">
+		      <div id="function-list-data">{{ functions }}</div>
+			</div>
+		  </div>
+		</div>
+
+	  	<div class="panel panel-success">
+		  <div class="panel-heading">
+		    <h3 class="panel-title" id="http-request-title">HTTP Request</h3>
+		  </div>
+		  <div class="panel-body">
+		    <div class="list-group" id="http-request-list">
+		    	<div class="please-select">Select a function first.</div>
+			</div>
+		  </div>
+		</div>
+
+	  	<div class="panel panel-success">
+		  <div class="panel-heading">
+		    <h3 class="panel-title" id="function-call-title">Function Call</h3>
+		  </div>
+		  <div class="panel-body">
+		    <div class="list-group" id="function-call-list">
+		    	<div class="please-select">Select an http request first.</div>
+			</div>
+		  </div>
+		</div>
+
+	</div>
+
+	</div>
+
+	<div class="col-md-8 selection">
+
+		<div class="fluid-container">
+
+	  	<div class="panel panel-success">
+		  <div class="panel-heading">
+		    <h3 class="panel-title">Verdict</h3>
+		  </div>
+		  <div class="panel-body" id="verdict-list">
+		  	<div class="please-select">Select a function call first.</div>
+		  </div>
+		</div>
+
+	</div>
+
+	</div>
+
+</div>
+
+{% endblock %}

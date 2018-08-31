@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block js_import %}
+
+{% endblock %}
+
+{% block body %}
+
+
+<div class="container-fluid">
+
+	<div class="panel panel-default">
+	  <div class="panel-heading">
+	    <h3 class="panel-title">VyPR, CFTL and PyCFTL</h3>
+	  </div>
+	  <div class="panel-body">
+	    <p>Flask-VyPR is a tool for runtime verification of Python and Flask-based web services with respect to specifications written in Control Flow Temporal Logic.</p>
+	    <p>It consists of:
+	    	<ul>
+	    		<li>The PyCFTL library, a small library for writing CFTL specifications in Python.</li>
+	    		<li>A program that performs optimal instrumentation of the web service for the given CFTL specifications.</li>
+	    		<li>A library for <i>making the web service verified</i> at runtime.</li>
+	    		<li>A server for collection of verdict data from the web service's runtime.  This server provides both an API for a service under scrutiny to store its verdict data, and a front-end for users to either 1) see verdicts from certain parts of the service or 2) see which parts of the service gave a specific verdict.</li>
+	    	</ul>
+	    </p>
+	    <p>Control Flow Temporal Logic (CFTL) is a specification language in the form of a temporal logic used to specify constraints over the state and time of a program.</p>
+	    <p>PyCFTL is the Python binding for CFTL that allows CFTL properties to be written in Python and checked over a Python program.</p>
+	    <p>This tool shows verdict data from CFTL formulas written in PyCFTL to describe behaviour of web services.</p>
+	  </div>
+	</div>
+	
+</div>
+
+<div class="container">
+	<div class="row" id="link-wrapper">
+
+	  	<div class="col-md-6">
+	  		<div class="panel panel-default index-link">
+			  <div class="panel-body">
+			    <p>Starting from the function/property pair, you can see the verdicts reached by verifying
+			    the property over the function in a specific HTTP request.</p>
+			  </div>
+			  <div class="panel-footer"><a href="/specification/">Search by Specification</a></div>
+			</div>
+	  	</div>
+
+	  	<div class="col-md-6">
+	  		<div class="panel panel-default index-link">
+			  <div class="panel-body">
+			    <p>Starting from a verdict, find the code that generated that verdict at some point during runtime.</p>
+			  </div>
+			  <div class="panel-footer"><a href="/verdict/">Search by Verdict</a></div>
+			</div>
+	  	</div>
+
+	</div>
+</div>
+
+{%endblock %}

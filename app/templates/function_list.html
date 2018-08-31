@@ -1,0 +1,27 @@
+<!-- template for displaying function data based on a verdict and a path. -->
+
+{% for function_id in data["functions"] %}
+<h3>{{ data["functions"][function_id]["fully_qualified_name"] }}</h3> verified with respect to
+<p>{{ data["functions"][function_id]["property"]["bind_variables"] }} : {{ data["functions"][function_id]["property"]["property"] }}</p>
+<ul>
+	{% for call in data["functions"][function_id]["calls"] %}
+		<li>Call at {{ data["functions"][function_id]["calls"][call]["time"] }} generated bindings:
+			<ul>
+				{% for binding in data["functions"][function_id]["calls"][call]["bindings"] %}
+					{% if data["functions"][function_id]["calls"][call]["bindings"][binding]["verdicts"]|length > 0 %}
+					<li>Lines {{ data["functions"][function_id]["calls"][call]["bindings"][binding]["lines"] }} with relevant verdicts
+						<ul>
+							{% for verdict in data["functions"][function_id]["calls"][call]["bindings"][binding]["verdicts"] %}
+								<li>{{ truth_map[verdict[0]] }} at {{ verdict[1] }}</li>
+							{% endfor %}
+						</ul>
+					</li>
+					{% else %}
+					<li>Lines {{ data["functions"][function_id]["calls"][call]["bindings"][binding]["lines"] }} generated no relevant verdicts.</li>
+					{% endif %}
+				{% endfor %}
+			</ul>
+		</li>
+	{% endfor %}
+</ul>
+{% endfor %}
