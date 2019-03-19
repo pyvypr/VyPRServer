@@ -13,7 +13,7 @@ import database
 
 import sys
 # temporary measure - we need the VyPR classes for deserialisation
-sys.path.append("../../VyPR/")
+sys.path.append("../common/wVyPR/")
 
 from formula_building.formula_building import *
 from monitor_synthesis.formula_tree import *
