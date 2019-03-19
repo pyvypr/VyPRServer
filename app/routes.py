@@ -13,7 +13,8 @@ import database
 
 import sys
 # temporary measure - we need the VyPR classes for deserialisation
-sys.path.append("../common/wVyPR/")
+#sys.path.append("../common/wVyPR/")
+sys.path.append("/afs/cern.ch/user/j/jdawes/pmp/vypr/")
 
 from formula_building.formula_building import *
 from monitor_synthesis.formula_tree import *
@@ -65,10 +66,54 @@ def store_property():
 
 	print(property_data)
 	print("attempting property insertion")
-	database.insert_property(property_data)
+	atom_index_to_db_index, function_id = database.insert_property(property_data)
 	print("property inserted")
 
-	return "success"
+	return json.dumps({"atom_index_to_db_index" : atom_index_to_db_index, "function_id" : function_id})
+
+@app_object.route("/store_binding/", methods=["post"])
+def store_binding():
+	"""
+	Receives a serialised binding and stores it.
+	"""
+	binding_data = json.loads(request.data)
+
+	print(binding_data)
+	print("attempting binding insertion")
+	new_id = database.insert_binding(binding_data)
+	print("binding inserted")
+
+	return str(new_id)
+
+@app_object.route("/store_instrumentation_point/", methods=["post"])
+def store_instrumentation_point():
+	"""
+	Receives a serialised instrumentation point, with branch condition sequence and path length data,
+	and stores it.
+	Note: this returns an ID which instrumentation then attaches to an instrument
+	so we can determine which instrumentation point in the SCFG generated observations at runtime.
+	"""
+	instrumentation_point_data = json.loads(request.data)
+	print(instrumentation_point_data)
+	print("attempting instrumentation point insertion")
+	new_id = database.insert_instrumentation_point(instrumentation_point_data)
+	print("instrumentation point inserted")
+
+	return str(new_id)
+
+@app_object.route("/store_branching_condition/", methods=["post"])
+def store_branching_condition():
+	"""
+	Receives a serialised branching condition.
+	Note: this returns an ID which instrumentation then attaches to branch recording instruments.
+	"""
+	branching_condition_data = json.loads(request.data)
+	print(branching_condition_data)
+	print("attempting branching condition insertion")
+	new_id = database.insert_branching_condition(branching_condition_data)
+	print("branching condition inserted or already existed")
+
+	return str(new_id)
 
 def deserialise_property_tree(property_tree, path=[]):
 	"""

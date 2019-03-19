@@ -25,7 +25,8 @@ def insert_verdict(verdict_dictionary):
 	cursor = connection.cursor()
 	# find if the function exists in the database
 	results = cursor.execute("select * from function where fully_qualified_name = ? and property = ?", [verdict_dictionary["function_name"], verdict_dictionary["property_hash"]]).fetchall()
-	if len(results) == 0:
+	new_function_id = int(results[0][0])
+	"""if len(results) == 0:
 		# the function hasn't already been encountered, so insert it
 		cursor.execute("insert into function (fully_qualified_name, property) values (?, ?)", [verdict_dictionary["function_name"], verdict_dictionary["property_hash"]])
 		connection.commit()
@@ -33,11 +34,12 @@ def insert_verdict(verdict_dictionary):
 		new_function_id = int(cursor.execute("select id from function where fully_qualified_name = ? and property = ?", [verdict_dictionary["function_name"], verdict_dictionary["property_hash"]]).fetchall()[0][0])
 	else:
 		# get the id of the existing function
-		new_function_id = int(results[0][0])
+		new_function_id = int(results[0][0])"""
 
 	# create the binding if it doesn't already exist
 	results = cursor.execute("select * from binding where binding_space_index = ? and function = ?", [verdict_dictionary["bind_space_index"], new_function_id]).fetchall()
-	if len(results) == 0:
+	new_binding_id = int(results[0][0])
+	"""if len(results) == 0:
 		# no binding exists yet, so insert a new binding
 		cursor.execute("insert into binding (binding_space_index, function, binding_statement_lines) values (?, ?, ?)",
 			[verdict_dictionary["bind_space_index"], new_function_id, verdict_dictionary["line_numbers"]])
@@ -46,7 +48,7 @@ def insert_verdict(verdict_dictionary):
 		new_binding_id = int(cursor.execute("select id from binding where binding_space_index = ? and function = ?", [verdict_dictionary["bind_space_index"], new_function_id]).fetchall()[0][0])
 	else:
 		# get the id of the existing binding
-		new_binding_id = int(results[0][0])
+		new_binding_id = int(results[0][0])"""
 
 	# create the http request
 	results = cursor.execute("select * from http_request where time_of_request = ?", [verdict_dictionary["http_request_time"]]).fetchall()
@@ -58,8 +60,11 @@ def insert_verdict(verdict_dictionary):
 		# get the id
 		new_http_request_id = int(cursor.execute("select id from http_request where time_of_request = ?", [verdict_dictionary["http_request_time"]]).fetchall()[0][0])
 	else:
-		# get the id of the existing binding
+		# get the id of the existing http request
 		new_http_request_id = int(results[0][0])
+
+	print("verdict data received")
+	print(verdict_dictionary["verdict"])
 
 	# insert the function call that the verdict belongs to
 	results = cursor.execute("select * from function_call where time_of_call = ? and function = ?", [verdict_dictionary["time_of_call"], new_function_id]).fetchall()
@@ -67,19 +72,91 @@ def insert_verdict(verdict_dictionary):
 		# no binding exists yet, so insert a new binding
 		cursor.execute("insert into function_call (function, time_of_call, http_request) values (?, ?, ?)",
 			(new_function_id, verdict_dictionary["time_of_call"], new_http_request_id))
+		new_function_call_id = cursor.lastrowid
 		connection.commit()
 		# get the id
-		new_function_call_id = int(cursor.execute("select id from function_call where time_of_call = ? and function = ?", [verdict_dictionary["time_of_call"], new_function_id]).fetchall()[0][0])
+		#new_function_call_id = int(cursor.execute("select id from function_call where time_of_call = ? and function = ?", [verdict_dictionary["time_of_call"], new_function_id]).fetchall()[0][0])
 	else:
-		# get the id of the existing binding
+		# get the id of the existing function call
 		new_function_call_id = int(results[0][0])
+
+	# now we have a verdict to link observations to, we insert the assignments and the observations
+	# process the slice dictionary received and, for any assignment not already existing, create a new one.
+	# keeping a record of the IDs of all existing and newly created assignments
+	# note: indices of slice_map and observations_map are the same since they're constructed at the same time
+	# during monitoring
+	slice_map = verdict_dictionary["verdict"][3]
+	observations_map = verdict_dictionary["verdict"][2]
+	path_map = verdict_dictionary["verdict"][4]
+
+	# insert path data
+	for atom_index in path_map:
+		#atom_index = int(atom_index)
+		# insert path condition sequence
+		condition_id_sequence = verdict_dictionary["verdict"][4][atom_index]
+		# insert empty condition at the beginning - we need to check if the empty condition exists in the database
+		result = cursor.execute("select id from path_condition_structure where serialised_condition = ''").fetchall()
+		if len(result) > 0:
+			# the empty condition exists
+			empty_condition_id = int(result[0][0])
+		else:
+			# we have to insert the empty condition
+			cursor.execute("insert into path_condition_structure (serialised_condition) values('')")
+			empty_condition_id = int(cursor.lastrowid)
+		condition_id_sequence = [empty_condition_id] + condition_id_sequence
+		# we iterate in reverse so we know what the ID is for the "next" path condition
+		most_recent_id = None
+		for (n, condition_id) in enumerate(condition_id_sequence[::-1]):
+			# insert a new path_condition row for this condition_id
+			next_path_condition = -1 if n == 0 else most_recent_id
+			# only perform the insertion if the path condition doesn't already exist
+			# we perform this check because, for the moment, atoms have overlapping paths.
+			results = cursor.execute("select id from path_condition where serialised_condition = ? and next_path_condition = ? and function_call = ?",
+				[condition_id, next_path_condition, new_function_call_id]).fetchall()
+			if len(results) == 0:
+				cursor.execute("insert into path_condition (serialised_condition, next_path_condition, function_call) values(?, ?, ?)",
+					[condition_id, next_path_condition, new_function_call_id])
+				most_recent_id = cursor.lastrowid
+			else:
+				most_recent_id = int(results[0][0])
 
 	# create the verdict
 	# we don't check for an existing verdict - there won't be repetitions here
+	# we have to create this before inserting slice data because slices map to observations, which map to verdicts
 	verdict = verdict_dictionary["verdict"][0]
 	verdict_time_obtained = verdict_dictionary["verdict"][1]
 	cursor.execute("insert into verdict (binding, verdict, time_obtained, function_call) values (?, ?, ?, ?)",
 		[new_binding_id, verdict, verdict_time_obtained, new_function_call_id])
+	new_verdict_id = cursor.lastrowid
+
+	# insert slice data
+	for atom_index in slice_map:
+		assignment_ids = []
+		for variable in slice_map[atom_index]:
+			value = slice_map[atom_index][variable]
+			print("inserting assignment %s = %s" % (str(variable), str(value)))
+			# check for whether it's already in the database
+			result = cursor.execute("select id from assignment where variable = ? and value = ?", [str(variable), str(value)]).fetchall()
+			if len(result) != 1:
+				# the assignment hasn't been inserted yet
+				# may need to adjust something for determining variable types...
+				cursor.execute("insert into assignment (variable, value, type) values (?, ?, ?)", [str(variable), str(value), str(type(value))])
+				assignment_ids.append(cursor.lastrowid)
+			else:
+				# the assignment exists - remember its ID
+				assignment_ids.append(result[0][0])
+
+		# insert observation for this atom_index
+		print(observations_map[atom_index])
+		last_condition = path_map[atom_index][-1] if len(path_map[atom_index]) > 0 else -1
+		cursor.execute("insert into observation (instrumentation_point, verdict, observed_value, previous_condition) values(?, ?, ?, ?)",
+			[observations_map[atom_index][1], new_verdict_id, str(observations_map[atom_index][0]), last_condition])
+		observation_id = cursor.lastrowid
+
+		# for each assignment id, create a map from the observation to that assignment
+		for assignment_id in assignment_ids:
+			cursor.execute("insert into observation_assignment_pair (observation, assignment) values (?, ?)", [observation_id, assignment_id])
+
 	connection.commit()
 
 	connection.close()
@@ -99,8 +176,6 @@ def insert_property(property_dictionary):
 		}
 		serialised_structure = json.dumps(serialised_structure)
 		cursor.execute("insert into property (hash, serialised_structure) values (?, ?)", [property_dictionary["formula_hash"], serialised_structure])
-		connection.commit()
-		connection.close()
 	except:
 		# for now, the error was probably because of dupicate properties if instrumentation was run again.
 		# instrumentation should only ever be run for new versions of code, so at some point
@@ -110,7 +185,124 @@ def insert_property(property_dictionary):
 
 		traceback.print_exc()
 
-		return False
+	try:
+		atom_index_to_db_index = []
+		
+		# insert the atoms
+		serialised_atom_list = property_dictionary["serialised_atom_list"]
+		for pair in serialised_atom_list:
+			cursor.execute("insert into atom (property_hash, serialised_structure, index_in_atoms) values (?, ?, ?)",
+				[property_dictionary["formula_hash"], pair[1], pair[0]])
+			atom_index_to_db_index.append(cursor.lastrowid)
+
+		print(atom_index_to_db_index)
+
+		# insert the function
+		cursor.execute("insert into function (fully_qualified_name, property) values (?, ?)", [property_dictionary["function"], property_dictionary["formula_hash"]])
+		connection.commit()
+		connection.close()
+		print("property and function inserted")
+		return atom_index_to_db_index, cursor.lastrowid
+	except:
+		# for now, the error was probably because of dupicate properties if instrumentation was run again.
+		# instrumentation should only ever be run for new versions of code, so at some point
+		# we will need to integrate version distinction into the schema.
+
+		print("ERROR OCCURRED DURING INSERTION:")
+
+		traceback.print_exc()
+		return "failure"
+
+
+def insert_binding(binding_dictionary):
+	"""
+	Given a dictionary describing a binding (binding space index, function, lines), insert into the database.
+	"""
+
+	connection = get_connection()
+	cursor = connection.cursor()
+
+	try:
+		print(binding_dictionary)
+		cursor.execute("insert into binding (binding_space_index, function, binding_statement_lines) values (?, ?, ?)",
+			[binding_dictionary["binding_space_index"], binding_dictionary["function"], json.dumps(binding_dictionary["binding_statement_lines"])])
+		new_id = cursor.lastrowid
+		connection.commit()
+		connection.close()
+		return new_id
+	except:
+		# for now, the error was probably because of dupicate properties if instrumentation was run again.
+		# instrumentation should only ever be run for new versions of code, so at some point
+		# we will need to integrate version distinction into the schema.
+
+		print("ERROR OCCURRED DURING INSERTION:")
+
+		traceback.print_exc()
+
+		return "failure"
+
+
+def insert_instrumentation_point(dictionary):
+	"""
+	Given a dictionary describing an instrumentation point, insert the instrumentation point,
+	the atom-instrumentation point and binding-instrumentation point pairs.
+	"""
+
+	connection = get_connection()
+	cursor = connection.cursor()
+
+	try:
+		print(dictionary)
+		# TODO: add existence checks
+		# insert instrumentation point
+		cursor.execute("insert into instrumentation_point (serialised_condition_sequence, reaching_path_length) values (?, ?)",
+			[json.dumps(dictionary["serialised_condition_sequence"]), dictionary["reaching_path_length"]])
+		new_id = cursor.lastrowid
+		
+		# insert the atom-instrumentation point link
+		cursor.execute("insert into atom_instrumentation_point_pair (atom, instrumentation_point) values (?, ?)", [dictionary["atom"], new_id])
+
+		# insert the binding-instrumentation point link
+		cursor.execute("insert into binding_instrumentation_point_pair (binding, instrumentation_point) values (?, ?)", [dictionary["binding"], new_id])
+
+		connection.commit()
+		connection.close()
+		return new_id
+	except:
+		# for now, the error was probably because of dupicate properties if instrumentation was run again.
+		# instrumentation should only ever be run for new versions of code, so at some point
+		# we will need to integrate version distinction into the schema.
+
+		print("ERROR OCCURRED DURING INSERTION:")
+
+		traceback.print_exc()
+
+		return "failure"
+
+def insert_branching_condition(dictionary):
+	"""
+	Given a dictionary describing a branching condition, perform the insertion.
+	"""
+	connection = get_connection()
+	cursor = connection.cursor()
+	try:
+		print(dictionary)
+		# check for existence
+		result = cursor.execute("select * from path_condition_structure where serialised_condition = ?", [dictionary["serialised_condition"]]).fetchall()
+		if len(result) > 0:
+			# condition already exists - return the existing ID
+			return result[0][0]
+		else:
+			# condition is new - insert it
+			cursor.execute("insert into path_condition_structure (serialised_condition) values (?)", [dictionary["serialised_condition"]])
+			new_id = cursor.lastrowid
+			connection.commit()
+			connection.close()
+			return new_id
+	except:
+		print("ERROR OCCURED DURING INSERTION:")
+		traceback.print_exc()
+		return "failure"
 
 def list_verdicts(function_name):
 	"""
