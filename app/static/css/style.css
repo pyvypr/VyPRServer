@@ -97,3 +97,19 @@ label#not-violating {
 #function-list input[type=radio] {
 	margin-right: 10px;
 }
+
+.function-list-wrapper {
+	padding: 10px;
+}
+
+.function-list-wrapper pre {
+	margin: 10px;
+}
+
+table.function-list-table td {
+	padding: 10px;
+}
+
+.list-group-item-text.code {
+	font-family: courier;
+}
