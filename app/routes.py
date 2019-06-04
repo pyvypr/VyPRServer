@@ -8,11 +8,9 @@ import datetime
 from flask import request, jsonify, render_template
 import json
 import pickle
-
 import database
-
 import sys
-# temporary measure - we need the VyPR classes for deserialisation
+
 sys.path.append("VyPR/")
 
 from formula_building.formula_building import *
