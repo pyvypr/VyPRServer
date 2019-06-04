@@ -158,50 +158,7 @@ def insert_verdict(verdict_dictionary):
 				cursor.execute("update path_condition set next_path_condition = ? where id = ?", [most_recent_id, result[0][0]])
 
 				break
-
-	"""# insert path data
-	for atom_index in path_map:
-		print("processing atom index %i in path condition insertion" % int(atom_index))
-		#atom_index = int(atom_index)
-		# insert path condition sequence
-		condition_id_sequence = verdict_dictionary["verdict"][3][atom_index]
-		# insert empty condition at the beginning - we need to check if the empty condition exists in the database
-		result = cursor.execute("select id from path_condition_structure where serialised_condition = ''").fetchall()
-		if len(result) > 0:
-			# the empty condition exists
-			empty_condition_id = int(result[0][0])
-		else:
-			# we have to insert the empty condition
-			cursor.execute("insert into path_condition_structure (serialised_condition) values('')")
-			empty_condition_id = int(cursor.lastrowid)
-		condition_id_sequence = [empty_condition_id] + condition_id_sequence
-		# we iterate in reverse so we know what the ID is for the "next" path condition
-		most_recent_id = None
-		for (n, condition_id) in enumerate(condition_id_sequence[::-1]):
-			# insert a new path_condition row for this condition_id
-			next_path_condition = -1 if n == 0 else most_recent_id
-			results = cursor.execute("select id from path_condition where serialised_condition = ? and next_path_condition = ? and function_call = ?",
-				[condition_id, next_path_condition, new_function_call_id]).fetchall()
-			print("for path condition check:", condition_id, next_path_condition, new_function_call_id)
-			elif len(results) == 0 and next_path_condition != -1:
-				# check for a part of the path with matching condition and function call ids,
-				# but with next_path_condition set to -1 (ie, we've reached the end of an existing
-				# path, so we need to extend it)
-				second_check = cursor.execute("select * from path_condition where serialised_condition = ? and function_call = ? and next_path_condition = -1",
-					[condition_id, new_function_call_id]).fetchall()
-				if len(second_check) == 0:
-					# no end of path was found - we're constructing a path from scratch
-					cursor.execute("insert into path_condition (serialised_condition, next_path_condition, function_call) values(?, ?, ?)",
-						[condition_id, next_path_condition, new_function_call_id])
-					most_recent_id = cursor.lastrowid
-				else:
-					# end of a path was found - extend it to attach it to this new suffix
-					cursor.execute("update path_condition set next_path_condition = ? where serialised_condition = ? and function_call = ?",
-						[next_path_condition, condition_id, new_function_call_id])
-					most_recent_id = second_check[0][0]
-			else:
-				most_recent_id = int(results[0][0])
-			path_condition_ids.append(most_recent_id)"""
+	
 	print("path condition ids are %s" % path_condition_ids)
 
 	# create the verdict
