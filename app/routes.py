@@ -13,27 +13,30 @@ import database
 
 import sys
 # temporary measure - we need the VyPR classes for deserialisation
-#sys.path.append("../common/wVyPR/")
-sys.path.append("/afs/cern.ch/user/j/jdawes/pmp/vypr/")
+sys.path.append("../common/wVyPR/")
+#sys.path.append("/afs/cern.ch/user/j/jdawes/pmp/vypr/")
 
 from formula_building.formula_building import *
 from monitor_synthesis.formula_tree import *
 
 def friendly_bind_variable(bind_variable):
 	if type(bind_variable) is StaticState:
-		return "state %s that changes (%s)" % (bind_variable._bind_variable_name, bind_variable._name_changed)
+		return "Forall(%s = changes(%s)).\\" % (bind_variable._bind_variable_name, bind_variable._name_changed)
 	elif type(bind_variable) is StaticTransition:
-		return "transition %s that calls (%s)" % (bind_variable._bind_variable_name, bind_variable._operates_on)
+		return "Forall(%s = calls(%s)).\\" % (bind_variable._bind_variable_name, bind_variable._operates_on)
 
 def friendly_atom(atom):
 	if type(atom) is TransitionDurationInInterval:
-		return "%s <= duration(%s) <= %s" % (atom._interval[0], atom._transition, atom._interval[1])
+		return "%s.duration()._in((%s, %s))" % (atom._transition, atom._interval[0], atom._interval[1])
 	elif type(atom) is StateValueInInterval:
-		return "%s <= value of %s in %s <= %s" % (atom._interval[0], atom._name, atom._state, atom._interval[1])
+		return "%s(%s)._in((%s, %s))" % (atom._state, atom._name, atom._interval[0], atom._interval[1])
 	elif type(atom) is StateValueInOpenInterval:
 		return "%s <= value of %s in %s <= %s" % (atom._interval[0], atom._name, atom._state, atom._interval[1])
 	elif type(atom) is StateValueEqualTo:
 		return "value of %s in %s = %s" % (atom._name, atom._state, atom._value)
+
+def get_bind_variable_names(bind_variables):
+	return map(lambda bind_variable : bind_variable._bind_variable_name, bind_variables)
 
 def friendly_variable_in_formula(variable):
 	return "%s" % variable._bind_variable_name
@@ -139,7 +142,8 @@ def deserialise_property_tree(property_tree, path=[]):
 			StaticState.__repr__ = friendly_variable_in_formula
 			StaticTransition.__repr__ = friendly_variable_in_formula
 			subtree.append(str(pickle.loads(property_dictionary["property"])))
-			subtree.append("for every %s" % ", for every ".join(map(friendly_bind_variable, pickle.loads(property_dictionary["bind_variables"]).values())))
+			subtree.append("%s" % ", ".join(map(friendly_bind_variable, pickle.loads(property_dictionary["bind_variables"]).values())))
+			subtree.append(", ".join(get_bind_variable_names(pickle.loads(property_dictionary["bind_variables"]).values())))
 
 			return subtree
 		elif type(subtree) is list:
@@ -166,7 +170,8 @@ def deserialise_property(dictionary):
 	# deserialise
 	return {
 		"property" : str(pickle.loads(dictionary["property"])),
-		"bind_variables" : "for every %s" % ", for every ".join(map(friendly_bind_variable, pickle.loads(dictionary["bind_variables"]).values()))
+		"bind_variables" : "%s" % ", ".join(map(friendly_bind_variable, pickle.loads(dictionary["bind_variables"]).values())),
+		"bind_variable_names" : ", ".join(get_bind_variable_names(pickle.loads(dictionary["bind_variables"]).values()))
 	}
 
 @app_object.route("/", methods=["get"])
@@ -223,6 +228,6 @@ def list_function_calls_from_verdict_and_path(verdict, path):
 
 	# now, send the map into a template and return the html
 
-	template_with_data = render_template("function_list.html", data=map_structure, truth_map={1:"No Violation", 0:"Violation"})
+	template_with_data = render_template("function_list.html", data=map_structure, truth_map={1:"Satisfaction", 0:"Violation"})
 
 	return template_with_data
