@@ -14,8 +14,12 @@ var process_subtree_accordion = function(path, subtree, dom_element) {
 		for(var i=0; i<subtree.length; i++) {
 			html_string += ('<button type="button" class="list-group-item" function-id="' + subtree[i][0] + '" style="padding-left:' + padding + '">' + 
 					  	//'<h4 class="list-group-item-heading">' + subtree[1] + '</h4>' + 
-					  	'<p class="list-group-item-text">' + subtree[i][5] + ':</p>' + 
-					  	'<p class="list-group-item-text">' + subtree[i][4] + '</p>' + 
+					  	'<p class="list-group-item-text code">' + subtree[i][5] + '</p>' + 
+					  	'<p class="list-group-item-text code">Check(</p>' + 
+					  	'<p class="list-group-item-text code">&nbsp;&nbsp;lambda ' + subtree[i][6] + ' : (</p>' + 
+					  	'<p class="list-group-item-text code">&nbsp;&nbsp;&nbsp;&nbsp;' + subtree[i][4] + '</p>' + 
+					  	'<p class="list-group-item-text code">&nbsp;&nbsp;)</p>' + 
+					  	'<p class="list-group-item-text code">)</p>' + 
 					  '</button>');
 		}
 		$(dom_element).html(html_string);
