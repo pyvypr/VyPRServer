@@ -4,11 +4,25 @@ body {
 	font-family: arial;
 }
 
+.navbar-header {
+	height: 70px;
+}
+
+.navbar-header.vypr-logo img {
+	margin-top: -10px;
+	width: 80px;
+}
+
+.nav.navbar-nav a {
+	height: 70px;
+	line-height: 40px;
+}
+
 .logo-wrapper {
 	background: white;
-	height: 50px;
+	height: 70px;
 	float: right;
-	padding: 5px;
+	padding: 15px;
 }
 
 .selection {
