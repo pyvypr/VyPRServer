@@ -171,14 +171,13 @@ def insert_verdict(verdict_dictionary):
 		[new_binding_id, verdict, verdict_time_obtained, new_function_call_id, collapsing_atom_index])
 	new_verdict_id = cursor.lastrowid
 
-	for atom_index in path_map:
+	for atom_index in observations_map:
 		# for now, without transition input data, we just insert observations
-
 		# insert observation for this atom_index
 		print(observations_map[atom_index])
 		last_condition = path_condition_ids[len(path_map[atom_index])]
-		cursor.execute("insert into observation (instrumentation_point, verdict, observed_value, previous_condition) values(?, ?, ?, ?)",
-			[observations_map[atom_index][1], new_verdict_id, str(observations_map[atom_index][0]), last_condition])
+		cursor.execute("insert into observation (instrumentation_point, verdict, observed_value, previous_condition, atom_index) values(?, ?, ?, ?, ?)",
+			[observations_map[atom_index][1], new_verdict_id, str(observations_map[atom_index][0]), last_condition, atom_index])
 		observation_id = cursor.lastrowid
 
 	connection.commit()
