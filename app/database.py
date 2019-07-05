@@ -493,3 +493,15 @@ def get_http_request_function_call_pairs(verdict, path):
 			del final_map["functions"][function[0]]
 
 	return final_map
+
+
+
+
+def list_functions2():
+	connection = get_connection()
+	cursor = connection.cursor()
+	
+	list1 = cursor.execute("select * from function;")
+	functions=list1.fetchall()
+	
+	return functions
