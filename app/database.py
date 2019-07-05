@@ -506,7 +506,6 @@ def list_functions2():
 	functions=list1.fetchall()
 	connection.close()
 	return json.dumps( [dict(f) for f in functions] )
-	return functions
 
 
 def list_calls_function(function_name):
