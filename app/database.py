@@ -505,3 +505,13 @@ def list_functions2():
 	functions=list1.fetchall()
 	
 	return functions
+
+
+def list_calls_function(function_name):
+	connection = get_connection()
+	cursor = connection.cursor()
+	
+	list1 = cursor.execute("select * from (function inner join function_call on function.id=function_call.function) where function.fully_qualified_name like ?",[function_name])
+	functions=list1.fetchall()
+	
+	return functions
