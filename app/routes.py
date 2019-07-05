@@ -231,7 +231,7 @@ def list_function_calls_from_verdict_and_path(verdict, path):
 
 
 
-@app_object.route("/list_functions2")
+@app_object.route("/list_functions_2")
 def list_functions_2():
 	return jsonify(database.list_functions2())
 
