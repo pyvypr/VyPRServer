@@ -237,6 +237,6 @@ def list_functions_2():
 
 @app_object.route("/list_function_calls_f/<function_name>/")
 def list_function_calls_f(function_name):
-	return jsonify(database.list_calls_function(function_name))
+	return database.list_calls_function(function_name)
 
 
