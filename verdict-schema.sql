@@ -101,3 +101,20 @@ CREATE TABLE path_condition (
     foreign key(function_call) references function_call(id),
     foreign key(next_path_condition) references path_condition(id)
 );
+CREATE TABLE search_tree (
+    id integer not null primary key,
+    root_vertex integer not null,
+    instrumentation_point integer not null,
+    foreign key(root_vertex) references search_tree_vertex(id),
+    foreign key(instrumentation_point) references instrumentation_point(id)
+);
+
+CREATE TABLE search_tree_vertex (
+    id integer not null primary key,
+    observation integer not null,
+    start_of_path integer,
+    parent_vertex integer not null,
+    foreign key(observation) references observation(id),
+    foreign key(start_of_path) references path_condition(id),
+    foreign key(parent_vertex) references search_tree_vertex(id)
+);
