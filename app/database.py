@@ -512,7 +512,10 @@ def list_calls_function(function_name):
 	connection = get_connection()
 	cursor = connection.cursor()
 	
+	connection.row_factory = sqlite3.Row
+        cursor = connection.cursor()
+	
 	list1 = cursor.execute("select * from (function inner join function_call on function.id=function_call.function) where function.fully_qualified_name like ?",[function_name])
 	functions=list1.fetchall()
 	connection.close()
-	return functions
+	return json.dumps([dict(f) for f in functions])
