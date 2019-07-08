@@ -228,3 +228,15 @@ def list_function_calls_from_verdict_and_path(verdict, path):
 	template_with_data = render_template("function_list.html", data=map_structure, truth_map={1:"Satisfaction", 0:"Violation"})
 
 	return template_with_data
+
+
+
+@app_object.route("/list_functions_2")
+def list_functions_2():
+	return database.list_functions2()
+
+@app_object.route("/list_function_calls_f/<function_name>/")
+def list_function_calls_f(function_name):
+	return database.list_calls_function(function_name)
+
+
