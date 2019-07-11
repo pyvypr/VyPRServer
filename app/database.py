@@ -158,7 +158,7 @@ def insert_verdict(verdict_dictionary):
 				cursor.execute("update path_condition set next_path_condition = ? where id = ?", [most_recent_id, result[0][0]])
 
 				break
-	
+
 	print("path condition ids are %s" % path_condition_ids)
 
 	# create the verdict
@@ -210,7 +210,7 @@ def insert_property(property_dictionary):
 
 	try:
 		atom_index_to_db_index = []
-		
+
 		# insert the atoms
 		serialised_atom_list = property_dictionary["serialised_atom_list"]
 		for pair in serialised_atom_list:
@@ -281,7 +281,7 @@ def insert_instrumentation_point(dictionary):
 		cursor.execute("insert into instrumentation_point (serialised_condition_sequence, reaching_path_length) values (?, ?)",
 			[json.dumps(dictionary["serialised_condition_sequence"]), dictionary["reaching_path_length"]])
 		new_id = cursor.lastrowid
-		
+
 		# insert the atom-instrumentation point link
 		cursor.execute("insert into atom_instrumentation_point_pair (atom, instrumentation_point) values (?, ?)", [dictionary["atom"], new_id])
 
@@ -499,22 +499,92 @@ def list_functions2():
 	connection = get_connection()
 	connection.row_factory = sqlite3.Row
 	cursor = connection.cursor()
-	
+
 	list1 = cursor.execute("select * from function;")
 	functions=list1.fetchall()
 	connection.close()
 	return json.dumps( [dict(f) for f in functions] )
-	
+
 
 
 def list_calls_function(function_name):
 	connection = get_connection()
-	cursor = connection.cursor()
-	
 	connection.row_factory = sqlite3.Row
-        cursor = connection.cursor()
-	
+	cursor = connection.cursor()
+
 	list1 = cursor.execute("select * from (function inner join function_call on function.id=function_call.function) where function.fully_qualified_name like ?",[function_name])
 	functions=list1.fetchall()
 	connection.close()
 	return json.dumps([dict(f) for f in functions])
+
+def list_calls_http(http_request_id):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+
+	list1 = cursor.execute("select * from (http_request inner join function_call on http_request.id=function_call.http_request) where http_request.id=?",[http_request_id])
+	functions=list1.fetchall()
+	connection.close()
+	return json.dumps([dict(f) for f in functions])
+
+def list_calls_httpid(http_request_id,function_id):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+
+	list1 = cursor.execute("select * from function_call where http_request=? and function=?",[http_request_id,function_id])
+	functions=list1.fetchall()
+	connection.close()
+	return json.dumps([dict(f) for f in functions])
+
+def get_f_byname(function_name):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+
+	list1 = cursor.execute("select * from function where fully_qualified_name like ?",[function_name])
+	f=list1.fetchone()
+	connection.close()
+	return json.dumps([dict(f)])
+
+
+def get_f_byid(function_id):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+
+	list1 = cursor.execute("select * from function where id like ?",[function_id])
+	f=list1.fetchone()
+	connection.close()
+	return json.dumps([dict(f)])
+
+
+def get_http_byid(http_request_id):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+
+	list1 = cursor.execute("select * from http_request where id=?",[http_request_id])
+	f=list1.fetchone()
+	connection.close()
+	return json.dumps([dict(f)])
+
+def get_call_byid(call_id):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+
+	list1 = cursor.execute("select * from function_call where id=?",[call_id])
+	f=list1.fetchone()
+	connection.close()
+	return json.dumps([dict(f)])
+
+def get_http_bytime(time):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+
+	list1 = cursor.execute("select * from http_request where time_of_request=?",[time])
+	f=list1.fetchone()
+	connection.close()
+	return json.dumps([dict(f)])

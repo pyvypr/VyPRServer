@@ -42,7 +42,7 @@ def friendly_variable_in_formula(variable):
 @app_object.route("/register_verdict/", methods=["post"])
 def register_verdict():
 	"""
-	Receives a verdict from a monitored service, and stores it 
+	Receives a verdict from a monitored service, and stores it
 	"""
 	verdict_data = json.loads(request.data)
 	verdict_data["verdict"] = json.loads(verdict_data["verdict"])
@@ -231,10 +231,38 @@ def list_function_calls_from_verdict_and_path(verdict, path):
 
 
 
-@app_object.route("/list_functions_2") 
+@app_object.route("/client/list_functions_2")
 def list_functions_2():
-	return database.list_functions2() 
+	return database.list_functions2()
 
-@app_object.route("/list_function_calls_f/<function_name>/") 
+@app_object.route("/client/list_function_calls_f/<function_name>/")
 def list_function_calls_f(function_name):
 	return database.list_calls_function(function_name)
+
+@app_object.route("/client/list_function_calls_http/<http_request_id>/")
+def list_function_calls_http(http_request_id):
+	return database.list_calls_http(http_request_id)
+
+@app_object.route("/client/list_function_calls_http_id/<http_request_id>/<function_id>/")
+def list_function_calls_http_id(http_request_id,function_id):
+	return database.list_calls_httpid(http_request_id,function_id)
+
+@app_object.route("/client/get_function_by_name/<function_name>/")
+def get_function_by_name(function_name):
+	return database.get_f_byname(function_name)
+
+@app_object.route("/client/get_function_by_id/<function_id>/")
+def get_function_by_id(function_id):
+	return database.get_f_byid(function_id)
+
+@app_object.route("/client/get_http_by_id/<http_request_id>/")
+def get_http_by_id(http_request_id):
+	return database.get_http_byid(http_request_id)
+
+@app_object.route("/client/get_call_by_id/<call_id>/")
+def get_call_by_id(call_id):
+	return database.get_call_byid(call_id)
+
+@app_object.route("/client/get_http_by_time/<time_of_request>/")
+def get_http_by_time(time_of_request):
+   return database.get_http_bytime(time_of_request)
