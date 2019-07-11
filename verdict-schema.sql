@@ -102,7 +102,7 @@ CREATE TABLE path_condition (
     foreign key(next_path_condition) references path_condition(id)
 );
 CREATE TABLE search_tree (
-    id integer not null primary key,
+    id integer not null primary key autoincrement,
     root_vertex integer not null,
     instrumentation_point integer not null,
     foreign key(root_vertex) references search_tree_vertex(id),
@@ -110,7 +110,7 @@ CREATE TABLE search_tree (
 );
 
 CREATE TABLE search_tree_vertex (
-    id integer not null primary key,
+    id integer not null primary key autoincrement,
     observation integer not null,
     start_of_path integer,
     parent_vertex integer not null,

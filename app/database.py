@@ -6,8 +6,18 @@ Module to handle interaction with the verdict database.
 import sqlite3
 import traceback
 import json
+import sys
+import ast
+import os
+from graphviz import Digraph
+import pickle
 
 database_string = "verdicts.db"
+
+sys.path.append("VyPR/")
+
+from control_flow_graph.construction import CFG
+from control_flow_graph.parse_tree import ParseTree
 
 def get_connection():
 	# for now, let exceptions appear in the log
@@ -519,3 +529,454 @@ def list_calls_function(function_name):
 	functions=list1.fetchall()
 	connection.close()
 	return json.dumps([dict(f) for f in functions])
+
+"""
+Path reconstruction functions.
+"""
+
+def construct_new_search_tree(connection, cursor, root_observation, observation_list, instrumentation_point_id):
+	"""
+	Given a list of observations and an instrumentation point id, construct a new search tree.
+	"""
+
+	# create a new root vertex
+	cursor.execute("insert into search_tree_vertex (observation, start_of_path, parent_vertex) values(?, -1, -1)", [root_observation])
+	search_tree_vertex_root_id = cursor.lastrowid
+	# insert the rest of the observations
+	insert_observations_from_vertex(connection, cursor, observation_list, search_tree_vertex_root_id)
+	# create a new search tree, and insert a path for the current set
+	cursor.execute("insert into search_tree (root_vertex, instrumentation_point) values(?, ?)", [search_tree_vertex_root_id, instrumentation_point_id])
+	new_search_tree_id = cursor.lastrowid
+	connection.commit()
+
+	return new_search_tree_id
+
+def insert_observations_from_vertex(connection, cursor, observations, vertex_id):
+	"""
+	Given a list of observations and a vertex id in search tree, add the new path starting from that vertex.
+	"""
+	print("inserting new path for observation sequence %s from vertex %i" % (str(observations), vertex_id))
+	parent_vertex_id = vertex_id
+	for obs in observations:
+		cursor.execute("insert into search_tree_vertex (observation, start_of_path, parent_vertex) values(?, -1, ?)", [obs, parent_vertex_id])
+		parent_vertex_id = cursor.lastrowid
+	connection.commit()
+
+def get_qualifier_subsequence(function_qualifier):
+	"""
+	Given a fully qualified function name, iterate over it and find the file
+	in which the function is defined (this is the entry in the qualifier chain
+	before the one that causes an import error)/
+	"""
+
+	# tokenise the qualifier string so we have names and symbols
+	# the symbol used to separate two names tells us what the relationship is
+	# a/b means a is a directory and b is contained within it
+	# a.b means b is a member of a, so a is either a module or a class
+
+	tokens = []
+	last_position = 0
+	for (n, character) in enumerate(list(function_qualifier)):
+		if character in [".", "/"]:
+			tokens.append(function_qualifier[last_position:n])
+			tokens.append(function_qualifier[n])
+			last_position = n + 1
+		elif n == len(function_qualifier)-1:
+			tokens.append(function_qualifier[last_position:])
+
+	return tokens
+
+def construct_function_scfg(function):
+	"""
+	Given a function name, find the function definition in the service code and construct the SCFG.
+	"""
+
+	module = function[0:function.rindex(".")]
+	function = function[function.rindex(".")+1:]
+
+	file_name = module.replace(".", "/") + ".py.inst"
+	file_name_without_extension = module.replace(".", "/")
+
+	# extract asts from the code in the file
+	code = "".join(open(os.path.join("/servers/TestService/", file_name), "r").readlines())
+	asts = ast.parse(code)
+
+	print(asts.body)
+
+	qualifier_subsequence = get_qualifier_subsequence(function)
+	function_name = function.split(".")
+
+	# find the function definition
+	print("finding function/method definition using qualifier chain %s" % function_name)
+
+	actual_function_name = function_name[-1]
+	hierarchy = function_name[:-1]
+
+	print(actual_function_name, hierarchy)
+
+	current_step = asts.body
+
+	# traverse sub structures
+
+	for step in hierarchy:
+		current_step = filter(
+			lambda entry : (type(entry) is ast.ClassDef and
+				entry.name == step),
+			current_step
+		)[0]
+
+	# find the final function definition
+
+	function_def = filter(
+		lambda entry : (type(entry) is ast.FunctionDef and
+			entry.name == actual_function_name),
+		current_step.body if type(current_step) is ast.ClassDef else current_step
+	)[0]
+
+	# construct the scfg of the code inside the function
+	scfg = CFG()
+	scfg_vertices = scfg.process_block(function_def.body)
+
+	return scfg
+
+def reconstruct_path(cursor, scfg, observation_id):
+	"""
+	Given an observation, determine the function that generated it,
+	construct that function's SCFG, then reconstruct the path taken by the observation
+	through this SCFG.
+	"""
+
+	observation = cursor.execute(
+"""
+select function.fully_qualified_name, verdict.function_call,
+		observation.instrumentation_point, observation.previous_condition,
+		observation.observed_value
+from
+(((observation inner join verdict on observation.verdict == verdict.id)
+	inner join binding on verdict.binding == binding.id)
+		inner join function on binding.function == function.id)
+where observation.id == ?
+""", [observation_id]).fetchall()[0]
+
+	function_name = observation[0]
+	function_call_id = observation[1]
+	instrumentation_point_id = observation[2]
+	previous_path_condition_entry = observation[3]
+	observed_value = observation[4]
+
+	# reconstruct the path up to the observation through the SCFG
+	# get the starting path condition in the path condition sequence for function_call_id
+	path_conditions = cursor.execute("select * from path_condition where function_call = ?", [function_call_id]).fetchall()
+	for path_condition in path_conditions:
+		# check if there are any other path conditions that refer to this one
+		# if there are none, we have the first one
+		check = cursor.execute("select * from path_condition where function_call = ? and next_path_condition = ?", [function_call_id, path_condition[0]]).fetchall()
+		if len(check) == 0:
+			print(path_condition)
+			first_path_condition_id = path_condition[0]
+			break
+	print("first path condition for this call is %i" % first_path_condition_id)
+	print("reconstructing chain")
+	current_path_condition_id = first_path_condition_id
+	path_chain = []
+	path_id_chain = []
+	while current_path_condition_id != -1:
+		path_id_chain.append(current_path_condition_id)
+		current_path_condition = cursor.execute("select * from path_condition where id = ?", [current_path_condition_id]).fetchall()[0]
+		current_path_condition_id = current_path_condition[-2]
+		serialised_condition_id = current_path_condition[1]
+		serialised_condition = cursor.execute("select * from path_condition_structure where id = ?", [serialised_condition_id]).fetchall()[0][1]
+		if serialised_condition != "":
+			if not(serialised_condition in ["conditional exited", "try-catch exited", "try-catch-main"]):
+				unserialised_condition = pickle.loads(serialised_condition)
+			else:
+				unserialised_condition = serialised_condition
+		else:
+			unserialised_condition = None
+		path_chain.append(unserialised_condition)
+
+	print(path_id_chain)
+	print(path_chain)
+
+	# remove the first condition, since it's None
+	path_chain = path_chain[1:]
+
+	instrumentation_point_path_length = int(cursor.execute("select reaching_path_length from instrumentation_point where id = ?", [instrumentation_point_id]).fetchall()[0][0])
+
+	print("reconstructing path for observation %s with previous condition %i and value %s based on chain %s" %\
+		(observation_id, previous_path_condition_entry, str(observed_value), path_chain))
+
+	# traverse the SCFG based on the derived condition chain
+	path_subchain = path_chain[0:path_id_chain.index(previous_path_condition_entry)]
+	print("traversing using condition subchain %s" % path_subchain)
+	condition_index = 0
+	curr = scfg.starting_vertices
+	#path = [curr]
+	path = []
+	cumulative_conditions = []
+	while condition_index < len(path_subchain):
+		#path.append(curr)
+		#print(curr._name_changed)
+		if len(curr.edges) > 1:
+			# more than 1 outgoing edges means we have a branching point
+			# we have to decide whether it's a loop or a conditional
+			if curr._name_changed == ["conditional"]:
+				print("traversing conditional %s with condition %s" % (curr, path_subchain[condition_index]))
+				# search the outgoing edges for an edge whose condition has the same length as path_chain[condition_index]
+				for edge in curr.edges:
+					print("testing edge condition %s against condition %s" %\
+						(edge._condition[-1], path_chain[condition_index][0]))
+					# for now we assume that conditions are single objects (ie, not conjunctions)
+					if type(edge._condition[-1]) == type(path_chain[condition_index][0]):
+						# conditions match
+						print("traversing edge with condition %s" % edge._condition[-1])
+						curr = edge._target_state
+						path.append(edge)
+						cumulative_conditions.append(edge._condition[-1])
+						break
+				# make sure the next branching point consumes the next condition in the chain
+				condition_index += 1
+			elif curr._name_changed == ["loop"]:
+				print("traversing loop %s with condition %s" % (curr, path_subchain[condition_index]))
+				if not(type(path_subchain[condition_index]) is LogicalNot):
+					# condition isn't a negation, so follow the edge leading into the loop
+					for edge in curr.edges:
+						if not(type(edge._condition) is LogicalNot):
+							print("traversing edge with positive loop condition")
+							cumulative_conditions.append("for")
+							# follow this edge
+							curr = edge._target_state
+							path.append(edge)
+							break
+					# make sure the next branching point consumes the next condition in the chain
+					condition_index += 1
+				else:
+					# go straight past the loop
+					for edge in curr.edges:
+						if type(edge._condition) is LogicalNot:
+							print("traversing edge with negative loop condition")
+							cumulative_conditions.append(edge._condition)
+							# follow this edge
+							curr = edge._target_state
+							path.append(edge)
+							break
+					# make sure the next branching point consumes the next condition in the chain
+					condition_index += 1
+			elif curr._name_changed == ["try-catch"]:
+				print("traversing try-catch")
+				# for now assume that we immediately traverse the no-exception branch
+				print(curr)
+				# search the outgoing edges for the edge leading to the main body
+				for edge in curr.edges:
+					print("testing edge with condition %s against cumulative condition %s" %\
+							(edge._condition, cumulative_conditions + [path_chain[condition_index]]))
+					if edge._condition[-1] == "try-catch-main":
+						print("traversing edge with condition %s" % edge._condition)
+						curr = edge._target_state
+						path.append(edge)
+						cumulative_conditions.append(edge._condition[-1])
+						break
+				condition_index += 1
+			else:
+				# probably the branching point at the end of a loop - currently these aren't explicitly marked
+				# the behaviour here with respect to consuming branching conditions will be a bit different
+				if not(type(path_subchain[condition_index]) is LogicalNot):
+					# go back to the start of the loop without consuming the condition
+					print("going back around the loop")
+					relevant_edge = filter(lambda edge : edge._condition == 'loop-jump', curr.edges)[0]
+					curr = relevant_edge._target_state
+					path.append(relevant_edge)
+				else:
+					# go past the loop
+					print(curr.edges)
+					print("ending loop")
+					relevant_edge = filter(lambda edge : edge._condition == 'post-loop', curr.edges)[0]
+					curr = relevant_edge._target_state
+					path.append(relevant_edge)
+					# consume the negative condition
+					condition_index += 1
+
+			print("condition index %i from condition chain length %i" % (condition_index, len(path_subchain)))
+		elif curr._name_changed == ["post-conditional"]:
+			print("traversing post-conditional")
+			# check the next vertex - if it's also a post-conditional, we move to that one but don't consume the condition
+			# if the next vertex isn't a post-conditional, we consume the condition and move to it
+			if curr.edges[0]._target_state._name_changed != ["post-conditional"]:
+				# consume the condition
+				condition_index += 1
+			path.append(curr.edges[0])
+			curr = curr.edges[0]._target_state
+			print("resulting state after conditional is %s" % curr)
+			print("condition index %i from condition chain length %i" % (condition_index, len(path_subchain)))
+		elif curr._name_changed == ["post-loop"]:
+			print("traversing post-loop")
+			# condition is consumed when branching at the end of the loop is detected, so no need to do it here
+			print("adding %s outgoing from %s to path" % (curr.edges[0], curr))
+			path.append(curr.edges[0])
+			curr = curr.edges[0]._target_state
+			print("condition index %i from condition chain length %i" % (condition_index, len(path_subchain)))
+		elif curr._name_changed == ["post-try-catch"]:
+			print("traversing post-try-catch")
+			if curr.edges[0]._target_state._name_changed != ["post-try-catch"]:
+				# consume the condition
+				condition_index += 1
+			path.append(curr.edges[0])
+			curr = curr.edges[0]._target_state
+			print("condition index %i from condition chain length %i" % (condition_index, len(path_subchain)))
+		else:
+			print("no branching at %s" % curr)
+			path.append(curr.edges[0])
+			curr = curr.edges[0]._target_state
+			print("condition index %i from condition chain length %i" % (condition_index, len(path_subchain)))
+
+	print("finishing path traversal with path length %i" % instrumentation_point_path_length)
+
+	# traverse the remainder of the branch using the path length of the instrumentation point
+	# that generated the observation we're looking at
+	print("starting remainder of traversal from vertex %s" % curr)
+	limit = instrumentation_point_path_length-1 if len(path_subchain) > 0 else instrumentation_point_path_length
+	for i in range(limit):
+		#path.append(curr)
+		path.append(curr.edges[0])
+		curr = curr.edges[0]._target_state
+
+	#path.append(curr)
+
+	print("reconstructed path is %s" % path)
+
+	return path
+
+
+def reconstruct_paths(cursor, scfg, observation_ids):
+	"""
+	Given a sequence of observations
+	"""
+	return map(lambda observation_id : reconstruct_path(cursor, scfg, observation_id), observation_ids)
+
+def compute_intersection(s, instrumentation_point_id):
+	"""
+	Given a list s of observations and an instrumentation point ID, compute the intersection
+	of the reconstructed paths using existing results as much as possible.
+	"""
+	connection = get_connection()
+	cursor = connection.cursor()
+
+	# get the name of the function from which the observation came
+	# the route taken through the verdict schema here is the shortest one I can think of
+	function_name = cursor.execute(
+"""
+select function.fully_qualified_name from
+(((observation inner join verdict on observation.verdict == verdict.id)
+	inner join binding on verdict.binding == binding.id)
+		inner join function on binding.function == function.id)
+where observation.id == ?
+""", [s[0]]).fetchall()[0][0]
+
+	# construct the scfg of the function from which the observation came
+	scfg = construct_function_scfg(function_name)
+
+	# derive a rule system from the scfg
+	grammar_rules_map = scfg.derive_grammar()
+
+	# get all existing search trees for the instrumentation point ID we have
+	search_trees = cursor.execute("select * from search_tree where instrumentation_point = ?", [instrumentation_point_id]).fetchall()
+
+	if len(search_trees) > 0:
+
+		print("processing search trees for observation sequence %s" % str(s))
+
+		# attempt to get the search tree with a root matching one of the elements of this list
+		root_observation_id = None
+		for obs in s:
+			# find the search tree with a root matching an observation from this set
+			for tree in search_trees:
+				root_vertex = cursor.execute("select * from search_tree_vertex where id = ?", [tree[1]]).fetchall()[0]
+				if root_vertex[1] == obs:
+					# the root matches this observation, so we can use this search tree
+					root_observation_id = obs
+					root_vertex_id = tree[1]
+					# break out of the loop - we've found the search tree we can use
+					break
+
+		# check if we found a search tree we can use for this set of observations
+		if not(root_observation_id):
+			# there were search trees for this instrumentation point, but none had a root we could use
+			# so now we construct a new search tree whose root is s[0]
+			print("no suitable search tree found - constructing a new one")
+			construct_new_search_tree(connection, cursor, s[0], s[1:], instrumentation_point_id)
+
+		else:
+			print("suitable search tree found - attempting traversal")
+			# if we found a search tree, traverse it and see if the intersection for this set of observations
+			# has already been computed
+			# root already exists, so remove it
+			s.remove(root_observation_id)
+			# here, we iterate until there are no observations remaining
+			# each iteration, we go through the remaining observations and see if we can traverse the tree further
+			parent_vertex_id = root_vertex_id
+			while len(s) > 0:
+
+				print("remaining observations %s" % str(s))
+
+				# search for a next vertex that we can follow
+				next_vertex = None
+
+				for obs in s:
+					print("looking for vertices with observation %i and parent %i" % (obs, parent_vertex_id))
+					next_vertex_list = cursor.execute("select * from search_tree_vertex where observation = ? and parent_vertex = ?", [obs, parent_vertex_id]).fetchall()
+					if len(next_vertex_list) > 0:
+						next_vertex = next_vertex_list[0]
+						break
+
+				# if we found a vertex, we can progress, otherwise we have to insert new vertices
+				if next_vertex:
+					print("can progress!")
+					# remove the observation
+					s.remove(obs)
+					# move to the next vertex
+					parent_vertex_id = next_vertex[0]
+				else:
+					# there's no vertex we can follow with the observations we have
+					# the only way to continue is to extend the tree
+					# we choose the first element from the remaining set
+					print("can't progress! doing insertion for observation id %i with parent vertex %i" % (s[0], parent_vertex_id))
+					# add the new path
+					cursor.execute("insert into search_tree_vertex (observation, start_of_path, parent_vertex) values(?, -1, ?)", [s[0], parent_vertex_id])
+					starting_vertex = cursor.lastrowid
+					# remove the observation we've just used
+					s.remove(s[0])
+					print("adding a new path for remaining observations %s" % str(s))
+					insert_observations_from_vertex(connection, cursor, s, starting_vertex)
+					break
+
+
+	else:
+		# no search tree was found for this instrumentation point
+		print("no search tree found for observation sequence %s - constructing a new one" % str(s))
+		new_tree_id = construct_new_search_tree(connection, cursor, s[0], s[1:], instrumentation_point_id)
+
+		# if we didn't find a search tree, then the intersection isn't computed yet (since we check
+		# for search trees whose roots are any element in the list of observations we have).
+
+		paths = reconstruct_paths(cursor, scfg, s)
+
+		parse_trees = []
+		for (path_index, path) in enumerate(paths):
+			print("="*100)
+			print("constructing parse tree for path")
+			print(path)
+
+			parse_tree = ParseTree(path, grammar_rules_map, scfg.starting_vertices)
+
+			parse_trees.append(parse_tree)
+			generated_path = parse_tree._path_progress
+
+			print("path generated by parse tree:")
+			print(generated_path)
+
+	# parse_trees will be defined by the end of the previous conditional block
+	intersection = parse_trees[0].intersect(parse_trees[1:])
+	parametric_path = []
+	# will populate parametric_path with the path read off the intersection parse tree
+	intersection.leaves_to_left_right_sequence(intersection._root_vertex, parametric_path)
+	return str(parametric_path)
