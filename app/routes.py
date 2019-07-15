@@ -266,3 +266,19 @@ def get_call_by_id(call_id):
 @app_object.route("/client/get_http_by_time/<time_of_request>/")
 def get_http_by_time(time_of_request):
    return database.get_http_bytime(time_of_request)
+
+@app_object.route("/client/get_verdict_by_id/<verdict_id>/")
+def get_verdict_by_id(verdict_id):
+	return database.get_verdict_byid(verdict_id)
+
+@app_object.route("/client/get_atom_by_id/<atom_id>/")
+def get_atom_by_id(atom_id):
+	return database.get_atom_byid(atom_id)
+
+@app_object.route("/client/get_atom_by_index/<atom_index>/")
+def get_atom_by_index(atom_index):
+	return database.get_atom_byindex(atom_index)
+
+@app_object.route("/client/list_atoms_where_verdict/<verdict_value>/") 
+def list_atoms_where_verdict(verdict_value):
+	return database.list_atoms_verdict(verdict_value)

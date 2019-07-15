@@ -499,19 +499,15 @@ def list_functions2():
 	connection = get_connection()
 	connection.row_factory = sqlite3.Row
 	cursor = connection.cursor()
-
 	list1 = cursor.execute("select * from function;")
 	functions=list1.fetchall()
 	connection.close()
 	return json.dumps( [dict(f) for f in functions] )
 
-
-
 def list_calls_function(function_name):
 	connection = get_connection()
 	connection.row_factory = sqlite3.Row
 	cursor = connection.cursor()
-
 	list1 = cursor.execute("select * from (function inner join function_call on function.id=function_call.function) where function.fully_qualified_name like ?",[function_name])
 	functions=list1.fetchall()
 	connection.close()
@@ -521,7 +517,6 @@ def list_calls_http(http_request_id):
 	connection = get_connection()
 	connection.row_factory = sqlite3.Row
 	cursor = connection.cursor()
-
 	list1 = cursor.execute("select * from (http_request inner join function_call on http_request.id=function_call.http_request) where http_request.id=?",[http_request_id])
 	functions=list1.fetchall()
 	connection.close()
@@ -531,7 +526,6 @@ def list_calls_httpid(http_request_id,function_id):
 	connection = get_connection()
 	connection.row_factory = sqlite3.Row
 	cursor = connection.cursor()
-
 	list1 = cursor.execute("select * from function_call where http_request=? and function=?",[http_request_id,function_id])
 	functions=list1.fetchall()
 	connection.close()
@@ -541,7 +535,6 @@ def get_f_byname(function_name):
 	connection = get_connection()
 	connection.row_factory = sqlite3.Row
 	cursor = connection.cursor()
-
 	list1 = cursor.execute("select * from function where fully_qualified_name like ?",[function_name])
 	f=list1.fetchone()
 	connection.close()
@@ -552,7 +545,6 @@ def get_f_byid(function_id):
 	connection = get_connection()
 	connection.row_factory = sqlite3.Row
 	cursor = connection.cursor()
-
 	list1 = cursor.execute("select * from function where id like ?",[function_id])
 	f=list1.fetchone()
 	connection.close()
@@ -563,7 +555,6 @@ def get_http_byid(http_request_id):
 	connection = get_connection()
 	connection.row_factory = sqlite3.Row
 	cursor = connection.cursor()
-
 	list1 = cursor.execute("select * from http_request where id=?",[http_request_id])
 	f=list1.fetchone()
 	connection.close()
@@ -573,7 +564,6 @@ def get_call_byid(call_id):
 	connection = get_connection()
 	connection.row_factory = sqlite3.Row
 	cursor = connection.cursor()
-
 	list1 = cursor.execute("select * from function_call where id=?",[call_id])
 	f=list1.fetchone()
 	connection.close()
@@ -583,8 +573,43 @@ def get_http_bytime(time):
 	connection = get_connection()
 	connection.row_factory = sqlite3.Row
 	cursor = connection.cursor()
-
 	list1 = cursor.execute("select * from http_request where time_of_request=?",[time])
 	f=list1.fetchone()
 	connection.close()
 	return json.dumps([dict(f)])
+
+def get_verdict_byid(verdict_id):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+	list1 = cursor.execute("select * from verdict where id=?",[verdict_id])
+	f=list1.fetchone()
+	connection.close()
+	return json.dumps([dict(f)])
+
+def get_atom_byid(atom_id):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+	list1 = cursor.execute("select * from atom where id=?",[atom_id])
+	f=list1.fetchone()
+	connection.close()
+	return json.dumps([dict(f)])
+
+def get_atom_byindex(atom_index):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+	list1 = cursor.execute("select * from atom where index_in_atoms=?",[atom_index])
+	f=list1.fetchone()
+	connection.close()
+	return json.dumps([dict(f)])
+
+def list_atoms_verdict(verdict_value):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+	list1 = cursor.execute("select atom.id,atom.property_hash,atom.serialised_structure,atom.index_in_atoms from (verdict inner join atom on verdict.collapsing_atom=atom.index_in_atoms) where verdict.verdict=?",[verdict_value])
+	atoms=list1.fetchall()
+	connection.close()
+	return json.dumps([dict(f) for f in atoms])
