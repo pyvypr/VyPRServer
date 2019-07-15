@@ -112,9 +112,14 @@ CREATE TABLE search_tree (
 CREATE TABLE search_tree_vertex (
     id integer not null primary key autoincrement,
     observation integer not null,
-    start_of_path integer,
+    intersection integer,
     parent_vertex integer not null,
     foreign key(observation) references observation(id),
-    foreign key(start_of_path) references path_condition(id),
+    foreign key(intersection) references intersection(id),
     foreign key(parent_vertex) references search_tree_vertex(id)
+);
+
+CREATE TABLE intersection (
+    id integer not null primary key autoincrement,
+    condition_sequence_string text not null
 );
