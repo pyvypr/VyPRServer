@@ -535,31 +535,75 @@ def list_calls_function(function_name):
 Path reconstruction functions.
 """
 
-def construct_new_search_tree(connection, cursor, root_observation, observation_list, instrumentation_point_id):
+def construct_new_search_tree(connection, cursor, scfg, root_observation, observation_list, instrumentation_point_id):
 	"""
 	Given a list of observations and an instrumentation point id, construct a new search tree.
 	"""
 
 	# create a new root vertex
-	cursor.execute("insert into search_tree_vertex (observation, start_of_path, parent_vertex) values(?, -1, -1)", [root_observation])
+	# the intersection held by the root vertex must be empty - intersection over one observation doesn't
+	# really make a lot of sense
+	cursor.execute("insert into search_tree_vertex (observation, intersection, parent_vertex) values(?, -1, -1)", [root_observation])
 	search_tree_vertex_root_id = cursor.lastrowid
+
+	# compute the sequence of intersections
+
+	root_path = reconstruct_path(cursor, scfg, root_observation)
+	root_parse_tree = ParseTree(root_path, scfg.derive_grammar(), scfg.starting_vertices)
+	child_path = reconstruct_path(cursor, scfg, observation_list[0])
+	child_parse_tree = ParseTree(child_path, scfg.derive_grammar(), scfg.starting_vertices)
+
+	initial_intersection = root_parse_tree.intersect([child_parse_tree])
+	previous_intersection_result = initial_intersection
+
+	# acts as a map from observation id index to intersection
+	intersections = [initial_intersection]
+	for obs in observation_list[1:]:
+		path = reconstruct_path(cursor, scfg, obs)
+		new_parse_tree = ParseTree(path, scfg.derive_grammar(), scfg.starting_vertices, parametric=True)
+		new_intersection = previous_intersection_result.intersect([new_parse_tree])
+		intersections.append(new_intersection)
+
+	condition_sequences = []
+	for intersection in intersections:
+		parametric_path = intersection.read_leaves()
+		condition_sequences.append(path_to_condition_sequence(cursor, parametric_path))
+
+	print(condition_sequences)
+
 	# insert the rest of the observations
-	insert_observations_from_vertex(connection, cursor, observation_list, search_tree_vertex_root_id)
+	insert_observations_from_vertex(connection, cursor, observation_list, search_tree_vertex_root_id, condition_sequences)
 	# create a new search tree, and insert a path for the current set
 	cursor.execute("insert into search_tree (root_vertex, instrumentation_point) values(?, ?)", [search_tree_vertex_root_id, instrumentation_point_id])
 	new_search_tree_id = cursor.lastrowid
 	connection.commit()
 
-	return new_search_tree_id
+	# return the condition sequence associated with the leaf
+	return condition_sequences[-1]
 
-def insert_observations_from_vertex(connection, cursor, observations, vertex_id):
+def insert_observations_from_vertex(connection, cursor, observations, vertex_id, condition_sequences):
 	"""
-	Given a list of observations and a vertex id in search tree, add the new path starting from that vertex.
+	Given a list of observations, a vertex id in search tree and a list of path condition sequences,
+	add the new path starting from that vertex.
 	"""
 	print("inserting new path for observation sequence %s from vertex %i" % (str(observations), vertex_id))
 	parent_vertex_id = vertex_id
-	for obs in observations:
-		cursor.execute("insert into search_tree_vertex (observation, start_of_path, parent_vertex) values(?, -1, ?)", [obs, parent_vertex_id])
+	for (n, obs) in enumerate(observations):
+
+		# if we're at the last observation, attach the leaf to the intersection
+		condition_sequence_string = json.dumps(condition_sequences[n])
+		# attempt to find the condition sequence in the intersection table
+		existing_intersection = cursor.execute(
+			"select id from intersection where condition_sequence_string = ?",
+			[condition_sequence_string]
+		).fetchall()
+		if len(existing_intersection) > 0:
+			intersection_id = existing_intersection[0][0]
+		else:
+			cursor.execute("insert into intersection (condition_sequence_string) values(?)", [condition_sequence_string])
+			intersection_id = cursor.lastrowid
+
+		cursor.execute("insert into search_tree_vertex (observation, intersection, parent_vertex) values(?, ?, ?)", [obs, intersection_id, parent_vertex_id])
 		parent_vertex_id = cursor.lastrowid
 	connection.commit()
 
@@ -640,76 +684,11 @@ def construct_function_scfg(function):
 
 	return scfg
 
-def reconstruct_path(cursor, scfg, observation_id):
+def edges_from_condition_sequence(scfg, path_subchain, instrumentation_point_path_length):
 	"""
-	Given an observation, determine the function that generated it,
-	construct that function's SCFG, then reconstruct the path taken by the observation
-	through this SCFG.
+	Given a sequence of (deserialised) conditions in path_subchain and the final path length,
+	reconstruct a path through the scfg, including loop multiplicity.
 	"""
-
-	observation = cursor.execute(
-"""
-select function.fully_qualified_name, verdict.function_call,
-		observation.instrumentation_point, observation.previous_condition,
-		observation.observed_value
-from
-(((observation inner join verdict on observation.verdict == verdict.id)
-	inner join binding on verdict.binding == binding.id)
-		inner join function on binding.function == function.id)
-where observation.id == ?
-""", [observation_id]).fetchall()[0]
-
-	function_name = observation[0]
-	function_call_id = observation[1]
-	instrumentation_point_id = observation[2]
-	previous_path_condition_entry = observation[3]
-	observed_value = observation[4]
-
-	# reconstruct the path up to the observation through the SCFG
-	# get the starting path condition in the path condition sequence for function_call_id
-	path_conditions = cursor.execute("select * from path_condition where function_call = ?", [function_call_id]).fetchall()
-	for path_condition in path_conditions:
-		# check if there are any other path conditions that refer to this one
-		# if there are none, we have the first one
-		check = cursor.execute("select * from path_condition where function_call = ? and next_path_condition = ?", [function_call_id, path_condition[0]]).fetchall()
-		if len(check) == 0:
-			print(path_condition)
-			first_path_condition_id = path_condition[0]
-			break
-	print("first path condition for this call is %i" % first_path_condition_id)
-	print("reconstructing chain")
-	current_path_condition_id = first_path_condition_id
-	path_chain = []
-	path_id_chain = []
-	while current_path_condition_id != -1:
-		path_id_chain.append(current_path_condition_id)
-		current_path_condition = cursor.execute("select * from path_condition where id = ?", [current_path_condition_id]).fetchall()[0]
-		current_path_condition_id = current_path_condition[-2]
-		serialised_condition_id = current_path_condition[1]
-		serialised_condition = cursor.execute("select * from path_condition_structure where id = ?", [serialised_condition_id]).fetchall()[0][1]
-		if serialised_condition != "":
-			if not(serialised_condition in ["conditional exited", "try-catch exited", "try-catch-main"]):
-				unserialised_condition = pickle.loads(serialised_condition)
-			else:
-				unserialised_condition = serialised_condition
-		else:
-			unserialised_condition = None
-		path_chain.append(unserialised_condition)
-
-	print(path_id_chain)
-	print(path_chain)
-
-	# remove the first condition, since it's None
-	path_chain = path_chain[1:]
-
-	instrumentation_point_path_length = int(cursor.execute("select reaching_path_length from instrumentation_point where id = ?", [instrumentation_point_id]).fetchall()[0][0])
-
-	print("reconstructing path for observation %s with previous condition %i and value %s based on chain %s" %\
-		(observation_id, previous_path_condition_entry, str(observed_value), path_chain))
-
-	# traverse the SCFG based on the derived condition chain
-	path_subchain = path_chain[0:path_id_chain.index(previous_path_condition_entry)]
-	print("traversing using condition subchain %s" % path_subchain)
 	condition_index = 0
 	curr = scfg.starting_vertices
 	#path = [curr]
@@ -720,15 +699,26 @@ where observation.id == ?
 		#print(curr._name_changed)
 		if len(curr.edges) > 1:
 			# more than 1 outgoing edges means we have a branching point
+
+			#TODO: need to handle parameters in condition sequences
+			if path_subchain[condition_index] == "parameter":
+				if curr._name_changed == ["conditional"]:
+					# add the vertex to the path, skip past the construct
+					# and increment the condition index
+					path.append(curr)
+					curr = curr.post_conditional_vertex
+					condition_index += 1
+					continue
+
 			# we have to decide whether it's a loop or a conditional
 			if curr._name_changed == ["conditional"]:
 				print("traversing conditional %s with condition %s" % (curr, path_subchain[condition_index]))
-				# search the outgoing edges for an edge whose condition has the same length as path_chain[condition_index]
+				# search the outgoing edges for an edge whose condition has the same length as path_subchain[condition_index]
 				for edge in curr.edges:
 					print("testing edge condition %s against condition %s" %\
-						(edge._condition[-1], path_chain[condition_index][0]))
+						(edge._condition[-1], path_subchain[condition_index][0]))
 					# for now we assume that conditions are single objects (ie, not conjunctions)
-					if type(edge._condition[-1]) == type(path_chain[condition_index][0]):
+					if type(edge._condition[-1]) == type(path_subchain[condition_index][0]):
 						# conditions match
 						print("traversing edge with condition %s" % edge._condition[-1])
 						curr = edge._target_state
@@ -770,7 +760,7 @@ where observation.id == ?
 				# search the outgoing edges for the edge leading to the main body
 				for edge in curr.edges:
 					print("testing edge with condition %s against cumulative condition %s" %\
-							(edge._condition, cumulative_conditions + [path_chain[condition_index]]))
+							(edge._condition, cumulative_conditions + [path_subchain[condition_index]]))
 					if edge._condition[-1] == "try-catch-main":
 						print("traversing edge with condition %s" % edge._condition)
 						curr = edge._target_state
@@ -843,6 +833,91 @@ where observation.id == ?
 
 	#path.append(curr)
 
+	return path
+
+def deserialise_condition(serialised_condition):
+	if serialised_condition != "":
+		if not(serialised_condition in ["conditional exited", "try-catch exited", "try-catch-main", "parameter", "exit conditional"]):
+			print(serialised_condition)
+			unserialised_condition = pickle.loads(serialised_condition)
+		else:
+			unserialised_condition = serialised_condition
+	else:
+		unserialised_condition = None
+	return unserialised_condition
+
+def reconstruct_path(cursor, scfg, observation_id):
+	"""
+	Given an observation, determine the function that generated it,
+	construct that function's SCFG, then reconstruct the path taken by the observation
+	through this SCFG.
+	"""
+
+	observation = cursor.execute(
+"""
+select function.fully_qualified_name, verdict.function_call,
+		observation.instrumentation_point, observation.previous_condition,
+		observation.observed_value
+from
+(((observation inner join verdict on observation.verdict == verdict.id)
+	inner join binding on verdict.binding == binding.id)
+		inner join function on binding.function == function.id)
+where observation.id == ?
+""", [observation_id]).fetchall()[0]
+
+	function_name = observation[0]
+	function_call_id = observation[1]
+	instrumentation_point_id = observation[2]
+	previous_path_condition_entry = observation[3]
+	observed_value = observation[4]
+
+	# reconstruct the path up to the observation through the SCFG
+	# get the starting path condition in the path condition sequence for function_call_id
+	path_conditions = cursor.execute("select * from path_condition where function_call = ?", [function_call_id]).fetchall()
+	for path_condition in path_conditions:
+		# check if there are any other path conditions that refer to this one
+		# if there are none, we have the first one
+		check = cursor.execute("select * from path_condition where function_call = ? and next_path_condition = ?", [function_call_id, path_condition[0]]).fetchall()
+		if len(check) == 0:
+			print(path_condition)
+			first_path_condition_id = path_condition[0]
+			break
+	print("first path condition for this call is %i" % first_path_condition_id)
+	print("reconstructing chain")
+	current_path_condition_id = first_path_condition_id
+	path_chain = []
+	path_id_chain = []
+	while current_path_condition_id != -1:
+		path_id_chain.append(current_path_condition_id)
+		current_path_condition = cursor.execute("select * from path_condition where id = ?", [current_path_condition_id]).fetchall()[0]
+		current_path_condition_id = current_path_condition[-2]
+		serialised_condition_id = current_path_condition[1]
+		serialised_condition = cursor.execute("select * from path_condition_structure where id = ?", [serialised_condition_id]).fetchall()[0][1]
+		unserialised_condition = deserialise_condition(serialised_condition)
+		path_chain.append(unserialised_condition)
+
+	print(path_id_chain)
+	print(path_chain)
+
+	# remove the first condition, since it's None
+	path_chain = path_chain[1:]
+
+	instrumentation_point_path_length = int(
+		cursor.execute(
+			"select reaching_path_length from instrumentation_point where id = ?",
+			[instrumentation_point_id]
+		).fetchall()[0][0]
+	)
+
+	print("reconstructing path for observation %s with previous condition %i and value %s based on chain %s" %\
+		(observation_id, previous_path_condition_entry, str(observed_value), path_chain))
+
+	# traverse the SCFG based on the derived condition chain
+	path_subchain = path_chain[0:path_id_chain.index(previous_path_condition_entry)]
+	print("traversing using condition subchain %s" % path_subchain)
+	
+	path = edges_from_condition_sequence(scfg, path_subchain, instrumentation_point_path_length)
+
 	print("reconstructed path is %s" % path)
 
 	return path
@@ -873,12 +948,45 @@ def path_to_condition_sequence(cursor, path):
 						condition_sequence.append("exit conditional")
 				else:
 					if el._condition == 'conditional':
-						index_of_branch_taken = map(lambda edge : edge._condition, el._target_state.edges).index(path[n+1]._condition)
-						condition_sequence.append(index_of_branch_taken)
+						#index_of_branch_taken = map(lambda edge : edge._condition, el._target_state.edges).index(path[n+1]._condition)
+						#condition_sequence.append(index_of_branch_taken)
+						condition_sequence.append(pickle.dumps(path[n+1]._condition))
+
 					elif el._condition == 'post-condition':
 						condition_sequence.append("exit conditional")
 
 	return condition_sequence
+
+def construct_parametric_path(scfg, paths, grammar_rules_map, read_leaves=True):
+	"""
+	Given an SCFG and a list of paths obtained by reconstruction,
+	compute the parse trees and then give the intersection.
+	"""
+	# compute parse trees
+	parse_trees = []
+	for (path_index, path) in enumerate(paths):
+		print("="*100)
+		print("constructing parse tree for path")
+		print(path)
+
+		parse_tree = ParseTree(path, grammar_rules_map, scfg.starting_vertices)
+
+		parse_trees.append(parse_tree)
+		generated_path = parse_tree._path_progress
+
+		print("path generated by parse tree:")
+		print(generated_path)
+
+	# intersect the parse trees
+	intersection = parse_trees[0].intersect(parse_trees[1:])
+	if read_leaves:
+		# read the parametric path from the intersection
+		parametric_path = []
+		intersection.leaves_to_left_right_sequence(intersection._root_vertex, parametric_path)
+		return parametric_path
+	else:
+		return intersection
+
 
 def compute_intersection(s, instrumentation_point_id):
 	"""
@@ -901,11 +1009,10 @@ where observation.id == ?
 
 	# construct the scfg of the function from which the observation came
 	scfg = construct_function_scfg(function_name)
-
 	# derive a rule system from the scfg
 	grammar_rules_map = scfg.derive_grammar()
 
-	"""# get all existing search trees for the instrumentation point ID we have
+	# get all existing search trees for the instrumentation point ID we have
 	search_trees = cursor.execute("select * from search_tree where instrumentation_point = ?", [instrumentation_point_id]).fetchall()
 
 	if len(search_trees) > 0:
@@ -929,8 +1036,18 @@ where observation.id == ?
 		if not(root_observation_id):
 			# there were search trees for this instrumentation point, but none had a root we could use
 			# so now we construct a new search tree whose root is s[0]
+			# we then attach condition_sequence to the new leaf node
 			print("no suitable search tree found - constructing a new one")
-			construct_new_search_tree(connection, cursor, s[0], s[1:], instrumentation_point_id)
+			# reconstruct the paths, compute the intersection and convert the resulting parametric path
+			# into a condition sequence
+			#paths = reconstruct_paths(cursor, scfg, s)
+			#parametric_path = construct_parametric_path(scfg, paths, grammar_rules_map)
+
+			#print("derived parametric path from observations:")
+			#print(parametric_path)
+
+			#condition_sequence = path_to_condition_sequence(cursor, parametric_path)
+			condition_sequence = construct_new_search_tree(connection, cursor, scfg, s[0], s[1:], instrumentation_point_id)
 
 		else:
 			print("suitable search tree found - attempting traversal")
@@ -941,6 +1058,9 @@ where observation.id == ?
 			# here, we iterate until there are no observations remaining
 			# each iteration, we go through the remaining observations and see if we can traverse the tree further
 			parent_vertex_id = root_vertex_id
+			nothing_added = True
+			most_recent_id = None
+
 			while len(s) > 0:
 
 				print("remaining observations %s" % str(s))
@@ -962,74 +1082,150 @@ where observation.id == ?
 					s.remove(obs)
 					# move to the next vertex
 					parent_vertex_id = next_vertex[0]
+					# if we make it to the end of the loop without hitting a leaf, we'll need to remember the ID of the
+					# vertex we reached so we can get its intersection
+					most_recent_id = parent_vertex_id
 				else:
+					nothing_added = False
 					# there's no vertex we can follow with the observations we have
 					# the only way to continue is to extend the tree
-					# we choose the first element from the remaining set
+					# we choose the first element from the remaining set of observations as a starting point
 					print("can't progress! doing insertion for observation id %i with parent vertex %i" % (s[0], parent_vertex_id))
+
+					# we take the intersection stored at the leaf we found (guaranteed to exist)
+					intersection_condition_sequence = cursor.execute(
+"""
+select intersection.condition_sequence_string from 
+(search_tree_vertex inner join intersection on intersection.id == search_tree_vertex.intersection)
+where search_tree_vertex.id = ?
+""",
+						[parent_vertex_id]
+					).fetchall()[0][0]
+					intersection_condition_sequence = json.loads(intersection_condition_sequence)
+					deserialised_condition_sequence = map(deserialise_condition, intersection_condition_sequence)
+					deserialised_condition_sequence = deserialised_condition_sequence[1:]
+
+					instrumentation_point_path_length = int(
+						cursor.execute(
+							"select reaching_path_length from instrumentation_point where id = ?",
+							[instrumentation_point_id]
+						).fetchall()[0][0]
+					)
+
+					print("deserialised condition sequence")
+					print(deserialised_condition_sequence)
+
+					# we reconstruct the path through the scfg based on this condition sequence
+					parametric_path = edges_from_condition_sequence(scfg, deserialised_condition_sequence, instrumentation_point_path_length)
+
+					print("parametric path derived is")
+					print(parametric_path)
+
+					print("building parametric parse tree")
+					parametric_parse_tree = ParseTree(parametric_path, grammar_rules_map, scfg.starting_vertices, parametric=True)
+
+					# we now need to form the intersection parse tree of the remaining observations,
+					# then intersect that with the parse tree from the existing subpath of the search tree
+					# we then convert that to a condition sequence, and associated this sequence with the new leaf
+					# of the search tree
+
+					# TODO: compute the intersection for every new vertex
+					# by doing this one vertex at a time, we only ever intersect two parse trees,
+					# so it should be reasonably efficient.
+
+					"""paths = reconstruct_paths(cursor, scfg, s)
+					remaining_parametric_path = construct_parametric_path(scfg, paths, grammar_rules_map)
+					remaining_parse_tree = ParseTree(remaining_parametric_path, grammar_rules_map, scfg.starting_vertices, parametric=True)
+
+					print("computing intersection of existing and remaining parse trees")
+					intersection_remaining_existing = parametric_parse_tree.intersect([remaining_parse_tree])
+
+					print("new parse tree")
+					print(intersection_remaining_existing)
+
+					new_path = intersection_remaining_existing.read_leaves()
+					new_condition_sequence = path_to_condition_sequence(cursor, new_path)
+
+					print(new_condition_sequence)
+
+					# check whether we need to add this intersection
+					existing_intersection = cursor.execute(
+						"select id from intersection where condition_sequence_string = ?",
+						[condition_sequence_string]
+					).fetchall()
+					if len(existing_intersection) > 0:
+						intersection_id = existing_intersection[0][0]
+					else:
+						cursor.execute("insert into intersection (condition_sequence_string) values(?)", [condition_sequence_string])
+						intersection_id = cursor.lastrowid
+
 					# add the new path
-					cursor.execute("insert into search_tree_vertex (observation, start_of_path, parent_vertex) values(?, -1, ?)", [s[0], parent_vertex_id])
+					cursor.execute(
+						"insert into search_tree_vertex (observation, intersection, parent_vertex) values(?, ?, ?)",
+						[s[0], intersection_id, parent_vertex_id]
+					)
 					starting_vertex = cursor.lastrowid
 					# remove the observation we've just used
 					s.remove(s[0])
+					# compute the condition sequences of the remaining intersections"""
+
+					previous_intersection_result = parametric_parse_tree
+
+					# acts as a map from observation id index to intersection
+					intersections = [parametric_parse_tree]
+					for obs in s:
+						path = reconstruct_path(cursor, scfg, obs)
+						new_parse_tree = ParseTree(path, scfg.derive_grammar(), scfg.starting_vertices, parametric=True)
+						new_intersection = previous_intersection_result.intersect([new_parse_tree])
+						intersections.append(new_intersection)
+
+					condition_sequences = []
+					for intersection in intersections:
+						parametric_path = intersection.read_leaves()
+						condition_sequences.append(path_to_condition_sequence(cursor, parametric_path))
+
+					print(condition_sequences)
+
+
 					print("adding a new path for remaining observations %s" % str(s))
-					insert_observations_from_vertex(connection, cursor, s, starting_vertex)
+					insert_observations_from_vertex(connection, cursor, s, parent_vertex_id, condition_sequences)
+
+					# return the last condition sequence we computed - this is from the leaf
+					condition_sequence = condition_sequences[-1]
 					break
 
+			if nothing_added:
+				print("intersection already exists in database - no need to compute it")
+				condition_sequence = cursor.execute(
+"""
+select intersection.condition_sequence_string from
+(intersection inner join search_tree_vertex on search_tree_vertex.intersection = intersection.id)
+where search_tree_vertex.id = ?
+""",
+					[most_recent_id]
+				).fetchall()[0][0]
+				condition_sequence = json.loads(condition_sequence)
 
 	else:
 		# no search tree was found for this instrumentation point
-		print("no search tree found for observation sequence %s - constructing a new one" % str(s))
-		new_tree_id = construct_new_search_tree(connection, cursor, s[0], s[1:], instrumentation_point_id)
+		# compute the intersection, then construct the tree and add a link to the intersection
+		# to the leaf vertex
+		print("no search tree found for observation sequence %s - constructing intersection, then a new tree" % str(s))
 
 		# if we didn't find a search tree, then the intersection isn't computed yet (since we check
 		# for search trees whose roots are any element in the list of observations we have).
+		# once the search tree is constructed, condition_sequence will be attached to the new leaf node
 
-		paths = reconstruct_paths(cursor, scfg, s)
+		# reconstruct the paths, compute the intersection and convert the resulting parametric path
+		# into a condition sequence
+		#paths = reconstruct_paths(cursor, scfg, s)
+		#parametric_path = construct_parametric_path(scfg, paths, grammar_rules_map)
 
-		parse_trees = []
-		for (path_index, path) in enumerate(paths):
-			print("="*100)
-			print("constructing parse tree for path")
-			print(path)
+		#print("derived parametric path from observations:")
+		#print(parametric_path)
 
-			parse_tree = ParseTree(path, grammar_rules_map, scfg.starting_vertices)
-
-			parse_trees.append(parse_tree)
-			generated_path = parse_tree._path_progress
-
-			print("path generated by parse tree:")
-			print(generated_path)
-
-		intersection = parse_trees[0].intersect(parse_trees[1:])
-		parametric_path = []
-		# will populate parametric_path with the path read off the intersection parse tree
-		intersection.leaves_to_left_right_sequence(intersection._root_vertex, parametric_path)
-
-		condition_sequence = path_to_condition_sequence(parametric_path)"""
-
-	paths = reconstruct_paths(cursor, scfg, s)
-
-	parse_trees = []
-	for (path_index, path) in enumerate(paths):
-		print("="*100)
-		print("constructing parse tree for path")
-		print(path)
-
-		parse_tree = ParseTree(path, grammar_rules_map, scfg.starting_vertices)
-
-		parse_trees.append(parse_tree)
-		generated_path = parse_tree._path_progress
-
-		print("path generated by parse tree:")
-		print(generated_path)
-
-	intersection = parse_trees[0].intersect(parse_trees[1:])
-	parametric_path = []
-	# will populate parametric_path with the path read off the intersection parse tree
-	intersection.leaves_to_left_right_sequence(intersection._root_vertex, parametric_path)
-
-	condition_sequence = path_to_condition_sequence(cursor, parametric_path)
+		#condition_sequence = path_to_condition_sequence(cursor, parametric_path)
+		condition_sequence = construct_new_search_tree(connection, cursor, scfg, s[0], s[1:], instrumentation_point_id)
 
 	connection.close()
 
