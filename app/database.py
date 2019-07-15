@@ -1040,13 +1040,6 @@ where observation.id == ?
 			print("no suitable search tree found - constructing a new one")
 			# reconstruct the paths, compute the intersection and convert the resulting parametric path
 			# into a condition sequence
-			#paths = reconstruct_paths(cursor, scfg, s)
-			#parametric_path = construct_parametric_path(scfg, paths, grammar_rules_map)
-
-			#print("derived parametric path from observations:")
-			#print(parametric_path)
-
-			#condition_sequence = path_to_condition_sequence(cursor, parametric_path)
 			condition_sequence = construct_new_search_tree(connection, cursor, scfg, s[0], s[1:], instrumentation_point_id)
 
 		else:
@@ -1129,46 +1122,6 @@ where search_tree_vertex.id = ?
 					# we then convert that to a condition sequence, and associated this sequence with the new leaf
 					# of the search tree
 
-					# TODO: compute the intersection for every new vertex
-					# by doing this one vertex at a time, we only ever intersect two parse trees,
-					# so it should be reasonably efficient.
-
-					"""paths = reconstruct_paths(cursor, scfg, s)
-					remaining_parametric_path = construct_parametric_path(scfg, paths, grammar_rules_map)
-					remaining_parse_tree = ParseTree(remaining_parametric_path, grammar_rules_map, scfg.starting_vertices, parametric=True)
-
-					print("computing intersection of existing and remaining parse trees")
-					intersection_remaining_existing = parametric_parse_tree.intersect([remaining_parse_tree])
-
-					print("new parse tree")
-					print(intersection_remaining_existing)
-
-					new_path = intersection_remaining_existing.read_leaves()
-					new_condition_sequence = path_to_condition_sequence(cursor, new_path)
-
-					print(new_condition_sequence)
-
-					# check whether we need to add this intersection
-					existing_intersection = cursor.execute(
-						"select id from intersection where condition_sequence_string = ?",
-						[condition_sequence_string]
-					).fetchall()
-					if len(existing_intersection) > 0:
-						intersection_id = existing_intersection[0][0]
-					else:
-						cursor.execute("insert into intersection (condition_sequence_string) values(?)", [condition_sequence_string])
-						intersection_id = cursor.lastrowid
-
-					# add the new path
-					cursor.execute(
-						"insert into search_tree_vertex (observation, intersection, parent_vertex) values(?, ?, ?)",
-						[s[0], intersection_id, parent_vertex_id]
-					)
-					starting_vertex = cursor.lastrowid
-					# remove the observation we've just used
-					s.remove(s[0])
-					# compute the condition sequences of the remaining intersections"""
-
 					previous_intersection_result = parametric_parse_tree
 
 					# acts as a map from observation id index to intersection
@@ -1218,13 +1171,6 @@ where search_tree_vertex.id = ?
 
 		# reconstruct the paths, compute the intersection and convert the resulting parametric path
 		# into a condition sequence
-		#paths = reconstruct_paths(cursor, scfg, s)
-		#parametric_path = construct_parametric_path(scfg, paths, grammar_rules_map)
-
-		#print("derived parametric path from observations:")
-		#print(parametric_path)
-
-		#condition_sequence = path_to_condition_sequence(cursor, parametric_path)
 		condition_sequence = construct_new_search_tree(connection, cursor, scfg, s[0], s[1:], instrumentation_point_id)
 
 	connection.close()
