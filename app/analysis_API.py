@@ -1,6 +1,6 @@
 import database
 import json
-
+from app import app_object
 
 @app_object.route("/client/list_functions_2")
 def list_functions_2():
