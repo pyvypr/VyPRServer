@@ -101,3 +101,25 @@ CREATE TABLE path_condition (
     foreign key(function_call) references function_call(id),
     foreign key(next_path_condition) references path_condition(id)
 );
+CREATE TABLE search_tree (
+    id integer not null primary key autoincrement,
+    root_vertex integer not null,
+    instrumentation_point integer not null,
+    foreign key(root_vertex) references search_tree_vertex(id),
+    foreign key(instrumentation_point) references instrumentation_point(id)
+);
+
+CREATE TABLE search_tree_vertex (
+    id integer not null primary key autoincrement,
+    observation integer not null,
+    intersection integer,
+    parent_vertex integer not null,
+    foreign key(observation) references observation(id),
+    foreign key(intersection) references intersection(id),
+    foreign key(parent_vertex) references search_tree_vertex(id)
+);
+
+CREATE TABLE intersection (
+    id integer not null primary key autoincrement,
+    condition_sequence_string text not null
+);

@@ -2,7 +2,6 @@
 Module to define the routes in this test service.
 """
 
-# Note: we import the instrumented version of the test_functions module
 from app import app_object
 import datetime
 from flask import request, jsonify, render_template
@@ -11,10 +10,15 @@ import pickle
 import database
 import sys
 
+# we import VyPR to help us with deserialising some contents of the verdict database
 sys.path.append("VyPR/")
 
 from formula_building.formula_building import *
 from monitor_synthesis.formula_tree import *
+
+"""
+Utility functions - these should be moved to another module.
+"""
 
 def friendly_bind_variable(bind_variable):
 	if type(bind_variable) is StaticState:
@@ -38,6 +42,65 @@ def get_bind_variable_names(bind_variables):
 def friendly_variable_in_formula(variable):
 	return "%s" % variable._bind_variable_name
 
+def deserialise_property_tree(property_tree, path=[]):
+	"""
+	recurse on the property tree to deserialise the properties that are stored there.
+	"""
+	if len(path) == 0:
+		# we're at the root
+		for key in property_tree.keys():
+			property_tree[key] = deserialise_property_tree(property_tree, [key])
+
+		return property_tree
+	else:
+		# we have a path, so go down to the subtree
+		subtree = property_tree[path[0]]
+		for item in path[1:]:
+			subtree = subtree[item]
+
+		if type(subtree) is tuple:
+			# if the subtree is just a tuple, we're at a leaf
+			subtree = list(subtree)
+			property_dictionary = json.loads(subtree[3])
+			TransitionDurationInInterval.__repr__ = friendly_atom
+			StaticState.__repr__ = friendly_variable_in_formula
+			StaticTransition.__repr__ = friendly_variable_in_formula
+			subtree.append(str(pickle.loads(property_dictionary["property"])))
+			subtree.append("%s" % ", ".join(map(friendly_bind_variable, pickle.loads(property_dictionary["bind_variables"]).values())))
+			subtree.append(", ".join(get_bind_variable_names(pickle.loads(property_dictionary["bind_variables"]).values())))
+
+			return subtree
+		elif type(subtree) is list:
+			for n in range(len(subtree)):
+				subtree[n] = deserialise_property_tree(property_tree, path + [n])
+			return subtree
+		else:
+			# if not, we have a further subtree
+			for next_item in subtree.keys():
+				subtree[next_item] = deserialise_property_tree(property_tree, path + [next_item])
+
+			return subtree
+
+def deserialise_property(dictionary):
+	"""
+	Given the bind variables and formula of a property, use the classes from VyPR to deserialise it and
+	form its string representation.
+	"""
+	# override the string representation methods
+	TransitionDurationInInterval.__repr__ = friendly_atom
+	StaticState.__repr__ = friendly_variable_in_formula
+	StaticTransition.__repr__ = friendly_variable_in_formula
+
+	# deserialise
+	return {
+		"property" : str(pickle.loads(dictionary["property"])),
+		"bind_variables" : "%s" % ", ".join(map(friendly_bind_variable, pickle.loads(dictionary["bind_variables"]).values())),
+		"bind_variable_names" : ", ".join(get_bind_variable_names(pickle.loads(dictionary["bind_variables"]).values()))
+	}
+
+"""
+Verdict storage end points for use by the VyPR monitoring machinery.
+"""
 
 @app_object.route("/register_verdict/", methods=["post"])
 def register_verdict():
@@ -115,61 +178,9 @@ def store_branching_condition():
 
 	return str(new_id)
 
-def deserialise_property_tree(property_tree, path=[]):
-	"""
-	recurse on the property tree to deserialise the properties that are stored there.
-	"""
-	if len(path) == 0:
-		# we're at the root
-		for key in property_tree.keys():
-			property_tree[key] = deserialise_property_tree(property_tree, [key])
-
-		return property_tree
-	else:
-		# we have a path, so go down to the subtree
-		subtree = property_tree[path[0]]
-		for item in path[1:]:
-			subtree = subtree[item]
-
-		if type(subtree) is tuple:
-			# if the subtree is just a tuple, we're at a leaf
-			subtree = list(subtree)
-			property_dictionary = json.loads(subtree[3])
-			TransitionDurationInInterval.__repr__ = friendly_atom
-			StaticState.__repr__ = friendly_variable_in_formula
-			StaticTransition.__repr__ = friendly_variable_in_formula
-			subtree.append(str(pickle.loads(property_dictionary["property"])))
-			subtree.append("%s" % ", ".join(map(friendly_bind_variable, pickle.loads(property_dictionary["bind_variables"]).values())))
-			subtree.append(", ".join(get_bind_variable_names(pickle.loads(property_dictionary["bind_variables"]).values())))
-
-			return subtree
-		elif type(subtree) is list:
-			for n in range(len(subtree)):
-				subtree[n] = deserialise_property_tree(property_tree, path + [n])
-			return subtree
-		else:
-			# if not, we have a further subtree
-			for next_item in subtree.keys():
-				subtree[next_item] = deserialise_property_tree(property_tree, path + [next_item])
-
-			return subtree
-
-def deserialise_property(dictionary):
-	"""
-	Given the bind variables and formula of a property, use the classes from VyPR to deserialise it and
-	form its string representation.
-	"""
-	# override the string representation methods
-	TransitionDurationInInterval.__repr__ = friendly_atom
-	StaticState.__repr__ = friendly_variable_in_formula
-	StaticTransition.__repr__ = friendly_variable_in_formula
-
-	# deserialise
-	return {
-		"property" : str(pickle.loads(dictionary["property"])),
-		"bind_variables" : "%s" % ", ".join(map(friendly_bind_variable, pickle.loads(dictionary["bind_variables"]).values())),
-		"bind_variable_names" : ", ".join(get_bind_variable_names(pickle.loads(dictionary["bind_variables"]).values()))
-	}
+"""
+Functions used as end points for the web-based analysis tool.
+"""
 
 @app_object.route("/", methods=["get"])
 def index():
@@ -182,16 +193,6 @@ def specification():
 	# representation of the property
 
 	functions = deserialise_property_tree(functions)
-
-	"""for n in range(len(functions)):
-		functions[n] = list(functions[n])
-		property_dictionary = json.loads(functions[n][3])
-		TransitionDurationInInterval.__repr__ = friendly_atom
-		functions[n].append(pickle.loads(property_dictionary["property"]))
-		# override the representation functions
-		StaticState.__repr__ = friendly_variable_in_formula
-		StaticTransition.__repr__ = friendly_variable_in_formula
-		functions[n].append("for every %s" % ", for every ".join(map(friendly_bind_variable, pickle.loads(property_dictionary["bind_variables"]).values())))"""
 
 	return render_template("by_specification.html", functions=json.dumps(functions))
 
@@ -228,7 +229,6 @@ def list_function_calls_from_verdict_and_path(verdict, path):
 	template_with_data = render_template("function_list.html", data=map_structure, truth_map={1:"Satisfaction", 0:"Violation"})
 
 	return template_with_data
-
 
 
 @app_object.route("/client/list_functions_2")
@@ -286,3 +286,32 @@ def list_atoms_where_verdict(verdict_value):
 @app_object.route("/client/first_observation_of_call_fail/<call_id>/")
 def first_observation_of_call_fail(call_id):
 	return database.first_observation_failed_verdict(call_id)
+
+"""
+Functions used as end points for VyPR-analysis.
+"""
+
+@app_object.route("/list_functions_2")
+def list_functions_2():
+	return database.list_functions2()
+
+@app_object.route("/list_function_calls_f/<function_name>/")
+def list_function_calls_f(function_name):
+	return database.list_calls_function(function_name)
+
+@app_object.route("/get_parametric_path/", methods=["POST"])
+def get_parametric_path():
+	"""
+	A list of observation IDs, along with an instrumentation point ID, will be given in the request body.
+	"""
+	data = json.loads(request.get_data())
+	observation_ids = data["observation_ids"]
+	instrumentation_point_id = data["instrumentation_point_id"]
+
+	print("getting intersection of paths up to observations with IDs %s, based on instrumentation point with ID %i" %\
+		(str(observation_ids), instrumentation_point_id))
+
+	intersection_data = database.compute_intersection(observation_ids, instrumentation_point_id)
+
+	return json.dumps(intersection_data)
+
