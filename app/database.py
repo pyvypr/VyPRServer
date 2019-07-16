@@ -613,3 +613,16 @@ def list_atoms_verdict(verdict_value):
 	atoms=list1.fetchall()
 	connection.close()
 	return json.dumps([dict(f) for f in atoms])
+
+def first_observation_failed_verdict(call_id):
+	#inner join three tables: observation-verdict-function_call
+	#find rows corresponding to the given call_id and with verdict value zero
+	#order by verdict limit 1 in order to find the first one wrt verdicts
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+	list1 = cursor.execute("select observation.id,observation.instrumentation_point,observation.verdict,observation.observed_value,observation.atom_index,observation.previous_condition from (observation inner join verdict on observation.verdict=verdict.id inner join function_call on verdict.function_call=function_call.id) where function_call.id=? and verdict.verdict=0 order by observation.verdict limit 1",[call_id])
+	f=list1.fetchone()
+	connection.close()
+	if f==None: return ("None")
+	return json.dumps([dict(f)])

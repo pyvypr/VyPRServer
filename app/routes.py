@@ -279,6 +279,10 @@ def get_atom_by_id(atom_id):
 def get_atom_by_index(atom_index):
 	return database.get_atom_byindex(atom_index)
 
-@app_object.route("/client/list_atoms_where_verdict/<verdict_value>/") 
+@app_object.route("/client/list_atoms_where_verdict/<verdict_value>/")
 def list_atoms_where_verdict(verdict_value):
 	return database.list_atoms_verdict(verdict_value)
+
+@app_object.route("/client/first_observation_of_call_fail/<call_id>/")
+def first_observation_of_call_fail(call_id):
+	return database.first_observation_failed_verdict(call_id)
