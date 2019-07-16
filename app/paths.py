@@ -423,18 +423,23 @@ def path_to_condition_sequence(cursor, path):
 
 		if type(el) is CFGEdge:
 			if el._operates_on == ["control-flow"]:
-				if type(path[n+1]) is CFGVertex:
-					condition_sequence.append("parameter")
-					if el._condition == 'conditional':
-						condition_sequence.append("exit conditional")
-				else:
-					if el._condition == 'conditional':
-						#index_of_branch_taken = map(lambda edge : edge._condition, el._target_state.edges).index(path[n+1]._condition)
-						#condition_sequence.append(index_of_branch_taken)
-						condition_sequence.append(pickle.dumps(path[n+1]._condition))
+				if n != len(path)-1:
+					if type(path[n+1]) is CFGVertex:
+						condition_sequence.append("parameter")
+						if el._condition == 'conditional':
+							condition_sequence.append("exit conditional")
+					else:
+						if el._condition == 'conditional':
+							#index_of_branch_taken = map(lambda edge : edge._condition, el._target_state.edges).index(path[n+1]._condition)
+							#condition_sequence.append(index_of_branch_taken)
+							condition_sequence.append(pickle.dumps(path[n+1]._condition))
 
-					elif el._condition == 'post-condition':
-						condition_sequence.append("exit conditional")
+						elif el._condition == 'post-condition':
+							condition_sequence.append("exit conditional")
+			elif el._instruction == "loop":
+				condition_sequence.append(pickle.dumps(el._condition))
+			elif el._instruction == "loop-jump":
+				condition_sequence.append(el._condition)
 
 	return condition_sequence
 
