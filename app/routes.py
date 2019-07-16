@@ -230,6 +230,9 @@ def list_function_calls_from_verdict_and_path(verdict, path):
 
 	return template_with_data
 
+"""
+Functions used as end points for VyPR-analysis.
+"""
 
 @app_object.route("/client/list_functions_2")
 def list_functions_2():
@@ -286,18 +289,6 @@ def list_atoms_where_verdict(verdict_value):
 @app_object.route("/client/first_observation_of_call_fail/<call_id>/")
 def first_observation_of_call_fail(call_id):
 	return database.first_observation_failed_verdict(call_id)
-
-"""
-Functions used as end points for VyPR-analysis.
-"""
-
-@app_object.route("/list_functions_2")
-def list_functions_2():
-	return database.list_functions2()
-
-@app_object.route("/list_function_calls_f/<function_name>/")
-def list_function_calls_f(function_name):
-	return database.list_calls_function(function_name)
 
 @app_object.route("/get_parametric_path/", methods=["POST"])
 def get_parametric_path():
