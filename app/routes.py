@@ -254,6 +254,6 @@ def get_parametric_path():
 	print("getting intersection of paths up to observations with IDs %s, based on instrumentation point with ID %i" %\
 		(str(observation_ids), instrumentation_point_id))
 
-	intersection = database.compute_intersection(observation_ids, instrumentation_point_id)
+	intersection_data = database.compute_intersection(observation_ids, instrumentation_point_id)
 
-	return intersection
+	return json.dumps(intersection_data)

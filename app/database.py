@@ -546,6 +546,17 @@ def compute_intersection(s, instrumentation_point_id):
 	connection = get_connection()
 	cursor = connection.cursor()
 
+	instrumentation_point_path_length = int(
+		cursor.execute(
+			"select reaching_path_length from instrumentation_point where id = ?",
+			[instrumentation_point_id]
+		).fetchall()[0][0]
+	)
+
+	# we'll need this at the end when we construct maps from observation ids
+	# to values they give each parameter
+	observation_list_copy = [obs for obs in s]
+
 	# get the name of the function from which the observation came
 	# the route taken through the verdict schema here is the shortest one I can think of
 	function_name = cursor.execute(
@@ -648,13 +659,6 @@ where search_tree_vertex.id = ?
 					deserialised_condition_sequence = map(deserialise_condition, intersection_condition_sequence)
 					deserialised_condition_sequence = deserialised_condition_sequence[1:]
 
-					instrumentation_point_path_length = int(
-						cursor.execute(
-							"select reaching_path_length from instrumentation_point where id = ?",
-							[instrumentation_point_id]
-						).fetchall()[0][0]
-					)
-
 					print("deserialised condition sequence")
 					print(deserialised_condition_sequence)
 
@@ -723,6 +727,37 @@ where search_tree_vertex.id = ?
 		# into a condition sequence
 		condition_sequence = construct_new_search_tree(connection, cursor, scfg, s[0], s[1:], instrumentation_point_id)
 
+	# using condition_sequence, reconstruct the parametric path
+	# then, for each parameter, find its path through the parse tree
+	# then follow this path through the parse tree of each reconstructed path
+	# to determine path parameter values
+
+	print("determining path parameters wrt parametric path %s" % str(condition_sequence))
+
+	final_parametric_path = edges_from_condition_sequence(scfg, condition_sequence[1:], instrumentation_point_path_length)
+	intersection_parse_tree = ParseTree(final_parametric_path, grammar_rules_map, scfg.starting_vertices, parametric=True)
+	paths = reconstruct_paths(cursor, scfg, observation_list_copy)
+	parse_trees = map(lambda path : ParseTree(path, grammar_rules_map, scfg.starting_vertices), paths)
+	parameter_paths = []
+	intersection_parse_tree.get_parameter_paths(intersection_parse_tree._root_vertex, [], parameter_paths)
+	parameter_subtrees = {}
+	for (n, parameter_path) in enumerate(parameter_paths):
+		parameter_subtrees[n] = {}
+	for (m, parse_tree) in enumerate(parse_trees):
+		for (n, parameter_path) in enumerate(parameter_paths):
+			subpath = parse_tree.get_parameter_subtree(parameter_path).read_leaves()
+			print("parameter value for parse tree %i" % m)
+			subpath_condition_sequence = path_to_condition_sequence(cursor, subpath)
+			parameter_subtrees[n][m] = subpath_condition_sequence
+
+	print(parameter_paths)
+
+
+	final_data = {
+		"intersection_condition_sequence" : condition_sequence,
+		"parameter_maps" : parameter_subtrees
+	}
+
 	connection.close()
 
-	return str(condition_sequence)
+	return final_data
