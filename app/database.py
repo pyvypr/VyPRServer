@@ -184,6 +184,8 @@ def insert_verdict(verdict_dictionary):
 		[new_binding_id, verdict, verdict_time_obtained, new_function_call_id, collapsing_atom_index])
 	new_verdict_id = cursor.lastrowid
 
+	atom_to_state_dict_map = verdict_dictionary["verdict"][5]
+
 	for atom_index in observations_map:
 		# for now, without transition input data, we just insert observations
 		# insert observation for this atom_index
@@ -192,6 +194,37 @@ def insert_verdict(verdict_dictionary):
 		cursor.execute("insert into observation (instrumentation_point, verdict, observed_value, previous_condition, atom_index) values(?, ?, ?, ?, ?)",
 			[observations_map[atom_index][1], new_verdict_id, str(observations_map[atom_index][0]), last_condition, atom_index])
 		observation_id = cursor.lastrowid
+
+		# insert assignments (if they don't exist yet), and link them
+		# to the observation we just inserted
+
+		state_dict = atom_to_state_dict_map[atom_index]
+		if state_dict:
+			for var in state_dict.keys():
+				# check if this assignment already exists
+				assignments = cursor.execute(
+					"select id from assignment where variable = ? and value = ?",
+					[var, pickle.dumps(state_dict[var])]
+				).fetchall()
+
+				# either take the existing ID, or insert a new assignment and use the new ID
+				if len(assignments) > 0:
+					# the assignment already exists - get its ID and link it to the observation
+					assignment_id = assignments[0][0]
+				else:
+					# create a new assignment
+					cursor.execute(
+						"insert into assignment (variable, value, type) values(?, ?, ?)",
+						[var, pickle.dumps(state_dict[var]), str(type(state_dict[var]))]
+					)
+					assignment_id = cursor.lastrowid
+
+				# insert the link
+				cursor.execute(
+					"insert into observation_assignment_pair (observation, assignment) values(?, ?)",
+					[observation_id, assignment_id]
+				)
+
 
 	connection.commit()
 
