@@ -540,6 +540,9 @@ def list_calls_httpid(http_request_id,function_id):
 	connection.row_factory = sqlite3.Row
 	cursor = connection.cursor()
 	list1 = cursor.execute("select * from function_call where http_request=? and function=?",[http_request_id,function_id])
+	calls=list1.fetchall()
+	connection.close()
+	return json.dumps([dict(c) for c in calls])
 
 def get_f_byname(function_name):
 	connection = get_connection()
@@ -632,6 +635,106 @@ def first_observation_failed_verdict(call_id):
 	connection.row_factory = sqlite3.Row
 	cursor = connection.cursor()
 	list1 = cursor.execute("select observation.id,observation.instrumentation_point,observation.verdict,observation.observed_value,observation.atom_index,observation.previous_condition from (observation inner join verdict on observation.verdict=verdict.id inner join function_call on verdict.function_call=function_call.id) where function_call.id=? and verdict.verdict=0 order by observation.verdict limit 1",[call_id])
+	f=list1.fetchone()
+	connection.close()
+	if f==None: return ("None")
+	return json.dumps([dict(f)])
+
+def get_property_byhash(hash):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+	list1 = cursor.execute("select * from property where hash like ?",[hash])
+	f=list1.fetchone()
+	connection.close()
+	if f==None: return ("None")
+	return json.dumps([dict(f)])
+
+def get_point_byid(id):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+	list1 = cursor.execute("select * from instrumentation_point where id=?",[id])
+	f=list1.fetchone()
+	connection.close()
+	if f==None: return ("None")
+	return json.dumps([dict(f)])
+
+def get_binding_byid(id):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+	list1 = cursor.execute("select * from binding where id=?",[id])
+	f=list1.fetchone()
+	connection.close()
+	if f==None: return ("None")
+	return json.dumps([dict(f)])
+
+def get_observation_byid(id):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+	list1 = cursor.execute("select * from observation where id=?",[id])
+	f=list1.fetchone()
+	connection.close()
+	if f==None: return ("None")
+	return json.dumps([dict(f)])
+
+def get_assignment_byid(id):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+	list1 = cursor.execute("select * from assignment where id=?",[id])
+	f=list1.fetchone()
+	connection.close()
+	if f==None: return ("None")
+	return json.dumps([dict(f)])
+
+def get_pcs_byid(id):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+	list1 = cursor.execute("select * from path_condition_structure where id=?",[id])
+	f=list1.fetchone()
+	connection.close()
+	if f==None: return ("None")
+	return json.dumps([dict(f)])
+
+def get_pathcon_byid(id):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+	list1 = cursor.execute("select * from path_condition where id=?",[id])
+	f=list1.fetchone()
+	connection.close()
+	if f==None: return ("None")
+	return json.dumps([dict(f)])
+
+def get_searchtree_byid(id):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+	list1 = cursor.execute("select * from search_tree where id=?",[id])
+	f=list1.fetchone()
+	connection.close()
+	if f==None: return ("None")
+	return json.dumps([dict(f)])
+
+def get_searchtreevertex_byid(id):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+	list1 = cursor.execute("select * from search_tree_vertex where id=?",[id])
+	f=list1.fetchone()
+	connection.close()
+	if f==None: return ("None")
+	return json.dumps([dict(f)])
+
+def get_intersection_byid(id):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+	list1 = cursor.execute("select * from intersection where id=?",[id])
 	f=list1.fetchone()
 	connection.close()
 	if f==None: return ("None")
@@ -753,7 +856,7 @@ where observation.id == ?
 					# we take the intersection stored at the leaf we found (guaranteed to exist)
 					intersection_condition_sequence = cursor.execute(
 """
-select intersection.condition_sequence_string from 
+select intersection.condition_sequence_string from
 (search_tree_vertex inner join intersection on intersection.id == search_tree_vertex.intersection)
 where search_tree_vertex.id = ?
 """,
