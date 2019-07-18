@@ -68,11 +68,11 @@ def get_instrumentation_point_by_id(point_id):
 
 @app_object.route("/client/get_binding_by_id/<binding_id>/")
 def get_binding_by_id(binding_id):
-	return database.get_binding_byid(point_id)
+	return database.get_binding_byid(binding_id)
 
-@app_object.route("/client/get_observation_by_id/<binding_id>/")
-def get_observation_by_id(binding_id):
-	return database.get_observation_byid(point_id)
+@app_object.route("/client/get_observation_by_id/<observation_id>/")
+def get_observation_by_id(observation_id):
+	return database.get_observation_byid(observation_id)
 
 @app_object.route("/client/get_assignment_by_id/<assignment_id>/")
 def get_assignment_by_id(assignment_id):
@@ -97,3 +97,15 @@ def get_search_tree_vertex_by_id(vertex_id):
 @app_object.route("/client/get_intersection_by_id/<intersection_id>/")
 def get_intersection_by_id(intersection_id):
 	return database.get_intersection_byid(intersection_id)
+
+@app_object.route("/client/list_assignments_given_observation/<observation_id>/")
+def list_assignments_given_observation(observation_id):
+	return database.list_assignments_obs(observation_id)
+
+@app_object.route("/client/list_verdicts_by_value/<verdict>/")
+def list_verdicts_by_value(verdict):
+	return database.list_verdicts_byvalue(verdict)
+
+@app_object.route("/client/list_verdicts_function_property_by_value/<verdict>/")
+def list_verdicts_function_property_by_value(verdict):
+	return database.list_verdicts_function_property_byvalue(verdict)
