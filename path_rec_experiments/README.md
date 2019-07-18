@@ -1,6 +1,6 @@
 # Path Reconstruction Experiments for VyPR2
 
-In this directory can be found scripts used for path reconstruction experiments.
+In this directory can be found scripts used for path reconstruction experiments.  They should be used in the root of the verdict server (most, if not all, will depend on VyPR, so will require a local release of VyPR).
 
 These scripts are not really in any official release of VyPR, so they're not wrapped up yet in nice and easy-to-follow tutorials.
 That's something for the future.
