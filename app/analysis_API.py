@@ -101,3 +101,7 @@ def get_intersection_by_id(intersection_id):
 @app_object.route("/client/get_assignment_dict_from_observation/<observation_id>/")
 def get_assignment_dict_from_observation(observation_id):
 	return database.get_assignment_dict_from_observation(observation_id)
+
+@app_object.route("/client/get_path_conditions_from_observation/<observation_id>/")
+def get_path_conditions_from_observation(observation_id):
+	return database.get_path_conditions_from_observation(observation_id)
