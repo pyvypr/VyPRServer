@@ -801,6 +801,39 @@ where observation.id = ?
 Path reconstruction functions.
 """
 
+def get_path_conditions_from_observation(id):
+	"""
+	Given an observation ID, find the sequence of path conditions leading to it.
+	To do this, we have to go backwards, since we first find the path condition before the observation,
+	and then find each successive path condition until we reach the beginning (no previous condition).
+	"""
+	connection = get_connection()
+	cursor = connection.cursor()
+	result = cursor.execute(
+"""
+select path_condition.id, path_condition.serialised_condition from
+(path_condition inner join observation
+	on path_condition.id = observation.previous_condition)
+where observation.id = ?
+""",
+		[id]
+	).fetchone()
+
+	while result:
+
+		previous_path_condition = result[0]
+		try:
+			reversed_path_conditions.append(result[1])
+		except:
+			reversed_path_conditions = [result[1]]
+		print("checking for path_condition with next_path_condition = %i" % previous_path_condition)
+		result = cursor.execute(
+			"select id, serialised_condition from path_condition where next_path_condition = ?",
+			[previous_path_condition]
+		).fetchone()
+
+	return json.dumps(reversed_path_conditions[::-1])
+
 
 def compute_intersection(s, instrumentation_point_id):
 	"""
