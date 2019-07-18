@@ -97,3 +97,7 @@ def get_search_tree_vertex_by_id(vertex_id):
 @app_object.route("/client/get_intersection_by_id/<intersection_id>/")
 def get_intersection_by_id(intersection_id):
 	return database.get_intersection_byid(intersection_id)
+
+@app_object.route("/client/get_assignment_dict_from_observation/<observation_id>/")
+def get_assignment_dict_from_observation(observation_id):
+	return database.get_assignment_dict_from_observation(observation_id)

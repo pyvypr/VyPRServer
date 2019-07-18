@@ -773,6 +773,30 @@ def get_intersection_byid(id):
 	if f==None: return ("None")
 	return json.dumps([dict(f)])
 
+def get_assignment_dict_from_observation(id):
+	"""
+	Given an observation ID, construct a dictionary mapping
+	variable names to values collected during monitoring.
+	"""
+	connection = get_connection()
+	cursor = connection.cursor()
+	list1 = cursor.execute(
+"""
+select assignment.variable, assignment.value, assignment.type from
+((observation inner join observation_assignment_pair
+		on observation_assignment_pair.observation == observation.id)
+		inner join assignment
+			on assignment.id == observation_assignment_pair.assignment)
+where observation.id = ?
+""",
+		[id]
+	).fetchall()
+	final_dict = {}
+	for row in list1:
+		final_dict[row[0]] = (row[1], row[2])
+	connection.close()
+	return json.dumps(final_dict)
+
 """
 Path reconstruction functions.
 """
