@@ -801,6 +801,23 @@ where observation.id = ?
 Path reconstruction functions.
 """
 
+def get_serialised_condition_from_id(id):
+	"""
+	Given an ID, get the serialised condition that can be used in path reconstruction.
+	"""
+	connection = get_connection()
+	cursor = connection.cursor()
+
+	serialised_condition = cursor.execute(
+		"select serialised_condition from path_condition_structure where id = ?",
+		[id]
+	).fetchone()[0]
+
+	connection.close()
+
+	return serialised_condition
+
+
 def get_path_conditions_from_observation(id):
 	"""
 	Given an observation ID, find the sequence of path conditions leading to it.
@@ -832,7 +849,9 @@ where observation.id = ?
 			[previous_path_condition]
 		).fetchone()
 
-	return json.dumps(reversed_path_conditions[::-1])
+	connection.close()
+
+	return json.dumps(map(get_serialised_condition_from_id, reversed_path_conditions[::-1]))
 
 
 def compute_intersection(s, instrumentation_point_id):
