@@ -670,7 +670,7 @@ def get_intersection_byid(id):
 	query_string="select * from intersection where id=?"
 	return query_db_one(query_string,[id])
 
-def list_assignment_obs(observation_id):
+def list_assignments_obs(observation_id):
 	query_string="""select assignment.id, assignment.variable,assignment.value,assignment.type
 	from assignment inner join observation_assignment_pair on assignment.id=observation_assignment_pair.assignment
 	where observation_assignment_pair.observation =?"""
@@ -688,6 +688,10 @@ def list_verdicts_function_property_byvalue(value):
 	inner join function where function_call.function=function.id)
 	where verdict.verdict=?"""
 	return query_db_all(query_string,[value])
+
+def list_verdicts_call(call_id):
+	query_string="select * from verdict where function_call=?"
+	retrun query_db_all(query_string,[call_id])
 
 def get_assignment_dict_from_observation(id):
 	"""
