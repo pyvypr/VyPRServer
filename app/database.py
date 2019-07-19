@@ -670,7 +670,7 @@ def get_intersection_byid(id):
 	query_string="select * from intersection where id=?"
 	return query_db_one(query_string,[id])
 
-def list_assignment_obs(observation_id):
+def list_assignments_obs(observation_id):
 	query_string="""select assignment.id, assignment.variable,assignment.value,assignment.type
 	from assignment inner join observation_assignment_pair on assignment.id=observation_assignment_pair.assignment
 	where observation_assignment_pair.observation =?"""
