@@ -540,238 +540,154 @@ def get_http_request_function_call_pairs(verdict, path):
 
 	return final_map
 
-def list_functions2():
+#these two functions search the database for the given query
+#the difference is that query_db_one returns one row of the database
+#while query_db_all returns all the rows that match the query
+def query_db_one(query_string,arg):
 	connection = get_connection()
 	connection.row_factory = sqlite3.Row
 	cursor = connection.cursor()
+	list1 = cursor.execute(query_string,arg)
+	f=list1.fetchone()
+	connection.close()
+	if f==None: return ("None")
+	return json.dumps([dict(f)])
 
-	list1 = cursor.execute("select * from function;")
+def query_db_all(query_string,arg):
+	connection = get_connection()
+	connection.row_factory = sqlite3.Row
+	cursor = connection.cursor()
+	list1 = cursor.execute(query_string,arg)
 	functions=list1.fetchall()
 	connection.close()
+	if functions==None: return("None")
 	return json.dumps( [dict(f) for f in functions] )
 
+def list_functions2():
+	query_string="select * from function;"
+	return query_db_all(query_string)
+
 def list_calls_function(function_name):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from (function inner join function_call on function.id=function_call.function) where function.fully_qualified_name like ?",[function_name])
-	functions=list1.fetchall()
-	connection.close()
-	return json.dumps([dict(f) for f in functions])
+	query_string="select * from (function inner join function_call on function.id=function_call.function) where function.fully_qualified_name like ?"
+	return query_db_all(query_string,[function_name])
 
 def list_calls_http(http_request_id):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from (http_request inner join function_call on http_request.id=function_call.http_request) where http_request.id=?",[http_request_id])
-	functions=list1.fetchall()
-	connection.close()
-	return json.dumps([dict(f) for f in functions])
+	query_string="select * from (http_request inner join function_call on http_request.id=function_call.http_request) where http_request.id=?"
+	return query_db_all(query_string,[http_request_id])
 
 def list_calls_httpid(http_request_id,function_id):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from function_call where http_request=? and function=?",[http_request_id,function_id])
-	calls=list1.fetchall()
-	connection.close()
-	return json.dumps([dict(c) for c in calls])
+	query_string="select * from function_call where http_request=? and function=?"
+	return query_db_all(query_string,[http_request_id,function_id])
 
 def get_f_byname(function_name):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from function where fully_qualified_name like ?",[function_name])
-	f=list1.fetchone()
-	connection.close()
-	return json.dumps([dict(f)])
-
+	query_string="select * from function where fully_qualified_name like ?"
+	return query_db_one(query_string,[function_name])
 
 def get_f_byid(function_id):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from function where id like ?",[function_id])
-	f=list1.fetchone()
-	connection.close()
-	return json.dumps([dict(f)])
-
+	query_string="select * from function where id like ?"
+	return query_db_one(query_string,[function_id])
 
 def get_http_byid(http_request_id):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from http_request where id=?",[http_request_id])
-	f=list1.fetchone()
-	connection.close()
-	return json.dumps([dict(f)])
+	query_string="select * from http_request where id=?"
+	return query_db_one(query_string,[http_request_id])
 
 def get_call_byid(call_id):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from function_call where id=?",[call_id])
-	f=list1.fetchone()
-	connection.close()
-	return json.dumps([dict(f)])
+	query_string="select * from function_call where id=?"
+	return query_db_one(query_string,[call_id])
 
 def get_http_bytime(time):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from http_request where time_of_request=?",[time])
-	f=list1.fetchone()
-	connection.close()
-	return json.dumps([dict(f)])
+	query_string="select * from http_request where time_of_request=?"
+	return query_db_one(query_string,[time])
 
 def get_verdict_byid(verdict_id):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from verdict where id=?",[verdict_id])
-	f=list1.fetchone()
-	connection.close()
-	return json.dumps([dict(f)])
+	query_string="select * from verdict where id=?"
+	return query_db_one(query_string,[verdict_id])
 
 def get_atom_byid(atom_id):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from atom where id=?",[atom_id])
-	f=list1.fetchone()
-	connection.close()
-	return json.dumps([dict(f)])
+	query_string="select * from atom where id=?"
+	return query_db_one(query_string,[atom_id])
 
 def get_atom_byindex(atom_index):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from atom where index_in_atoms=?",[atom_index])
-	f=list1.fetchone()
-	connection.close()
-	return json.dumps([dict(f)])
+	query_string="select * from atom where index_in_atoms=?"
+	return query_db_one(query_string,[atom_index])
 
 def list_atoms_verdict(verdict_value):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select atom.id,atom.property_hash,atom.serialised_structure,atom.index_in_atoms from (verdict inner join atom on verdict.collapsing_atom=atom.index_in_atoms) where verdict.verdict=?",[verdict_value])
-	atoms=list1.fetchall()
-	connection.close()
-	return json.dumps([dict(f) for f in atoms])
+	query_string="""select atom.id,atom.property_hash,atom.serialised_structure,atom.index_in_atoms
+	from (verdict inner join atom on verdict.collapsing_atom=atom.index_in_atoms)
+	where verdict.verdict=?"""
+	return query_db_all(query_string,[verdict_value])
 
 def first_observation_failed_verdict(call_id):
 	#inner join three tables: observation-verdict-function_call
 	#find rows corresponding to the given call_id and with verdict value zero
 	#order by verdict limit 1 in order to find the first one wrt verdicts
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select observation.id,observation.instrumentation_point,observation.verdict,observation.observed_value,observation.atom_index,observation.previous_condition from (observation inner join verdict on observation.verdict=verdict.id inner join function_call on verdict.function_call=function_call.id) where function_call.id=? and verdict.verdict=0 order by observation.verdict limit 1",[call_id])
-	f=list1.fetchone()
-	connection.close()
-	if f==None: return ("None")
-	return json.dumps([dict(f)])
+	query_string="""select observation.id,observation.instrumentation_point,
+	observation.verdict,observation.observed_value,observation.atom_index,
+	observation.previous_condition from
+	(observation inner join verdict on observation.verdict=verdict.id
+	inner join function_call on verdict.function_call=function_call.id)
+	where function_call.id=? and verdict.verdict=0
+	order by verdict.time_obtained limit 1"""
+	return query_db_one(query_string,[call_id])
 
 def get_property_byhash(hash):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from property where hash like ?",[hash])
-	f=list1.fetchone()
-	connection.close()
-	if f==None: return ("None")
-	return json.dumps([dict(f)])
+	query_string="select * from property where hash like ?"
+	return query_db_one(query_string,[hash])
 
 def get_point_byid(id):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from instrumentation_point where id=?",[id])
-	f=list1.fetchone()
-	connection.close()
-	if f==None: return ("None")
-	return json.dumps([dict(f)])
+	query_string="select * from instrumentation_point where id=?"
+	return query_db_one(query_string,[id])
 
 def get_binding_byid(id):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from binding where id=?",[id])
-	f=list1.fetchone()
-	connection.close()
-	if f==None: return ("None")
-	return json.dumps([dict(f)])
+	query_string="select * from binding where id=?"
+	return query_db_one(query_string,[id])
 
 def get_observation_byid(id):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from observation where id=?",[id])
-	f=list1.fetchone()
-	connection.close()
-	if f==None: return ("None")
-	return json.dumps([dict(f)])
+	query_string="select * from observation where id=?"
+	return query_db_one(query_string,[id])
 
 def get_assignment_byid(id):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from assignment where id=?",[id])
-	f=list1.fetchone()
-	connection.close()
-	if f==None: return ("None")
-	return json.dumps([dict(f)])
+	query_string="select * from assignment where id=?"
+	return query_db_one(query_string,[id])
 
 def get_pcs_byid(id):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from path_condition_structure where id=?",[id])
-	f=list1.fetchone()
-	connection.close()
-	if f==None: return ("None")
-	return json.dumps([dict(f)])
+	query_string="select * from path_condition_structure where id=?"
+	return query_db_one(query_string,[id])
 
 def get_pathcon_byid(id):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from path_condition where id=?",[id])
-	f=list1.fetchone()
-	connection.close()
-	if f==None: return ("None")
-	return json.dumps([dict(f)])
+	query_string="select * from path_condition where id=?"
+	return query_db_one(query_string,[id])
 
 def get_searchtree_byid(id):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from search_tree where id=?",[id])
-	f=list1.fetchone()
-	connection.close()
-	if f==None: return ("None")
-	return json.dumps([dict(f)])
+	query_string="select * from search_tree where id=?"
+	return query_db_one(query_string,[id])
 
 def get_searchtreevertex_byid(id):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from search_tree_vertex where id=?",[id])
-	f=list1.fetchone()
-	connection.close()
-	if f==None: return ("None")
-	return json.dumps([dict(f)])
+	query_string="select * from search_tree_vertex where id=?"
+	return query_db_one(query_string,[id])
 
 def get_intersection_byid(id):
-	connection = get_connection()
-	connection.row_factory = sqlite3.Row
-	cursor = connection.cursor()
-	list1 = cursor.execute("select * from intersection where id=?",[id])
-	f=list1.fetchone()
-	connection.close()
-	if f==None: return ("None")
-	return json.dumps([dict(f)])
+	query_string="select * from intersection where id=?"
+	return query_db_one(query_string,[id])
+
+def list_assignment_obs(observation_id):
+	query_string="""select assignment.id, assignment.variable,assignment.value,assignment.type
+	from assignment inner join observation_assignment_pair on assignment.id=observation_assignment_pair.assignment
+	where observation_assignment_pair.observation =?"""
+	return query_db_all(query_string,[observation_id])
+
+def list_verdicts_byvalue(value):
+	query_string="select * from verdict where verdict.verdict=?"
+	return query_db_all(query_string,[value])
+
+def list_verdicts_function_property_byvalue(value):
+	query_string="""select verdict.id, verdict.binding, verdict.verdict,
+	verdict.time_obtained, function_call.function, function.fully_qualified_name,
+	function_call.time_of_call, function.property
+	from (verdict inner join function_call on verdict.function_call=function_call.id
+	inner join function where function_call.function=function.id)
+	where verdict.verdict=?"""
+	return query_db_all(query_string,[value])
 
 def get_assignment_dict_from_observation(id):
 	"""
