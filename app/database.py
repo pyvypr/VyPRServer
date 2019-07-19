@@ -689,9 +689,85 @@ def list_verdicts_function_property_byvalue(value):
 	where verdict.verdict=?"""
 	return query_db_all(query_string,[value])
 
+def get_assignment_dict_from_observation(id):
+	"""
+	Given an observation ID, construct a dictionary mapping
+	variable names to values collected during monitoring.
+	"""
+	connection = get_connection()
+	cursor = connection.cursor()
+	list1 = cursor.execute(
+"""
+select assignment.variable, assignment.value, assignment.type from
+((observation inner join observation_assignment_pair
+		on observation_assignment_pair.observation == observation.id)
+		inner join assignment
+			on assignment.id == observation_assignment_pair.assignment)
+where observation.id = ?
+""",
+		[id]
+	).fetchall()
+	final_dict = {}
+	for row in list1:
+		final_dict[row[0]] = (row[1], row[2])
+	connection.close()
+	return json.dumps(final_dict)
+
 """
 Path reconstruction functions.
 """
+
+def get_serialised_condition_from_id(id):
+	"""
+	Given an ID, get the serialised condition that can be used in path reconstruction.
+	"""
+	connection = get_connection()
+	cursor = connection.cursor()
+
+	serialised_condition = cursor.execute(
+		"select serialised_condition from path_condition_structure where id = ?",
+		[id]
+	).fetchone()[0]
+
+	connection.close()
+
+	return serialised_condition
+
+
+def get_path_conditions_from_observation(id):
+	"""
+	Given an observation ID, find the sequence of path conditions leading to it.
+	To do this, we have to go backwards, since we first find the path condition before the observation,
+	and then find each successive path condition until we reach the beginning (no previous condition).
+	"""
+	connection = get_connection()
+	cursor = connection.cursor()
+	result = cursor.execute(
+"""
+select path_condition.id, path_condition.serialised_condition from
+(path_condition inner join observation
+	on path_condition.id = observation.previous_condition)
+where observation.id = ?
+""",
+		[id]
+	).fetchone()
+
+	while result:
+
+		previous_path_condition = result[0]
+		try:
+			reversed_path_conditions.append(result[1])
+		except:
+			reversed_path_conditions = [result[1]]
+		print("checking for path_condition with next_path_condition = %i" % previous_path_condition)
+		result = cursor.execute(
+			"select id, serialised_condition from path_condition where next_path_condition = ?",
+			[previous_path_condition]
+		).fetchone()
+
+	connection.close()
+
+	return json.dumps(map(get_serialised_condition_from_id, reversed_path_conditions[::-1]))
 
 
 def compute_intersection(s, instrumentation_point_id):

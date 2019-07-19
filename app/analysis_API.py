@@ -109,3 +109,12 @@ def list_verdicts_by_value(verdict):
 @app_object.route("/client/list_verdicts_function_property_by_value/<verdict>/")
 def list_verdicts_function_property_by_value(verdict):
 	return database.list_verdicts_function_property_byvalue(verdict)
+
+@app_object.route("/client/get_assignment_dict_from_observation/<observation_id>/")
+def get_assignment_dict_from_observation(observation_id):
+	return database.get_assignment_dict_from_observation(observation_id)
+
+@app_object.route("/client/get_path_conditions_from_observation/<observation_id>/")
+def get_path_conditions_from_observation(observation_id):
+	return database.get_path_conditions_from_observation(observation_id)
+
