@@ -565,7 +565,7 @@ def query_db_all(query_string,arg):
 
 def list_functions2():
 	query_string="select * from function;"
-	return query_db_all(query_string)
+	return query_db_all(query_string,[])
 
 def list_calls_function(function_name):
 	query_string="select * from (function inner join function_call on function.id=function_call.function) where function.fully_qualified_name like ?"
@@ -692,6 +692,19 @@ def list_verdicts_function_property_byvalue(value):
 def list_verdicts_call(call_id):
 	query_string="select * from verdict where function_call=?"
 	return query_db_all(query_string,[call_id])
+
+def list_observations_call(call_id):
+	query_string="""select observation.id, observation.instrumentation_point,
+	observation.verdict,observation.observed_value,observation.atom_index,
+	observation.previous_condition from
+	observation inner join verdict on observation.verdict=verdict.id
+	inner join function_call on verdict.function_call=function_call.id
+	where function_call.id=?"""
+	return query_db_all(query_string,[call_id])
+
+def list_observations():
+	query_string="select * from observation;"
+	return query_db_all(query_string,[])
 
 def get_assignment_dict_from_observation(id):
 	"""

@@ -113,3 +113,11 @@ def list_verdicts_function_property_by_value(verdict):
 @app_object.route("/client/list_verdicts_of_call/<call_id>/")
 def list_verdicts_of_call(call_id):
 	return database.list_verdicts_call(call_id)
+
+@app_object.route("/client/list_observations_during_call/<call_id>/")
+def list_observations_during_call(call_id):
+	return database.list_observations_call(call_id)
+
+@app_object.route("/client/list_observations/")
+def list_observations():
+	return database.list_observations()
