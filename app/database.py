@@ -685,13 +685,13 @@ def list_verdicts_function_property_byvalue(value):
 	verdict.time_obtained, function_call.function, function.fully_qualified_name,
 	function_call.time_of_call, function.property
 	from (verdict inner join function_call on verdict.function_call=function_call.id
-	inner join function where function_call.function=function.id)
+	inner join function on function_call.function=function.id)
 	where verdict.verdict=?"""
 	return query_db_all(query_string,[value])
 
 def list_verdicts_call(call_id):
 	query_string="select * from verdict where function_call=?"
-	retrun query_db_all(query_string,[call_id])
+	return query_db_all(query_string,[call_id])
 
 def get_assignment_dict_from_observation(id):
 	"""
