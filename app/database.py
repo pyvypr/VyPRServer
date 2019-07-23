@@ -706,6 +706,15 @@ def list_observations():
 	query_string="select * from observation;"
 	return query_db_all(query_string,[])
 
+def list_observations_of_point(point_id):
+	query_string="""select observation.id, observation.instrumentation_point,
+	observation.verdict,observation.observed_value,observation.atom_index,
+	observation.previous_condition from
+	observation inner join instrumentation_point
+	on observation.instrumentation_point=instrumentation_point.id
+	where observation.instrumentation_point=?"""
+	return query_db_all(query_string,[point_id])
+
 def get_assignment_dict_from_observation(id):
 	"""
 	Given an observation ID, construct a dictionary mapping
