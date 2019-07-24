@@ -546,6 +546,7 @@ def get_http_request_function_call_pairs(verdict, path):
 def query_db_one(query_string,arg):
 	connection = get_connection()
 	connection.row_factory = sqlite3.Row
+	  #enables saving the rows as a dictionary with name of column as key
 	cursor = connection.cursor()
 	list1 = cursor.execute(query_string,arg)
 	f=list1.fetchone()
@@ -568,16 +569,29 @@ def list_functions2():
 	return query_db_all(query_string,[])
 
 def list_calls_function(function_name):
+	#based on the name of the function, list all function calls of the function with that name
 	query_string="select * from (function inner join function_call on function.id=function_call.function) where function.fully_qualified_name like ?"
 	return query_db_all(query_string,[function_name])
 
 def list_calls_http(http_request_id):
+	#list all function_calls during the given http request
 	query_string="select * from (http_request inner join function_call on http_request.id=function_call.http_request) where http_request.id=?"
 	return query_db_all(query_string,[http_request_id])
 
 def list_calls_httpid(http_request_id,function_id):
+	#a combination of the previous two functions: lists calls of given function during the given request
 	query_string="select * from function_call where http_request=? and function=?"
 	return query_db_all(query_string,[http_request_id,function_id])
+
+def list_calls_failed_verdict(function_id):
+	#returns a list of dictionaries with calls of the given function
+	#such that their verdict value is zero
+	query_string="""select function_call.id, function_call.function,
+	function_call.time_of_call,	function_call.http_request from
+	function_call inner join verdict on verdict.function_call=function_call.id
+	inner join function on function_call.function=function.id
+	where function.id=? and verdict.verdict=0"""
+	return query_db_all(query_string,[function_id])
 
 def get_f_byname(function_name):
 	query_string="select * from function where fully_qualified_name like ?"
@@ -709,9 +723,7 @@ def list_observations():
 def list_observations_of_point(point_id):
 	query_string="""select observation.id, observation.instrumentation_point,
 	observation.verdict,observation.observed_value,observation.atom_index,
-	observation.previous_condition from
-	observation inner join instrumentation_point
-	on observation.instrumentation_point=instrumentation_point.id
+	observation.previous_condition from observation
 	where observation.instrumentation_point=?"""
 	return query_db_all(query_string,[point_id])
 
