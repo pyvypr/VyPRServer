@@ -125,3 +125,7 @@ def list_observations():
 @app_object.route("/client/list_observations_of_point/<point_id>/")
 def list_observations_of_point(point_id):
 	return database.list_observations_of_point(point_id)
+
+@app_object.route("/client/list_function_calls_failed_verdict/<call_id>/")
+def list_function_calls_failed_verdict(call_id):
+	return database.list_calls_failed_verdict(call_id)
