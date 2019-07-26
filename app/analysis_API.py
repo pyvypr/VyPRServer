@@ -54,9 +54,9 @@ def get_atom_by_index(atom_index):
 def list_atoms_where_verdict(verdict_value):
 	return database.list_atoms_verdict(verdict_value)
 
-@app_object.route("/client/first_observation_of_call_fail/<call_id>/")
-def first_observation_of_call_fail(call_id):
-	return database.first_observation_failed_verdict(call_id)
+@app_object.route("/client/get_falsifying_observation_for_call/<call_id>/")
+def get_falsifying_observation_for_call(call_id):
+	return database.get_falsifying_observation_call(call_id)
 
 @app_object.route("/client/get_property_by_hash/<hash>/")
 def get_property_by_hash(hash):
