@@ -546,6 +546,7 @@ def get_http_request_function_call_pairs(verdict, path):
 def query_db_one(query_string,arg):
 	connection = get_connection()
 	connection.row_factory = sqlite3.Row
+	  #enables saving the rows as a dictionary with name of column as key
 	cursor = connection.cursor()
 	list1 = cursor.execute(query_string,arg)
 	f=list1.fetchone()
@@ -565,19 +566,32 @@ def query_db_all(query_string,arg):
 
 def list_functions2():
 	query_string="select * from function;"
-	return query_db_all(query_string)
+	return query_db_all(query_string,[])
 
 def list_calls_function(function_name):
+	#based on the name of the function, list all function calls of the function with that name
 	query_string="select * from (function inner join function_call on function.id=function_call.function) where function.fully_qualified_name like ?"
 	return query_db_all(query_string,[function_name])
 
 def list_calls_http(http_request_id):
+	#list all function_calls during the given http request
 	query_string="select * from (http_request inner join function_call on http_request.id=function_call.http_request) where http_request.id=?"
 	return query_db_all(query_string,[http_request_id])
 
 def list_calls_httpid(http_request_id,function_id):
+	#a combination of the previous two functions: lists calls of given function during the given request
 	query_string="select * from function_call where http_request=? and function=?"
 	return query_db_all(query_string,[http_request_id,function_id])
+
+def list_calls_failed_verdict(function_id):
+	#returns a list of dictionaries with calls of the given function
+	#such that their verdict value is zero
+	query_string="""select function_call.id, function_call.function,
+	function_call.time_of_call,	function_call.http_request from
+	function_call inner join verdict on verdict.function_call=function_call.id
+	inner join function on function_call.function=function.id
+	where function.id=? and verdict.verdict=0"""
+	return query_db_all(query_string,[function_id])
 
 def get_f_byname(function_name):
 	query_string="select * from function where fully_qualified_name like ?"
@@ -617,7 +631,7 @@ def list_atoms_verdict(verdict_value):
 	where verdict.verdict=?"""
 	return query_db_all(query_string,[verdict_value])
 
-def first_observation_failed_verdict(call_id):
+def get_falsifying_observation_call(call_id):
 	#inner join three tables: observation-verdict-function_call
 	#find rows corresponding to the given call_id and with verdict value zero
 	#order by verdict limit 1 in order to find the first one wrt verdicts
@@ -671,8 +685,10 @@ def get_intersection_byid(id):
 	return query_db_one(query_string,[id])
 
 def list_assignments_obs(observation_id):
-	query_string="""select assignment.id, assignment.variable,assignment.value,assignment.type
-	from assignment inner join observation_assignment_pair on assignment.id=observation_assignment_pair.assignment
+	query_string="""select assignment.id, assignment.variable,
+	assignment.value,assignment.type
+	from assignment inner join observation_assignment_pair
+	on assignment.id=observation_assignment_pair.assignment
 	where observation_assignment_pair.observation =?"""
 	return query_db_all(query_string,[observation_id])
 
@@ -685,9 +701,33 @@ def list_verdicts_function_property_byvalue(value):
 	verdict.time_obtained, function_call.function, function.fully_qualified_name,
 	function_call.time_of_call, function.property
 	from (verdict inner join function_call on verdict.function_call=function_call.id
-	inner join function where function_call.function=function.id)
+	inner join function on function_call.function=function.id)
 	where verdict.verdict=?"""
 	return query_db_all(query_string,[value])
+
+def list_verdicts_call(call_id):
+	query_string="select * from verdict where function_call=?"
+	return query_db_all(query_string,[call_id])
+
+def list_observations_call(call_id):
+	query_string="""select observation.id, observation.instrumentation_point,
+	observation.verdict,observation.observed_value,observation.atom_index,
+	observation.previous_condition from
+	observation inner join verdict on observation.verdict=verdict.id
+	inner join function_call on verdict.function_call=function_call.id
+	where function_call.id=?"""
+	return query_db_all(query_string,[call_id])
+
+def list_observations():
+	query_string="select * from observation;"
+	return query_db_all(query_string,[])
+
+def list_observations_of_point(point_id):
+	query_string="""select observation.id, observation.instrumentation_point,
+	observation.verdict,observation.observed_value,observation.atom_index,
+	observation.previous_condition from observation
+	where observation.instrumentation_point=?"""
+	return query_db_all(query_string,[point_id])
 
 def get_assignment_dict_from_observation(id):
 	"""

@@ -54,9 +54,9 @@ def get_atom_by_index(atom_index):
 def list_atoms_where_verdict(verdict_value):
 	return database.list_atoms_verdict(verdict_value)
 
-@app_object.route("/client/first_observation_of_call_fail/<call_id>/")
-def first_observation_of_call_fail(call_id):
-	return database.first_observation_failed_verdict(call_id)
+@app_object.route("/client/get_falsifying_observation_for_call/<call_id>/")
+def get_falsifying_observation_for_call(call_id):
+	return database.get_falsifying_observation_call(call_id)
 
 @app_object.route("/client/get_property_by_hash/<hash>/")
 def get_property_by_hash(hash):
@@ -110,11 +110,22 @@ def list_verdicts_by_value(verdict):
 def list_verdicts_function_property_by_value(verdict):
 	return database.list_verdicts_function_property_byvalue(verdict)
 
-@app_object.route("/client/get_assignment_dict_from_observation/<observation_id>/")
-def get_assignment_dict_from_observation(observation_id):
-	return database.get_assignment_dict_from_observation(observation_id)
+@app_object.route("/client/list_verdicts_of_call/<call_id>/")
+def list_verdicts_of_call(call_id):
+	return database.list_verdicts_call(call_id)
 
-@app_object.route("/client/get_path_conditions_from_observation/<observation_id>/")
-def get_path_conditions_from_observation(observation_id):
-	return database.get_path_conditions_from_observation(observation_id)
+@app_object.route("/client/list_observations_during_call/<call_id>/")
+def list_observations_during_call(call_id):
+	return database.list_observations_call(call_id)
 
+@app_object.route("/client/list_observations/")
+def list_observations():
+	return database.list_observations()
+
+@app_object.route("/client/list_observations_of_point/<point_id>/")
+def list_observations_of_point(point_id):
+	return database.list_observations_of_point(point_id)
+
+@app_object.route("/client/list_function_calls_failed_verdict/<call_id>/")
+def list_function_calls_failed_verdict(call_id):
+	return database.list_calls_failed_verdict(call_id)
