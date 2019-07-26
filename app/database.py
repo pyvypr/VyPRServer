@@ -631,7 +631,7 @@ def list_atoms_verdict(verdict_value):
 	where verdict.verdict=?"""
 	return query_db_all(query_string,[verdict_value])
 
-def first_observation_failed_verdict(call_id):
+def get_falsifying_observation_call(call_id):
 	#inner join three tables: observation-verdict-function_call
 	#find rows corresponding to the given call_id and with verdict value zero
 	#order by verdict limit 1 in order to find the first one wrt verdicts
@@ -685,8 +685,10 @@ def get_intersection_byid(id):
 	return query_db_one(query_string,[id])
 
 def list_assignments_obs(observation_id):
-	query_string="""select assignment.id, assignment.variable,assignment.value,assignment.type
-	from assignment inner join observation_assignment_pair on assignment.id=observation_assignment_pair.assignment
+	query_string="""select assignment.id, assignment.variable,
+	assignment.value,assignment.type
+	from assignment inner join observation_assignment_pair
+	on assignment.id=observation_assignment_pair.assignment
 	where observation_assignment_pair.observation =?"""
 	return query_db_all(query_string,[observation_id])
 
