@@ -46,9 +46,9 @@ def get_verdict_by_id(verdict_id):
 def get_atom_by_id(atom_id):
 	return database.get_atom_byid(atom_id)
 
-@app_object.route("/client/get_atom_by_index/<atom_index>/")
-def get_atom_by_index(atom_index):
-	return database.get_atom_byindex(atom_index)
+@app_object.route("/client/get_atom_by_index_and_property/<atom_index>/<property_hash>/")
+def get_atom_by_index_and_property(atom_index,property_hash):
+	return database.get_atom_by_index_and_property(atom_index,property_hash)
 
 @app_object.route("/client/list_atoms_where_verdict/<verdict_value>/")
 def list_atoms_where_verdict(verdict_value):
@@ -126,6 +126,10 @@ def list_observations():
 def list_observations_of_point(point_id):
 	return database.list_observations_of_point(point_id)
 
-@app_object.route("/client/list_function_calls_failed_verdict/<call_id>/")
-def list_function_calls_failed_verdict(call_id):
-	return database.list_calls_failed_verdict(call_id)
+@app_object.route("/client/list_function_calls_with_verdict/<call_id>/<verdict_value>/")
+def list_function_calls_with_verdict(call_id,verdict_value):
+	return database.list_calls_verdict(call_id,verdict_value)
+
+@app_object.route("/client/list_verdicts_with_value_of_call/<call_id>/<verdict_value>/")
+def list_verdicts_with_value_of_call(call_id,verdict_value):
+	return database.list_verdicts_with_value_of_call(call_id,verdict_value)

@@ -583,15 +583,15 @@ def list_calls_httpid(http_request_id,function_id):
 	query_string="select * from function_call where http_request=? and function=?"
 	return query_db_all(query_string,[http_request_id,function_id])
 
-def list_calls_failed_verdict(function_id):
+def list_calls_verdict(function_id,verdict_value):
 	#returns a list of dictionaries with calls of the given function
-	#such that their verdict value is zero
+	#such that their verdict value is 0 or 1 (verdict_value)
 	query_string="""select function_call.id, function_call.function,
 	function_call.time_of_call,	function_call.http_request from
 	function_call inner join verdict on verdict.function_call=function_call.id
 	inner join function on function_call.function=function.id
-	where function.id=? and verdict.verdict=0"""
-	return query_db_all(query_string,[function_id])
+	where function.id=? and verdict.verdict=?"""
+	return query_db_all(query_string,[function_id,verdict_value])
 
 def get_f_byname(function_name):
 	query_string="select * from function where fully_qualified_name like ?"
@@ -621,9 +621,10 @@ def get_atom_byid(atom_id):
 	query_string="select * from atom where id=?"
 	return query_db_one(query_string,[atom_id])
 
-def get_atom_byindex(atom_index):
-	query_string="select * from atom where index_in_atoms=?"
-	return query_db_one(query_string,[atom_index])
+def get_atom_by_index_and_property(atom_index,property_hash):
+	query_string="""select * from atom where index_in_atoms=?
+	and property_hash=?"""
+	return query_db_one(query_string,[atom_index,property_hash])
 
 def list_atoms_verdict(verdict_value):
 	query_string="""select atom.id,atom.property_hash,atom.serialised_structure,atom.index_in_atoms
@@ -728,6 +729,10 @@ def list_observations_of_point(point_id):
 	observation.previous_condition from observation
 	where observation.instrumentation_point=?"""
 	return query_db_all(query_string,[point_id])
+
+def list_verdicts_with_value_of_call(call_id, verdict_value):
+	query_string="select * from verdict where function_call=? and verdict=?"
+	return query_db_all(query_string,[call_id,verdict_value])
 
 def get_assignment_dict_from_observation(id):
 	"""
