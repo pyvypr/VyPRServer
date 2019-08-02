@@ -1019,7 +1019,7 @@ where search_tree_vertex.id = ?
 		for (n, parameter_path) in enumerate(parameter_paths):
 			subpath = parse_tree.get_parameter_subtree(parameter_path).read_leaves()
 			print("parameter value for parse tree %i" % m)
-			subpath_condition_sequence = path_to_condition_sequence(cursor, subpath)
+			subpath_condition_sequence = path_to_condition_sequence(cursor, subpath, parametric=True)
 			parameter_subtrees[n][m] = subpath_condition_sequence
 
 	print(parameter_paths)

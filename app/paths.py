@@ -410,14 +410,15 @@ def reconstruct_paths(cursor, scfg, observation_ids):
 	"""
 	return map(lambda observation_id : reconstruct_path(cursor, scfg, observation_id), observation_ids)
 
-def path_to_condition_sequence(cursor, path):
+def path_to_condition_sequence(cursor, path, parametric=False):
 	"""
 	Iterate through the path given, converting it to a sequence of condition IDs.
 	"""
 	print("converting to condition sequence")
 	print(path)
 	# initialise the condition sequence with the empty condition
-	condition_sequence = [""]
+	# NOTE: this might break for loops... we'll see
+	condition_sequence = [""] if not(parametric) else [pickle.dumps(path[0]._condition)]
 	for (n, el) in enumerate(path):
 		print("processing %s" % str(el))
 
