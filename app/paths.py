@@ -440,7 +440,9 @@ def path_to_condition_sequence(cursor, path, parametric=False):
 			elif el._instruction == "loop":
 				condition_sequence.append(pickle.dumps(el._condition))
 			elif el._instruction == "loop-jump":
-				condition_sequence.append(el._condition)
+				condition_sequence.append("loop-jump")
+			elif el._instruction == "post-loop":
+				condition_sequence.append(pickle.dumps(LogicalNot("dummy")))
 
 	return condition_sequence
 
