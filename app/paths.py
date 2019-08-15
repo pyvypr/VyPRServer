@@ -124,7 +124,7 @@ def construct_function_scfg(function):
 	file_name_without_extension = module.replace(".", "/")
 
 	# extract asts from the code in the file
-	code = "".join(open(os.path.join("/servers/TestService/", file_name), "r").readlines())
+	code = "".join(open(os.path.join("/servers/SampleWebService/", file_name), "r").readlines())
 	asts = ast.parse(code)
 
 	print(asts.body)
