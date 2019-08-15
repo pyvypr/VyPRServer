@@ -14,7 +14,7 @@ import pickle
 
 from paths import *
 
-database_string = "verdicts.db"
+database_string = "verdicts_staro.db"
 
 sys.path.append("VyPR/")
 
@@ -733,6 +733,22 @@ def list_observations_of_point(point_id):
 def list_verdicts_with_value_of_call(call_id, verdict_value):
 	query_string="select * from verdict where function_call=? and verdict=?"
 	return query_db_all(query_string,[call_id,verdict_value])
+
+def list_verdicts_of_function(function_id):
+	query_string="""select * from verdict inner join binding
+	on verdict.binding=binding.id
+	where binding.function=?"""
+	return query_db_all(query_string,[function_id])
+
+def list_verdicts_of_function_with_value(function_id,verdict_value):
+	query_string="""select * from verdict inner join binding
+	on verdict.binding=binding.id
+	where binding.function=? and verdict.verdict=?"""
+	return query_db_all(query_string,[function_id,verdict_value])
+
+def list_functions():
+	query_string="select * from function"
+	return query_db_all(query_string,[])
 
 def get_assignment_dict_from_observation(id):
 	"""

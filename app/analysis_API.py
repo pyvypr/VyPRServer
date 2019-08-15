@@ -133,3 +133,15 @@ def list_function_calls_with_verdict(call_id,verdict_value):
 @app_object.route("/client/list_verdicts_with_value_of_call/<call_id>/<verdict_value>/")
 def list_verdicts_with_value_of_call(call_id,verdict_value):
 	return database.list_verdicts_with_value_of_call(call_id,verdict_value)
+
+@app_object.route("/client/list_verdicts_of_function/<function_id>/")
+def list_verdicts_of_function(function_id):
+	return database.list_verdicts_of_function(function_id)
+
+@app_object.route("/client/list_verdicts_of_function_with_value/<function_id>/<verdict_value>/")
+def list_verdicts_of_function_with_value(function_id,verdict_value):
+	return database.list_verdicts_of_function_with_value(function_id,verdict_value)
+
+@app_object.route("/client/list_functions/")
+def list_functions():
+	return database.list_functions()
