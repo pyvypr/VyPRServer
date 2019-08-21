@@ -14,7 +14,7 @@ import pickle
 
 from paths import *
 
-database_string = "verdicts_staro.db"
+database_string = "verdicts.db"
 
 sys.path.append("VyPR/")
 
