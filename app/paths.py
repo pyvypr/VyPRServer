@@ -124,7 +124,9 @@ def construct_function_scfg(function):
 	file_name_without_extension = module.replace(".", "/")
 
 	# extract asts from the code in the file
-	code = "".join(open(os.path.join("/servers/SampleWebService/", file_name), "r").readlines())
+	config_dict = json.load(open('config.json'))
+	monitored_service = config_dict["monitored_service"]
+	code = "".join(open(os.path.join(monitored_service, file_name), "r").readlines())
 	asts = ast.parse(code)
 
 	print(asts.body)
@@ -396,7 +398,7 @@ where observation.id == ?
 	# traverse the SCFG based on the derived condition chain
 	path_subchain = path_chain[0:path_id_chain.index(previous_path_condition_entry)]
 	print("traversing using condition subchain %s" % path_subchain)
-	
+
 	path = edges_from_condition_sequence(scfg, path_subchain, instrumentation_point_path_length)
 
 	print("reconstructed path is %s" % path)
