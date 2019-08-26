@@ -774,6 +774,13 @@ where observation.id = ?
 	connection.close()
 	return json.dumps(final_dict)
 
+def get_observations_from_verdict(verdict_id):
+	"""
+	Given a verdict ID, return a list of verdict dictionaries.
+	"""
+	query_string = "select * from observation where verdict = ?"
+	return query_db_all(query_string, [verdict_id])
+
 """
 Path reconstruction functions.
 """

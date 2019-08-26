@@ -54,6 +54,10 @@ def get_atom_by_index_and_property(atom_index,property_hash):
 def list_atoms_where_verdict(verdict_value):
 	return database.list_atoms_verdict(verdict_value)
 
+@app_object.route("/client/get_observations_from_verdict/<verdict_id>/")
+def get_observations_from_verdict(verdict_id):
+	return database.get_observations_from_verdict(verdict_id)
+
 @app_object.route("/client/get_falsifying_observation_for_call/<call_id>/")
 def get_falsifying_observation_for_call(call_id):
 	return database.get_falsifying_observation_call(call_id)
