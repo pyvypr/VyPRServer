@@ -570,7 +570,9 @@ def list_functions2():
 
 def list_calls_function(function_name):
 	#based on the name of the function, list all function calls of the function with that name
-	query_string="select * from (function inner join function_call on function.id=function_call.function) where function.fully_qualified_name like ?"
+	query_string="""select function_call.id, function_call.function, function_call.time_of_call, function_call.http_request from
+	(function inner join function_call on function.id=function_call.function)
+	where function.fully_qualified_name like ?"""
 	return query_db_all(query_string,[function_name])
 
 def list_calls_http(http_request_id):
