@@ -77,21 +77,25 @@ def insert_verdict(verdict_dictionary):
 	# keeping a record of the IDs of all existing and newly created assignments
 	# note: indices of slice_map and observations_map are the same since they're constructed at the same time
 	# during monitoring
-	#slice_map = verdict_dictionary["verdict"][3]
 	observations_map = verdict_dictionary["verdict"][2]
 	path_map = verdict_dictionary["verdict"][3]
 	path_condition_ids = []
 
 	# find longest path length and just perform insertion for this path
 	# all the others will be subpaths
-	longest_path_index = verdict_dictionary["verdict"][3].keys()[0]
+	longest_path_coordinate = (
+		verdict_dictionary["verdict"][3].keys()[0],
+		verdict_dictionary["verdict"][3][verdict_dictionary["verdict"][3].keys()[0]].keys()[0]
+	)
 	for atom_index in path_map:
-		if len(verdict_dictionary["verdict"][3][atom_index]) > len(verdict_dictionary["verdict"][3][longest_path_index]):
-			longest_path_index = atom_index
+		for atom_sub_index in path_map[atom_index]:
+			if (len(verdict_dictionary["verdict"][3][atom_index][atom_sub_index]) >
+					len(verdict_dictionary["verdict"][3][longest_path_coordinate[0]][longest_path_coordinate[1]])):
+				longest_path_coordinate = (atom_index, atom_sub_index)
 
-	print("atom index %s has longest path" % longest_path_index)
+	print("atom index %s has longest path" % str(longest_path_coordinate))
 
-	condition_id_sequence = verdict_dictionary["verdict"][3][longest_path_index]
+	condition_id_sequence = verdict_dictionary["verdict"][3][longest_path_coordinate[0]][longest_path_coordinate[1]]
 	# insert empty condition at the beginning - we need to check if the empty condition exists in the database
 	result = cursor.execute("select id from path_condition_structure where serialised_condition = ''").fetchall()
 	if len(result) > 0:
@@ -187,43 +191,43 @@ def insert_verdict(verdict_dictionary):
 	atom_to_state_dict_map = verdict_dictionary["verdict"][5]
 
 	for atom_index in observations_map:
-		# for now, without transition input data, we just insert observations
-		# insert observation for this atom_index
+		# insert observation(s) for this atom_index
 		print(observations_map[atom_index])
-		last_condition = path_condition_ids[len(path_map[atom_index])]
-		cursor.execute("insert into observation (instrumentation_point, verdict, observed_value, previous_condition, atom_index) values(?, ?, ?, ?, ?)",
-			[observations_map[atom_index][1], new_verdict_id, str(observations_map[atom_index][0]), last_condition, atom_index])
-		observation_id = cursor.lastrowid
+		for sub_index in observations_map[atom_index].keys():
+			last_condition = path_condition_ids[len(path_map[atom_index][sub_index])]
+			cursor.execute("insert into observation (instrumentation_point, verdict, observed_value, previous_condition, atom_index, sub_index) values(?, ?, ?, ?, ?, ?)",
+				[observations_map[atom_index][sub_index][1], new_verdict_id, str(observations_map[atom_index][sub_index][0]), last_condition, atom_index, sub_index])
+			observation_id = cursor.lastrowid
 
-		# insert assignments (if they don't exist yet), and link them
-		# to the observation we just inserted
+			# insert assignments (if they don't exist yet), and link them
+			# to the observation we just inserted
 
-		state_dict = atom_to_state_dict_map[atom_index]
-		if state_dict:
-			for var in state_dict.keys():
-				# check if this assignment already exists
-				assignments = cursor.execute(
-					"select id from assignment where variable = ? and value = ?",
-					[var, pickle.dumps(state_dict[var])]
-				).fetchall()
+			state_dict = atom_to_state_dict_map[atom_index][sub_index]
+			if state_dict:
+				for var in state_dict.keys():
+					# check if this assignment already exists
+					assignments = cursor.execute(
+						"select id from assignment where variable = ? and value = ?",
+						[var, pickle.dumps(state_dict[var])]
+					).fetchall()
 
-				# either take the existing ID, or insert a new assignment and use the new ID
-				if len(assignments) > 0:
-					# the assignment already exists - get its ID and link it to the observation
-					assignment_id = assignments[0][0]
-				else:
-					# create a new assignment
+					# either take the existing ID, or insert a new assignment and use the new ID
+					if len(assignments) > 0:
+						# the assignment already exists - get its ID and link it to the observation
+						assignment_id = assignments[0][0]
+					else:
+						# create a new assignment
+						cursor.execute(
+							"insert into assignment (variable, value, type) values(?, ?, ?)",
+							[var, pickle.dumps(state_dict[var]), str(type(state_dict[var]))]
+						)
+						assignment_id = cursor.lastrowid
+
+					# insert the link
 					cursor.execute(
-						"insert into assignment (variable, value, type) values(?, ?, ?)",
-						[var, pickle.dumps(state_dict[var]), str(type(state_dict[var]))]
+						"insert into observation_assignment_pair (observation, assignment) values(?, ?)",
+						[observation_id, assignment_id]
 					)
-					assignment_id = cursor.lastrowid
-
-				# insert the link
-				cursor.execute(
-					"insert into observation_assignment_pair (observation, assignment) values(?, ?)",
-					[observation_id, assignment_id]
-				)
 
 
 	connection.commit()

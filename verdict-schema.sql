@@ -71,6 +71,7 @@ CREATE TABLE observation (
     verdict int not null,
     observed_value text not null,
     atom_index int not null,
+    sub_index int not null,
     previous_condition integer not null,
     foreign key(previous_condition) references path_condition(id),
     foreign key(instrumentation_point) references instrumentation_point(id),
