@@ -16,11 +16,9 @@ from paths import *
 
 database_string = "verdicts.db"
 
-sys.path.append("VyPR/")
-
-from control_flow_graph.construction import CFG, CFGVertex, CFGEdge
-from control_flow_graph.parse_tree import ParseTree
-from monitor_synthesis.formula_tree import LogicalNot
+from VyPR.control_flow_graph.construction import CFG, CFGVertex, CFGEdge
+from VyPR.control_flow_graph.parse_tree import ParseTree
+from VyPR.monitor_synthesis.formula_tree import LogicalNot
 
 def get_connection():
 	# for now, let exceptions appear in the log

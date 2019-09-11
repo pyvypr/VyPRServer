@@ -11,11 +11,8 @@ import database
 import sys
 from analysis_API import *
 
-# we import VyPR to help us with deserialising some contents of the verdict database
-sys.path.append("VyPR/")
-
-from formula_building.formula_building import *
-from monitor_synthesis.formula_tree import *
+from VyPR.formula_building.formula_building import *
+from VyPR.monitor_synthesis.formula_tree import *
 
 """
 Utility functions - these should be moved to another module.
