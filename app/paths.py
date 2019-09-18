@@ -319,13 +319,84 @@ def edges_from_condition_sequence(scfg, path_subchain, instrumentation_point_pat
 def deserialise_condition(serialised_condition):
 	if serialised_condition != "":
 		if not(serialised_condition in ["conditional exited", "try-catch exited", "try-catch-main", "parameter", "exit conditional"]):
-			print(serialised_condition)
 			unserialised_condition = pickle.loads(serialised_condition)
 		else:
 			unserialised_condition = serialised_condition
 	else:
 		unserialised_condition = None
 	return unserialised_condition
+
+def observation_id_to_condition_sequence_and_path_length(cursor, observation_id):
+	"""
+	Given an observation, determine the sequence of path conditions satisfied to reach it.
+	This will be used for path reconstruction on the client side.
+	"""
+	observation = cursor.execute(
+"""
+select function.fully_qualified_name, verdict.function_call,
+		observation.instrumentation_point, observation.previous_condition,
+		observation.observed_value
+from
+(((observation inner join verdict on observation.verdict == verdict.id)
+	inner join binding on verdict.binding == binding.id)
+		inner join function on binding.function == function.id)
+where observation.id == ?
+""", [observation_id]).fetchall()[0]
+
+	function_name = observation[0]
+	function_call_id = observation[1]
+	instrumentation_point_id = observation[2]
+	previous_path_condition_entry = observation[3]
+	observed_value = observation[4]
+
+	# reconstruct the path up to the observation through the SCFG
+	# get the starting path condition in the path condition sequence for function_call_id
+	path_conditions = cursor.execute("select * from path_condition where function_call = ?", [function_call_id]).fetchall()
+	for path_condition in path_conditions:
+		# check if there are any other path conditions that refer to this one
+		# if there are none, we have the first one
+		check = cursor.execute("select * from path_condition where function_call = ? and next_path_condition = ?", [function_call_id, path_condition[0]]).fetchall()
+		if len(check) == 0:
+			print(path_condition)
+			first_path_condition_id = path_condition[0]
+			break
+	print("first path condition for this call is %i" % first_path_condition_id)
+	print("reconstructing chain")
+	current_path_condition_id = first_path_condition_id
+	path_chain = []
+	path_id_chain = []
+	while current_path_condition_id != -1:
+		path_id_chain.append(current_path_condition_id)
+		current_path_condition = cursor.execute("select * from path_condition where id = ?", [current_path_condition_id]).fetchall()[0]
+		current_path_condition_id = current_path_condition[-2]
+		serialised_condition_id = current_path_condition[1]
+		serialised_condition = cursor.execute("select * from path_condition_structure where id = ?", [serialised_condition_id]).fetchall()[0][1]
+		unserialised_condition = deserialise_condition(serialised_condition)
+		path_chain.append(unserialised_condition)
+
+	print(path_id_chain)
+	print(path_chain)
+
+	# remove the first condition, since it's None
+	path_chain = path_chain[1:]
+
+	instrumentation_point_path_length = int(
+		cursor.execute(
+			"select reaching_path_length from instrumentation_point where id = ?",
+			[instrumentation_point_id]
+		).fetchall()[0][0]
+	)
+
+	print("reconstructing path for observation %s with previous condition %i and value %s based on chain %s" %\
+		(observation_id, previous_path_condition_entry, str(observed_value), path_chain))
+
+	# traverse the SCFG based on the derived condition chain
+	path_subchain = path_chain[0:path_id_chain.index(previous_path_condition_entry)]
+	print("traversing using condition subchain %s" % path_subchain)
+
+	path_subchain = map(pickle.dumps, path_subchain)
+
+	return {"path_subchain" : path_subchain, "path_length" : instrumentation_point_path_length}
 
 def reconstruct_path(cursor, scfg, observation_id):
 	"""

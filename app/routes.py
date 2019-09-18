@@ -247,3 +247,10 @@ def get_parametric_path():
 	intersection_data = database.compute_intersection(observation_ids, instrumentation_point_id)
 
 	return json.dumps(intersection_data)
+
+@app_object.route("/get_path_condition_sequence/<observation_id>/", methods=["GET"])
+def get_path_condition_sequence(observation_id):
+	"""
+	Given an observation ID, determine the sequence of path conditions leading to it through the SCFG with which it's associated.
+	"""
+	return json.dumps(database.compute_condition_sequence_and_path_length(observation_id))

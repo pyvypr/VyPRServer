@@ -74,6 +74,10 @@ def get_instrumentation_point_by_id(point_id):
 def get_binding_by_id(binding_id):
 	return database.get_binding_byid(binding_id)
 
+@app_object.route("/client/get_bindings_from_function_property_pair/<id>/")
+def get_bindings_from_function_property_pair(id):
+	return database.get_bindings_from_function_property_pair(id)
+
 @app_object.route("/client/get_observation_by_id/<observation_id>/")
 def get_observation_by_id(observation_id):
 	return database.get_observation_byid(observation_id)
@@ -117,6 +121,10 @@ def list_verdicts_function_property_by_value(verdict):
 @app_object.route("/client/list_verdicts_of_call/<call_id>/")
 def list_verdicts_of_call(call_id):
 	return database.list_verdicts_call(call_id)
+
+@app_object.route("/client/list_verdicts_from_binding/<binding_id>/")
+def list_verdicts_from_binding(binding_id):
+	return database.list_verdicts_from_binding(binding_id)
 
 @app_object.route("/client/list_observations_during_call/<call_id>/")
 def list_observations_during_call(call_id):

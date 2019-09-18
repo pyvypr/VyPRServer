@@ -599,7 +599,7 @@ def list_calls_verdict(function_id,verdict_value):
 
 def get_f_byname(function_name):
 	query_string="select * from function where fully_qualified_name like ?"
-	return query_db_one(query_string,[function_name])
+	return query_db_all(query_string,[function_name])
 
 def get_f_byid(function_id):
 	query_string="select * from function where id like ?"
@@ -661,6 +661,10 @@ def get_binding_byid(id):
 	query_string="select * from binding where id=?"
 	return query_db_one(query_string,[id])
 
+def get_bindings_from_function_property_pair(id):
+	query_string = "select * from binding where function=?"
+	return query_db_all(query_string, [id])
+
 def get_observation_byid(id):
 	query_string="select * from observation where id=?"
 	return query_db_one(query_string,[id])
@@ -713,6 +717,10 @@ def list_verdicts_function_property_byvalue(value):
 def list_verdicts_call(call_id):
 	query_string="select * from verdict where function_call=?"
 	return query_db_all(query_string,[call_id])
+
+def list_verdicts_from_binding(binding_id):
+	query_string = "select * from verdict where binding=?"
+	return query_db_all(query_string, [binding_id])
 
 def list_observations_call(call_id):
 	query_string="""select observation.id, observation.instrumentation_point,
@@ -1065,3 +1073,17 @@ where search_tree_vertex.id = ?
 	connection.close()
 
 	return final_data
+
+def compute_condition_sequence_and_path_length(observation_id):
+	"""
+	Given an observation ID, find the path condition sequence leading to that observation.
+	"""
+
+	connection = get_connection()
+	cursor = connection.cursor()
+
+	condition_sequence_and_path_length = observation_id_to_condition_sequence_and_path_length(cursor, observation_id)
+
+	connection.close()
+
+	return condition_sequence_and_path_length
