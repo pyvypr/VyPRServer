@@ -116,6 +116,18 @@ def register_verdict():
 
 	return "success"
 
+@app_object.route("/insert_function_call_data/", methods=["post"])
+def insert_function_call_data():
+	"""
+	Receives a json list of condition ids that make up the program path for a given function run.
+	This is inserted into the database so that mapping observations
+	to the appropriate previous condition is straightforward
+	(we just have to follow the chain for the correct number of steps).
+	"""
+	call_data = json.loads(request.data)
+	insertion_result = database.insert_function_call_data(call_data)
+	return json.dumps(insertion_result)
+
 @app_object.route("/store_property/", methods=["post"])
 def store_property():
 	"""

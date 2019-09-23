@@ -25,6 +25,65 @@ def get_connection():
 	global database_string
 	return sqlite3.connect(database_string)
 
+def insert_function_call_data(call_data):
+	"""
+	Given function call data, create the http request, function call and program path.
+	"""
+	connection = get_connection()
+	cursor = connection.cursor()
+
+	# insert http request
+	# since this data is received from the monitored service potentially
+	# multiple times per http request, we have to check whether a http
+	# request already exists in the database
+
+	http_requests = cursor.execute("select * from http_request where time_of_request = ?",
+			[call_data["http_request_time"]]).fetchall()
+	if len(http_requests) == 0:
+		cursor.execute("insert into http_request (time_of_request, grouping) values(?, ?)",
+			[call_data["http_request_time"], ""])
+		http_request_id = cursor.lastrowid
+		connection.commit()
+	else:
+		http_request_id = http_requests[0][0]
+
+	# insert call
+
+	function_id = cursor.execute("select id from function where fully_qualified_name = ? and property = ?",
+			(call_data["function_name"], call_data["property_hash"])).fetchall()[0][0]
+
+	cursor.execute("insert into function_call (function, time_of_call, http_request) values(?, ?, ?)",
+			[function_id, call_data["time_of_call"], http_request_id])
+	function_call_id = cursor.lastrowid
+	connection.commit()
+
+	# insert program path
+
+	program_path = call_data["program_path"]
+
+	# check for the empty condition
+	empty_condition = cursor.execute("select * from path_condition_structure where serialised_condition = ''").fetchall()
+	if len(empty_condition) == 0:
+		cursor.execute("insert into path_condition_structure (serialised_condition) values('')")
+		empty_condition_id = cursor.lastrowid
+	else:
+		empty_condition_id = empty_condition[0][0]
+
+	new_program_path = [empty_condition_id] + program_path
+	reversed_program_path = new_program_path[::-1]
+
+	next_condition_id = -1
+
+	for (n, condition_id) in enumerate(reversed_program_path):
+		cursor.execute("insert into path_condition (serialised_condition, next_path_condition, function_call) values(?, ?, ?)",
+				[condition_id, next_condition_id, function_call_id])
+		next_condition_id = cursor.lastrowid
+
+	connection.commit()
+	connection.close()
+
+	return {"function_call_id" : function_call_id, "function_id" : function_id}
+
 def insert_verdict(verdict_dictionary):
 	"""
 	Given a verdict dictionary containing a function name,
@@ -35,15 +94,15 @@ def insert_verdict(verdict_dictionary):
 	connection = get_connection()
 	cursor = connection.cursor()
 	# find if the function exists in the database
-	results = cursor.execute("select * from function where fully_qualified_name = ? and property = ?", [verdict_dictionary["function_name"], verdict_dictionary["property_hash"]]).fetchall()
-	new_function_id = int(results[0][0])
+	"""results = cursor.execute("select * from function where fully_qualified_name = ? and property = ?", [verdict_dictionary["function_name"], verdict_dictionary["property_hash"]]).fetchall()
+	new_function_id = int(results[0][0])"""
 
 	# create the binding if it doesn't already exist
-	results = cursor.execute("select * from binding where binding_space_index = ? and function = ?", [verdict_dictionary["bind_space_index"], new_function_id]).fetchall()
+	results = cursor.execute("select * from binding where binding_space_index = ? and function = ?", [verdict_dictionary["bind_space_index"], verdict_dictionary["function_id"]]).fetchall()
 	new_binding_id = int(results[0][0])
 
 	# create the http request
-	results = cursor.execute("select * from http_request where time_of_request = ?", [verdict_dictionary["http_request_time"]]).fetchall()
+	"""results = cursor.execute("select * from http_request where time_of_request = ?", [verdict_dictionary["http_request_time"]]).fetchall()
 	if len(results) == 0:
 		# no binding exists yet, so insert a new binding
 		cursor.execute("insert into http_request (time_of_request, grouping) values (?, ?)",
@@ -53,13 +112,13 @@ def insert_verdict(verdict_dictionary):
 		new_http_request_id = int(cursor.execute("select id from http_request where time_of_request = ?", [verdict_dictionary["http_request_time"]]).fetchall()[0][0])
 	else:
 		# get the id of the existing http request
-		new_http_request_id = int(results[0][0])
+		new_http_request_id = int(results[0][0])"""
 
 	print("verdict data received")
 	print(verdict_dictionary["verdict"])
 
 	# insert the function call that the verdict belongs to
-	results = cursor.execute("select * from function_call where time_of_call = ? and function = ?", [verdict_dictionary["time_of_call"], new_function_id]).fetchall()
+	"""results = cursor.execute("select * from function_call where time_of_call = ? and function = ?", [verdict_dictionary["time_of_call"], new_function_id]).fetchall()
 	if len(results) == 0:
 		# no binding exists yet, so insert a new binding
 		cursor.execute("insert into function_call (function, time_of_call, http_request) values (?, ?, ?)",
@@ -68,7 +127,7 @@ def insert_verdict(verdict_dictionary):
 		connection.commit()
 	else:
 		# get the id of the existing function call
-		new_function_call_id = int(results[0][0])
+		new_function_call_id = int(results[0][0])"""
 
 	# now we have a verdict to link observations to, we insert the assignments and the observations
 	# process the slice dictionary received and, for any assignment not already existing, create a new one.
@@ -79,7 +138,7 @@ def insert_verdict(verdict_dictionary):
 	path_map = verdict_dictionary["verdict"][3]
 	path_condition_ids = []
 
-	# find longest path length and just perform insertion for this path
+	"""# find longest path length and just perform insertion for this path
 	# all the others will be subpaths
 	longest_path_coordinate = (
 		verdict_dictionary["verdict"][3].keys()[0],
@@ -174,16 +233,29 @@ def insert_verdict(verdict_dictionary):
 
 				break
 
-	print("path condition ids are %s" % path_condition_ids)
+	print("path condition ids are %s" % path_condition_ids)"""
+
+	function_call_id = verdict_dictionary["function_call_id"]
+
+	# get path condition IDs - they were inserted before any verdicts
+	# we get the sequence in reverse and then reverse it
+	current_in_path = cursor.execute("select * from path_condition where next_path_condition = -1 and function_call = ?",
+				[function_call_id]).fetchall()[0]
+	reversed_path_sequence = [current_in_path[0]]
+	next_in_path = cursor.execute("select * from path_condition where next_path_condition = ?", [current_in_path[0]]).fetchall()
+	while len(next_in_path) == 1:
+		reversed_path_sequence.append(next_in_path[0][0])
+		next_in_path = cursor.execute("select * from path_condition where next_path_condition = ?", [next_in_path[0][0]]).fetchall()
+
+	path_condition_sequence = reversed_path_sequence[::-1]
 
 	# create the verdict
 	# we don't check for an existing verdict - there won't be repetitions here
-	# we have to create this before inserting slice data because slices map to observations, which map to verdicts
 	verdict = verdict_dictionary["verdict"][0]
 	verdict_time_obtained = verdict_dictionary["verdict"][1]
 	collapsing_atom_index = verdict_dictionary["verdict"][4]
 	cursor.execute("insert into verdict (binding, verdict, time_obtained, function_call, collapsing_atom) values (?, ?, ?, ?, ?)",
-		[new_binding_id, verdict, verdict_time_obtained, new_function_call_id, collapsing_atom_index])
+		[new_binding_id, verdict, verdict_time_obtained, function_call_id, collapsing_atom_index])
 	new_verdict_id = cursor.lastrowid
 
 	atom_to_state_dict_map = verdict_dictionary["verdict"][5]
@@ -192,7 +264,7 @@ def insert_verdict(verdict_dictionary):
 		# insert observation(s) for this atom_index
 		print(observations_map[atom_index])
 		for sub_index in observations_map[atom_index].keys():
-			last_condition = path_condition_ids[len(path_map[atom_index][sub_index])]
+			last_condition = path_condition_sequence[len(path_map[atom_index][sub_index])]
 			cursor.execute("insert into observation (instrumentation_point, verdict, observed_value, previous_condition, atom_index, sub_index) values(?, ?, ?, ?, ?, ?)",
 				[observations_map[atom_index][sub_index][1], new_verdict_id, str(observations_map[atom_index][sub_index][0]), last_condition, atom_index, sub_index])
 			observation_id = cursor.lastrowid
