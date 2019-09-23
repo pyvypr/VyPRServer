@@ -30,9 +30,9 @@ CREATE TABLE verdict (
     time_obtained timestamp not null,
     function_call int not null,
     collapsing_atom int not null,
+    collapsing_atom_sub_index int not null,
     foreign key(binding) references binding(id),
-    foreign key(function_call) references function_call(id),
-    foreign key(collapsing_atom) references atom(id)
+    foreign key(function_call) references function_call(id)
 );
 CREATE TABLE http_request (
     id integer primary key autoincrement,

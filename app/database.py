@@ -254,11 +254,12 @@ def insert_verdict(verdict_dictionary):
 	verdict = verdict_dictionary["verdict"][0]
 	verdict_time_obtained = verdict_dictionary["verdict"][1]
 	collapsing_atom_index = verdict_dictionary["verdict"][4]
-	cursor.execute("insert into verdict (binding, verdict, time_obtained, function_call, collapsing_atom) values (?, ?, ?, ?, ?)",
-		[new_binding_id, verdict, verdict_time_obtained, function_call_id, collapsing_atom_index])
+	collapsing_atom_sub_index = verdict_dictionary["verdict"][5]
+	cursor.execute("insert into verdict (binding, verdict, time_obtained, function_call, collapsing_atom, collapsing_atom_sub_index) values (?, ?, ?, ?, ?, ?)",
+		[new_binding_id, verdict, verdict_time_obtained, function_call_id, collapsing_atom_index, collapsing_atom_sub_index])
 	new_verdict_id = cursor.lastrowid
 
-	atom_to_state_dict_map = verdict_dictionary["verdict"][5]
+	atom_to_state_dict_map = verdict_dictionary["verdict"][6]
 
 	for atom_index in observations_map:
 		# insert observation(s) for this atom_index
