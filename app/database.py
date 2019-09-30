@@ -9,7 +9,7 @@ import json
 import sys
 import ast
 import os
-from graphviz import Digraph
+#from graphviz import Digraph
 import pickle
 
 from paths import *
@@ -32,6 +32,8 @@ def insert_function_call_data(call_data):
 	connection = get_connection()
 	cursor = connection.cursor()
 
+	print(str(call_data))
+
 	# insert http request
 	# since this data is received from the monitored service potentially
 	# multiple times per http request, we have to check whether a http
@@ -47,15 +49,26 @@ def insert_function_call_data(call_data):
 	else:
 		http_request_id = http_requests[0][0]
 
+	print("http request created")
+
 	# insert call
 
-	function_id = cursor.execute("select id from function where fully_qualified_name = ? and property = ?",
+	try:
+
+		function_id = cursor.execute("select id from function where fully_qualified_name = ? and property = ?",
 			(call_data["function_name"], call_data["property_hash"])).fetchall()[0][0]
 
-	cursor.execute("insert into function_call (function, time_of_call, http_request) values(?, ?, ?)",
-			[function_id, call_data["time_of_call"], http_request_id])
+	except Exception:
+		traceback.print_exc()
+
+	print("obtained function id")
+
+	cursor.execute("insert into function_call (function, time_of_call, end_time_of_call, http_request) values(?, ?, ?, ?)",
+			[function_id, call_data["time_of_call"], call_data["end_time_of_call"], http_request_id])
 	function_call_id = cursor.lastrowid
 	connection.commit()
+
+	print("function call created")
 
 	# insert program path
 
@@ -81,6 +94,8 @@ def insert_function_call_data(call_data):
 
 	connection.commit()
 	connection.close()
+
+	print("program path created")
 
 	return {"function_call_id" : function_call_id, "function_id" : function_id}
 
@@ -645,14 +660,19 @@ def list_functions2():
 
 def list_calls_function(function_name):
 	#based on the name of the function, list all function calls of the function with that name
-	query_string="""select function_call.id, function_call.function, function_call.time_of_call, function_call.http_request from
+	query_string="""select function_call.id, function_call.function, function_call.time_of_call, function_call.end_time_of_call, function_call.http_request from
 	(function inner join function_call on function.id=function_call.function)
 	where function.fully_qualified_name like ?"""
 	return query_db_all(query_string,[function_name])
 
 def list_calls_http(http_request_id):
 	#list all function_calls during the given http request
-	query_string="select * from (http_request inner join function_call on http_request.id=function_call.http_request) where http_request.id=?"
+	query_string="""
+	select function_call.id, function_call.function, function_call.time_of_call,
+	function_call.end_time_of_call, function_call.http_request
+	from (http_request inner join function_call on
+		http_request.id=function_call.http_request)
+	where http_request.id=?"""
 	return query_db_all(query_string,[http_request_id])
 
 def list_calls_httpid(http_request_id,function_id):
@@ -664,7 +684,7 @@ def list_calls_verdict(function_id,verdict_value):
 	#returns a list of dictionaries with calls of the given function
 	#such that their verdict value is 0 or 1 (verdict_value)
 	query_string="""select function_call.id, function_call.function,
-	function_call.time_of_call,	function_call.http_request from
+	function_call.time_of_call, function_call.end_time_of_call,	function_call.http_request from
 	function_call inner join verdict on verdict.function_call=function_call.id
 	inner join function on function_call.function=function.id
 	where function.id=? and verdict.verdict=?"""

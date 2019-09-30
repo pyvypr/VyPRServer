@@ -19,6 +19,7 @@ CREATE TABLE function_call (
     id integer primary key autoincrement,
     function int not null,
     time_of_call timestamp not null,
+    end_time_of_call timestamp not null,
     http_request int not null,
     foreign key(function) references function(id),
     foreign key(http_request) references http_request(id)
