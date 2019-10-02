@@ -100,19 +100,21 @@ def deserialise_property(dictionary):
 Verdict storage end points for use by the VyPR monitoring machinery.
 """
 
-@app_object.route("/register_verdict/", methods=["post"])
-def register_verdict():
+@app_object.route("/register_verdicts/", methods=["post"])
+def register_verdicts():
 	"""
 	Receives a verdict from a monitored service, and stores it
 	"""
+	print("attempting verdict insertion")
+	print(request.data)
+
 	verdict_data = json.loads(request.data)
-	verdict_data["verdict"] = json.loads(verdict_data["verdict"])
 
 	print("attempting verdict insertion for data %s" % str(verdict_data))
 
-	database.insert_verdict(verdict_data)
+	database.insert_verdicts(verdict_data)
 
-	print("verdict inserted")
+	print("verdicts inserted")
 
 	return "success"
 
@@ -265,4 +267,5 @@ def get_path_condition_sequence(observation_id):
 	"""
 	Given an observation ID, determine the sequence of path conditions leading to it through the SCFG with which it's associated.
 	"""
+	print("getting condition sequence")
 	return json.dumps(database.compute_condition_sequence_and_path_length(observation_id))

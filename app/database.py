@@ -99,224 +99,117 @@ def insert_function_call_data(call_data):
 
 	return {"function_call_id" : function_call_id, "function_id" : function_id}
 
-def insert_verdict(verdict_dictionary):
-	"""
-	Given a verdict dictionary containing a function name,
-	time of call, bind space index and verdict (paired with timestamp),
-	insert the necessary rows into the tables in the verdict schema.
-	"""
+def insert_verdicts(verdict_dictionary):
 
 	connection = get_connection()
 	cursor = connection.cursor()
-	# find if the function exists in the database
-	"""results = cursor.execute("select * from function where fully_qualified_name = ? and property = ?", [verdict_dictionary["function_name"], verdict_dictionary["property_hash"]]).fetchall()
-	new_function_id = int(results[0][0])"""
 
-	# create the binding if it doesn't already exist
-	results = cursor.execute("select * from binding where binding_space_index = ? and function = ?", [verdict_dictionary["bind_space_index"], verdict_dictionary["function_id"]]).fetchall()
-	new_binding_id = int(results[0][0])
-
-	# create the http request
-	"""results = cursor.execute("select * from http_request where time_of_request = ?", [verdict_dictionary["http_request_time"]]).fetchall()
-	if len(results) == 0:
-		# no binding exists yet, so insert a new binding
-		cursor.execute("insert into http_request (time_of_request, grouping) values (?, ?)",
-			(verdict_dictionary["http_request_time"], ""))
-		connection.commit()
-		# get the id
-		new_http_request_id = int(cursor.execute("select id from http_request where time_of_request = ?", [verdict_dictionary["http_request_time"]]).fetchall()[0][0])
-	else:
-		# get the id of the existing http request
-		new_http_request_id = int(results[0][0])"""
-
-	print("verdict data received")
-	print(verdict_dictionary["verdict"])
-
-	# insert the function call that the verdict belongs to
-	"""results = cursor.execute("select * from function_call where time_of_call = ? and function = ?", [verdict_dictionary["time_of_call"], new_function_id]).fetchall()
-	if len(results) == 0:
-		# no binding exists yet, so insert a new binding
-		cursor.execute("insert into function_call (function, time_of_call, http_request) values (?, ?, ?)",
-			(new_function_id, verdict_dictionary["time_of_call"], new_http_request_id))
-		new_function_call_id = cursor.lastrowid
-		connection.commit()
-	else:
-		# get the id of the existing function call
-		new_function_call_id = int(results[0][0])"""
-
-	# now we have a verdict to link observations to, we insert the assignments and the observations
-	# process the slice dictionary received and, for any assignment not already existing, create a new one.
-	# keeping a record of the IDs of all existing and newly created assignments
-	# note: indices of slice_map and observations_map are the same since they're constructed at the same time
-	# during monitoring
-	observations_map = verdict_dictionary["verdict"][2]
-	path_map = verdict_dictionary["verdict"][3]
-	path_condition_ids = []
-
-	"""# find longest path length and just perform insertion for this path
-	# all the others will be subpaths
-	longest_path_coordinate = (
-		verdict_dictionary["verdict"][3].keys()[0],
-		verdict_dictionary["verdict"][3][verdict_dictionary["verdict"][3].keys()[0]].keys()[0]
-	)
-	for atom_index in path_map:
-		for atom_sub_index in path_map[atom_index]:
-			if (len(verdict_dictionary["verdict"][3][atom_index][atom_sub_index]) >
-					len(verdict_dictionary["verdict"][3][longest_path_coordinate[0]][longest_path_coordinate[1]])):
-				longest_path_coordinate = (atom_index, atom_sub_index)
-
-	print("atom index %s has longest path" % str(longest_path_coordinate))
-
-	condition_id_sequence = verdict_dictionary["verdict"][3][longest_path_coordinate[0]][longest_path_coordinate[1]]
-	# insert empty condition at the beginning - we need to check if the empty condition exists in the database
-	result = cursor.execute("select id from path_condition_structure where serialised_condition = ''").fetchall()
-	if len(result) > 0:
-		# the empty condition exists
-		empty_condition_id = int(result[0][0])
-	else:
-		# we have to insert the empty condition
-		cursor.execute("insert into path_condition_structure (serialised_condition) values('')")
-		empty_condition_id = int(cursor.lastrowid)
-	condition_id_sequence = [empty_condition_id] + condition_id_sequence
-
-	print("performing insertion with condition id sequence %s" % str(condition_id_sequence))
-
-	# before constructing the path based on the atom with the longest path sequence,
-	# we trace forwards through condition_id_sequence to see if part of the path has already been inserted
-	# by a previous verdict insertion from the same function call.
-	# eventually we should change the way verdicts are sent from the service-level to send everything at once
-	# and then path insertion will be simpler
-	for (n, condition_id) in enumerate(condition_id_sequence):
-		print("path check - %i with condition id %i and function call id %i" % (n, condition_id, new_function_call_id))
-		result = cursor.execute("select id, next_path_condition from path_condition where serialised_condition = ? and function_call = ?", [condition_id, new_function_call_id]).fetchall()
-		if len(result) == 0:
-			# the only way this can happen is if there is no existing path - if the first path condition
-			# in the chain exists, all others in the chain exist by construction.
-			# we tell the path insertion that happens below where to start inserting the path from
-			# in this case, the entire path must be inserted because nothing exists yet.
-
-			print("no path found - inserting one")
-
-			most_recent_id = None
-			for (m, condition_id) in enumerate(condition_id_sequence[::-1]):
-				# insert a new path_condition row for this condition_id
-				next_path_condition = -1 if m == 0 else most_recent_id
-				cursor.execute("insert into path_condition (serialised_condition, next_path_condition, function_call) values(?, ?, ?)",
-					[condition_id, next_path_condition, new_function_call_id])
-				print("inserted", condition_id, next_path_condition, new_function_call_id)
-				most_recent_id = cursor.lastrowid
-				path_condition_ids.append(most_recent_id)
-
-			# reverse the id sequence since it's currently backwards due
-			# due to inserting in reverse order
-			path_condition_ids = path_condition_ids[::-1]
-
-			break
-
-		else:
-			next_path_condition = result[0][1]
-			path_condition_ids.append(result[0][0])
-			if next_path_condition == -1 and n < len(condition_id_sequence)-1:
-				# we've reached the end of the path condition chain, but we have more conditions to insert
-				# from the verdict sent from the service-level.
-				# this means we must extend the existing path
-				# we do this by inserting the rest of the path (the remainder of condition_id_sequence)
-				# and then updating the old end of path to point to the new extension
-
-				print("existing path ended too soon - extending it...")
-				print("starting by inserting extension from position %i" % (n+1))
-
-				# insert the extension
-				most_recent_id = None
-				extension_condition_ids = []
-				for (m, condition_id) in enumerate(condition_id_sequence[n+1:][::-1]):
-					# insert a new path_condition row for this condition_id
-					next_path_condition = -1 if m == 0 else most_recent_id
-					cursor.execute("insert into path_condition (serialised_condition, next_path_condition, function_call) values(?, ?, ?)",
-						[condition_id, next_path_condition, new_function_call_id])
-					print("inserted", condition_id, next_path_condition, new_function_call_id)
-					most_recent_id = cursor.lastrowid
-					extension_condition_ids.append(most_recent_id)
-
-				# reverse the list of condition ids of the path extension
-				extension_condition_ids = extension_condition_ids[::-1]
-				# add to the existing list of condition ids
-				path_condition_ids += extension_condition_ids
-
-				# update the old path
-				cursor.execute("update path_condition set next_path_condition = ? where id = ?", [most_recent_id, result[0][0]])
-
-				break
-
-	print("path condition ids are %s" % path_condition_ids)"""
+	print("Performing verdicts insertion")
 
 	function_call_id = verdict_dictionary["function_call_id"]
 
 	# get path condition IDs - they were inserted before any verdicts
 	# we get the sequence in reverse and then reverse it
-	current_in_path = cursor.execute("select * from path_condition where next_path_condition = -1 and function_call = ?",
-				[function_call_id]).fetchall()[0]
+	current_in_path = cursor.execute(
+		"select * from path_condition where next_path_condition = -1 and function_call = ?",
+		[function_call_id]
+	).fetchall()[0]
 	reversed_path_sequence = [current_in_path[0]]
-	next_in_path = cursor.execute("select * from path_condition where next_path_condition = ?", [current_in_path[0]]).fetchall()
+	next_in_path = cursor.execute(
+		"select * from path_condition where next_path_condition = ?",
+		[current_in_path[0]]
+	).fetchall()
 	while len(next_in_path) == 1:
 		reversed_path_sequence.append(next_in_path[0][0])
-		next_in_path = cursor.execute("select * from path_condition where next_path_condition = ?", [next_in_path[0][0]]).fetchall()
+		next_in_path = cursor.execute(
+			"select * from path_condition where next_path_condition = ?",
+			[next_in_path[0][0]]
+		).fetchall()
 
 	path_condition_sequence = reversed_path_sequence[::-1]
 
-	# create the verdict
-	# we don't check for an existing verdict - there won't be repetitions here
-	verdict = verdict_dictionary["verdict"][0]
-	verdict_time_obtained = verdict_dictionary["verdict"][1]
-	collapsing_atom_index = verdict_dictionary["verdict"][4]
-	collapsing_atom_sub_index = verdict_dictionary["verdict"][5]
-	cursor.execute("insert into verdict (binding, verdict, time_obtained, function_call, collapsing_atom, collapsing_atom_sub_index) values (?, ?, ?, ?, ?, ?)",
-		[new_binding_id, verdict, verdict_time_obtained, function_call_id, collapsing_atom_index, collapsing_atom_sub_index])
-	new_verdict_id = cursor.lastrowid
+	print("Path condition sequence is")
+	print(path_condition_sequence)
 
-	atom_to_state_dict_map = verdict_dictionary["verdict"][6]
+	for verdict in verdict_dictionary["verdicts"]:
 
-	for atom_index in observations_map:
-		# insert observation(s) for this atom_index
-		print(observations_map[atom_index])
-		for sub_index in observations_map[atom_index].keys():
-			last_condition = path_condition_sequence[len(path_map[atom_index][sub_index])]
-			cursor.execute("insert into observation (instrumentation_point, verdict, observed_value, previous_condition, atom_index, sub_index) values(?, ?, ?, ?, ?, ?)",
-				[observations_map[atom_index][sub_index][1], new_verdict_id, str(observations_map[atom_index][sub_index][0]), last_condition, atom_index, sub_index])
-			observation_id = cursor.lastrowid
+		print("inserting verdict")
+		print(verdict)
+		print(type(verdict))
 
-			# insert assignments (if they don't exist yet), and link them
-			# to the observation we just inserted
+		# use the binding space index and the function id to get the binding id
+		results = cursor.execute(
+			"select * from binding where binding_space_index = ? and function = ?",
+			[verdict["bind_space_index"], verdict_dictionary["function_id"]]
+		).fetchall()
+		new_binding_id = int(results[0][0])
 
-			state_dict = atom_to_state_dict_map[atom_index][sub_index]
-			if state_dict:
-				for var in state_dict.keys():
-					# check if this assignment already exists
-					assignments = cursor.execute(
-						"select id from assignment where variable = ? and value = ?",
-						[var, pickle.dumps(state_dict[var])]
-					).fetchall()
+		print("obtained binding id")
 
-					# either take the existing ID, or insert a new assignment and use the new ID
-					if len(assignments) > 0:
-						# the assignment already exists - get its ID and link it to the observation
-						assignment_id = assignments[0][0]
-					else:
-						# create a new assignment
+		verdict_value = verdict["verdict"][0]
+		verdict_time_obtained = verdict["verdict"][1]
+		observations_map = verdict["verdict"][2]
+		# Note: path_map already holds integers that are offsets into the program path
+		# of the entire function call
+		path_map = verdict["verdict"][3]
+		collapsing_atom_index = verdict["verdict"][4]
+		collapsing_atom_sub_index = verdict["verdict"][5]
+		atom_to_state_dict_map = verdict["verdict"][6]
+
+		path_condition_ids = []
+
+		# create the verdict
+		# we don't check for an existing verdict - there won't be repetitions here
+		cursor.execute(
+			"insert into verdict (binding, verdict, time_obtained, function_call, collapsing_atom, collapsing_atom_sub_index) values (?, ?, ?, ?, ?, ?)",
+			[new_binding_id, verdict_value, verdict_time_obtained, function_call_id, collapsing_atom_index, collapsing_atom_sub_index])
+		new_verdict_id = cursor.lastrowid
+
+		print("inserted verdict - now performing observation insertion")
+
+		for atom_index in observations_map:
+			# insert observation(s) for this atom_index
+			print(observations_map[atom_index])
+			for sub_index in observations_map[atom_index].keys():
+				last_condition = path_condition_sequence[path_map[atom_index][sub_index]]
+				cursor.execute(
+					"insert into observation (instrumentation_point, verdict, observed_value, previous_condition, atom_index, sub_index) values(?, ?, ?, ?, ?, ?)",
+					[observations_map[atom_index][sub_index][1], new_verdict_id, str(observations_map[atom_index][sub_index][0]), last_condition, atom_index, sub_index]
+				)
+				observation_id = cursor.lastrowid
+
+				# insert assignments (if they don't exist yet), and link them
+				# to the observation we just inserted
+
+				state_dict = atom_to_state_dict_map[atom_index][sub_index]
+				if state_dict:
+					for var in state_dict.keys():
+						# check if this assignment already exists
+						assignments = cursor.execute(
+							"select id from assignment where variable = ? and value = ?",
+							[var, pickle.dumps(state_dict[var])]
+						).fetchall()
+
+						# either take the existing ID, or insert a new assignment and use the new ID
+						if len(assignments) > 0:
+							# the assignment already exists - get its ID and link it to the observation
+							assignment_id = assignments[0][0]
+						else:
+							# create a new assignment
+							cursor.execute(
+								"insert into assignment (variable, value, type) values(?, ?, ?)",
+								[var, pickle.dumps(state_dict[var]), str(type(state_dict[var]))]
+							)
+							assignment_id = cursor.lastrowid
+
+						# insert the link
 						cursor.execute(
-							"insert into assignment (variable, value, type) values(?, ?, ?)",
-							[var, pickle.dumps(state_dict[var]), str(type(state_dict[var]))]
+							"insert into observation_assignment_pair (observation, assignment) values(?, ?)",
+							[observation_id, assignment_id]
 						)
-						assignment_id = cursor.lastrowid
 
-					# insert the link
-					cursor.execute(
-						"insert into observation_assignment_pair (observation, assignment) values(?, ?)",
-						[observation_id, assignment_id]
-					)
-
-
-	connection.commit()
+		# commit for this verdict
+		connection.commit()
 
 	connection.close()
 
