@@ -198,7 +198,7 @@ Functions used as end points for the web-based analysis tool.
 def index():
 	return render_template("index.html")
 
-@app_object.route("/specification/", methods=["get"])
+"""@app_object.route("/specification/", methods=["get"])
 def specification():
 	functions = database.list_functions()
 	# process the property serialisation for each function to turn it into an understandable string
@@ -240,7 +240,7 @@ def list_function_calls_from_verdict_and_path(verdict, path):
 
 	template_with_data = render_template("function_list.html", data=map_structure, truth_map={1:"Satisfaction", 0:"Violation"})
 
-	return template_with_data
+	return template_with_data"""
 
 """
 Functions used as end points for VyPR-analysis.

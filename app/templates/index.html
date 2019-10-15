@@ -11,40 +11,15 @@
 
 	<div class="panel panel-default">
 	  <div class="panel-heading">
-	    <h3 class="panel-title">VyPR Server</h3>
+	    <h3 class="panel-title">VyPRServer</h3>
 	  </div>
 	  <div class="panel-body">
 	    <p><b>VyPR</b> is a framework for automated performance analysis of Python web services.</p>
-	    <p><b>VyPR Server</b> is a central server used for web-based analysis of performance data obtained by monitoring a service with VyPR.</p>
-	    <p><b>To begin, select a type of analysis below:</b></p>
+	    <p><b>VyPRServer</b> is a central server used to collect the data obtained at runtime by monitoring.</p>
+	    <p>The data held by <b>VyPRServer</b> can be analysed using <b>VyPRAnalysis</b>.</p>
 	  </div>
 	</div>
 	
-</div>
-
-<div class="container-fluid">
-	<div class="row" id="link-wrapper">
-
-	  	<div class="col-md-6">
-	  		<div class="panel panel-default index-link">
-			  <div class="panel-body">
-			    <p>Starting from the function/property pair, you can see the verdicts reached by verifying
-			    the property over the function in a specific HTTP request.</p>
-			  </div>
-			  <div class="panel-footer"><a href="/specification/">Search by Specification</a></div>
-			</div>
-	  	</div>
-
-	  	<div class="col-md-6">
-	  		<div class="panel panel-default index-link">
-			  <div class="panel-body">
-			    <p>Starting from a verdict, find the code that generated that verdict at some point during runtime.</p>
-			  </div>
-			  <div class="panel-footer"><a href="/verdict/">Search by Verdict</a></div>
-			</div>
-	  	</div>
-
-	</div>
 </div>
 
 {%endblock %}
