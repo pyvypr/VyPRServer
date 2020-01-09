@@ -7,9 +7,10 @@ import datetime
 from flask import request, jsonify, render_template
 import json
 import pickle
-import database
 import sys
-from analysis_API import *
+
+from .analysis_API import *
+from . import database
 
 from VyPR.formula_building.formula_building import *
 from VyPR.monitor_synthesis.formula_tree import *

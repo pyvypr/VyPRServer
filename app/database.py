@@ -12,7 +12,7 @@ import os
 # from graphviz import Digraph
 import pickle
 
-from paths import *
+from .paths import *
 
 database_string = "verdicts.db"
 
