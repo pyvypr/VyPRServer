@@ -10,8 +10,8 @@ import ast
 import pickle
 import json
 
-from VyPR.control_flow_graph.construction import CFG, CFGVertex, CFGEdge
-from VyPR.control_flow_graph.parse_tree import ParseTree
+from VyPR.SCFG.construction import CFG, CFGVertex, CFGEdge
+from VyPR.SCFG.parse_tree import ParseTree
 from VyPR.monitor_synthesis.formula_tree import LogicalNot
 
 def construct_new_search_tree(connection, cursor, scfg, root_observation, observation_list, instrumentation_point_id):

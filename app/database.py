@@ -2,23 +2,14 @@
 Module to handle interaction with the verdict database.
 """
 
-# use sqlite for now
 import sqlite3
 import traceback
-import json
-import sys
-import ast
-import os
-# from graphviz import Digraph
-import pickle
 
 from .paths import *
 
 database_string = "verdicts.db"
 
-from VyPR.control_flow_graph.construction import CFG, CFGVertex, CFGEdge
-from VyPR.control_flow_graph.parse_tree import ParseTree
-from VyPR.monitor_synthesis.formula_tree import LogicalNot
+from VyPR.SCFG.parse_tree import ParseTree
 
 
 def get_connection():

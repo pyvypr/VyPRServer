@@ -12,7 +12,7 @@ import sys
 from .analysis_API import *
 from . import database
 
-from VyPR.formula_building.formula_building import *
+from VyPR.QueryBuilding import *
 from VyPR.monitor_synthesis.formula_tree import *
 
 """
