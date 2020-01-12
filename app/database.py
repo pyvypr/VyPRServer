@@ -170,9 +170,11 @@ def insert_verdicts(verdict_dictionary):
             for sub_index in observations_map[atom_index].keys():
                 last_condition = path_condition_sequence[path_map[atom_index][sub_index]]
                 cursor.execute(
-                    "insert into observation (instrumentation_point, verdict, observed_value, previous_condition, atom_index, sub_index) values(?, ?, ?, ?, ?, ?)",
+                    "insert into observation (instrumentation_point, verdict, observed_value, observation_time, "
+                    "previous_condition, atom_index, sub_index) values(?, ?, ?, ?, ?, ?, ?)",
                     [observations_map[atom_index][sub_index][1], new_verdict_id,
-                     str(observations_map[atom_index][sub_index][0]), last_condition, atom_index, sub_index]
+                     str(observations_map[atom_index][sub_index][0]), observations_map[atom_index][sub_index][2],
+                     last_condition, atom_index, sub_index]
                 )
                 observation_id = cursor.lastrowid
 
@@ -181,6 +183,7 @@ def insert_verdicts(verdict_dictionary):
 
                 state_dict = atom_to_state_dict_map[atom_index][sub_index]
                 if state_dict:
+                    print(state_dict)
                     for var in state_dict.keys():
                         # check if this assignment already exists
                         assignments = cursor.execute(

@@ -70,6 +70,7 @@ CREATE TABLE observation (
     instrumentation_point int not null,
     verdict int not null,
     observed_value text not null,
+    observation_time timestamp not null,
     atom_index int not null,
     sub_index int not null,
     previous_condition integer not null,
