@@ -20,29 +20,29 @@ def get_connection():
 
 def insert_function_call_data(call_data):
     """
-    Given function call data, create the http request, function call and program path.
+    Given function call data, create the transaction, function call and program path.
     """
     connection = get_connection()
     cursor = connection.cursor()
 
     print(str(call_data))
 
-    # insert http request
+    # insert transaction
     # since this data is received from the monitored service potentially
-    # multiple times per http request, we have to check whether a http
-    # request already exists in the database
+    # multiple times per transaction, we have to check whether a transaction
+    # already exists in the database
 
-    http_requests = cursor.execute("select * from http_request where time_of_request = ?",
-                                   [call_data["http_request_time"]]).fetchall()
-    if len(http_requests) == 0:
-        cursor.execute("insert into http_request (time_of_request, grouping) values(?, ?)",
-                       [call_data["http_request_time"], ""])
-        http_request_id = cursor.lastrowid
+    transactions = cursor.execute("select * from trans where time_of_transaction = ?",
+                                  [call_data["transaction_time"]]).fetchall()
+    if len(transactions) == 0:
+        cursor.execute("insert into trans (time_of_transaction) values(?)",
+                       [call_data["transaction_time"]])
+        transaction_id = cursor.lastrowid
         connection.commit()
     else:
-        http_request_id = http_requests[0][0]
+        transaction_id = transactions[0][0]
 
-    print("http request created")
+    print("transaction created")
 
     # insert call
 
@@ -57,8 +57,8 @@ def insert_function_call_data(call_data):
     print("obtained function id")
 
     cursor.execute(
-        "insert into function_call (function, time_of_call, end_time_of_call, http_request) values(?, ?, ?, ?)",
-        [function_id, call_data["time_of_call"], call_data["end_time_of_call"], http_request_id])
+        "insert into function_call (function, time_of_call, end_time_of_call, trans) values(?, ?, ?, ?)",
+        [function_id, call_data["time_of_call"], call_data["end_time_of_call"], transaction_id])
     function_call_id = cursor.lastrowid
     connection.commit()
 
@@ -367,7 +367,7 @@ def insert_branching_condition(dictionary):
 
 def list_verdicts(function_name):
     """
-    Given a function name, for each http request, for each function call, list the verdicts.
+    Given a function name, for each transaction, for each function call, list the verdicts.
     """
     connection = get_connection()
     cursor = connection.cursor()
@@ -377,12 +377,12 @@ def list_verdicts(function_name):
 
     bindings = cursor.execute("select * from binding where function = ?", [function_id]).fetchall()
 
-    http_requests = cursor.execute("select * from http_request").fetchall()
+    transactions = cursor.execute("select * from trans").fetchall()
     request_to_verdicts = {}
-    for result in http_requests:
+    for result in transactions:
         request_to_verdicts[result[1]] = {}
-        # find the function calls of function_name for this http request
-        calls = cursor.execute("select * from function_call where http_request = ?", [result[0]]).fetchall()
+        # find the function calls of function_name for this transaction
+        calls = cursor.execute("select * from function_call where trans = ?", [result[0]]).fetchall()
         for call in calls:
             request_to_verdicts[result[1]][call[2]] = {}
             for binding in bindings:
@@ -401,19 +401,19 @@ def list_verdicts(function_name):
     return request_to_verdicts
 
 
-def list_http_requests(function_id):
+def list_transactions(function_id):
     """
-    Return a list of all http requests - we may eventually want do to this with a time interval bound.
+    Return a list of all transactions - we may eventually want do to this with a time interval bound.
     """
     connection = get_connection()
     cursor = connection.cursor()
 
-    http_requests = cursor.execute("select * from http_request").fetchall()
+    transactions = cursor.execute("select * from trans").fetchall()
 
     # list only the requests for which there is a call to the function with function_id
     final_requests = []
-    for request in http_requests:
-        calls_with_function_id = cursor.execute("select * from function_call where function = ? and http_request = ?",
+    for request in transactions:
+        calls_with_function_id = cursor.execute("select * from function_call where function = ? and trans = ?",
                                                 [function_id, request[0]]).fetchall()
         if len(calls_with_function_id) > 0:
             final_requests.append(request)
@@ -424,15 +424,15 @@ def list_http_requests(function_id):
     return final_requests
 
 
-def list_calls_during_request(http_request_id, function_name):
+def list_calls_during_request(transaction_id, function_name):
     """
-    Given an http request id, list the function calls of the given function during that request.
+    Given an transaction id, list the function calls of the given function during that request.
     """
     connection = get_connection()
     cursor = connection.cursor()
 
-    function_calls = cursor.execute("select * from function_call where http_request = ? and function = ?",
-                                    [http_request_id, function_name]).fetchall()
+    function_calls = cursor.execute("select * from function_call where trans = ? and function = ?",
+                                    [transaction_id, function_name]).fetchall()
 
     connection.close()
 
@@ -498,7 +498,7 @@ def web_list_functions():
     return dictionary_tree_structure
 
 
-def get_http_request_function_call_pairs(verdict, path):
+def get_transaction_function_call_pairs(verdict, path):
     """
     For the given verdict and path pair, find all the function calls inside that path that
     result in a verdict matching the one given.
@@ -592,34 +592,34 @@ def list_functions2():
 
 def list_calls_function(function_name):
     # based on the name of the function, list all function calls of the function with that name
-    query_string = """select function_call.id, function_call.function, function_call.time_of_call, function_call.end_time_of_call, function_call.http_request from
-    (function inner join function_call on function.id=function_call.function)
-    where function.fully_qualified_name like ?"""
+    query_string = """select function_call.id, function_call.function, function_call.time_of_call, 
+    function_call.end_time_of_call, function_call.trans from (function inner join function_call on 
+    function.id=function_call.function) where function.fully_qualified_name like ? """
     return query_db_all(query_string, [function_name])
 
 
-def list_calls_http(http_request_id):
-    # list all function_calls during the given http request
+def list_calls_transaction(transaction_id):
+    # list all function_calls during the given transaction
     query_string = """
     select function_call.id, function_call.function, function_call.time_of_call,
-    function_call.end_time_of_call, function_call.http_request
-    from (http_request inner join function_call on
-        http_request.id=function_call.http_request)
-    where http_request.id=?"""
-    return query_db_all(query_string, [http_request_id])
+    function_call.end_time_of_call, function_call.trans
+    from (trans inner join function_call on
+        trans.id=function_call.trans)
+    where trans.id=?"""
+    return query_db_all(query_string, [transaction_id])
 
 
-def list_calls_httpid(http_request_id, function_id):
+def list_calls_transactionid(transaction_id, function_id):
     # a combination of the previous two functions: lists calls of given function during the given request
-    query_string = "select * from function_call where http_request=? and function=?"
-    return query_db_all(query_string, [http_request_id, function_id])
+    query_string = "select * from function_call where trans=? and function=?"
+    return query_db_all(query_string, [transaction_id, function_id])
 
 
 def list_calls_verdict(function_id, verdict_value):
     # returns a list of dictionaries with calls of the given function
     # such that their verdict value is 0 or 1 (verdict_value)
     query_string = """select function_call.id, function_call.function,
-    function_call.time_of_call, function_call.end_time_of_call,	function_call.http_request from
+    function_call.time_of_call, function_call.end_time_of_call,	function_call.trans from
     function_call inner join verdict on verdict.function_call=function_call.id
     inner join function on function_call.function=function.id
     where function.id=? and verdict.verdict=?"""
@@ -636,9 +636,9 @@ def get_f_byid(function_id):
     return query_db_one(query_string, [function_id])
 
 
-def get_http_byid(http_request_id):
-    query_string = "select * from http_request where id=?"
-    return query_db_one(query_string, [http_request_id])
+def get_transaction_byid(transaction_id):
+    query_string = "select * from trans where id=?"
+    return query_db_one(query_string, [transaction_id])
 
 
 def get_call_byid(call_id):
@@ -646,8 +646,8 @@ def get_call_byid(call_id):
     return query_db_one(query_string, [call_id])
 
 
-def get_http_bytime(time):
-    query_string = "select * from http_request where time_of_request=?"
+def get_transaction_bytime(time):
+    query_string = "select * from trans where time_of_transaction=?"
     return query_db_one(query_string, [time])
 
 
