@@ -171,10 +171,10 @@ def insert_verdicts(verdict_dictionary):
                 last_condition = path_condition_sequence[path_map[atom_index][sub_index]]
                 cursor.execute(
                     "insert into observation (instrumentation_point, verdict, observed_value, observation_time, "
-                    "previous_condition, atom_index, sub_index) values(?, ?, ?, ?, ?, ?, ?)",
+                    "observation_end_time, previous_condition, atom_index, sub_index) values(?, ?, ?, ?, ?, ?, ?, ?)",
                     [observations_map[atom_index][sub_index][1], new_verdict_id,
                      str(observations_map[atom_index][sub_index][0]), observations_map[atom_index][sub_index][2],
-                     last_condition, atom_index, sub_index]
+                     observations_map[atom_index][sub_index][3], last_condition, atom_index, sub_index]
                 )
                 observation_id = cursor.lastrowid
 
