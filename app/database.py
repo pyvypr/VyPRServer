@@ -731,6 +731,27 @@ def get_pathcon_byid(id):
     return query_db_one(query_string, [id])
 
 
+def get_path_conditions_by_function_call_id(call_id):
+    """Given a function call id, get the serialised conditions used for path reconstruction through that function
+    call. """
+    connection = get_connection()
+    connection.row_factory = sqlite3.Row
+    cursor = connection.cursor()
+    query_string = "select * from path_condition where function_call = ?"
+    path_condition_dicts = cursor.execute("select * from path_condition where function_call = ?", [call_id]).fetchall()
+    path_condition_ids = map(lambda path_cond_dict : path_cond_dict["serialised_condition"], path_condition_dicts)
+    # extract the path condition ids, then get the serialised path conditions
+    serialised_conditions = list(map(
+        lambda path_condition_id : cursor.execute(
+            "select serialised_condition from path_condition_structure where id=?",
+            [path_condition_id]
+        ).fetchone()["serialised_condition"],
+        path_condition_ids
+    ))
+    connection.close()
+    return json.dumps(serialised_conditions)
+
+
 def get_searchtree_byid(id):
     query_string = "select * from search_tree where id=?"
     return query_db_one(query_string, [id])

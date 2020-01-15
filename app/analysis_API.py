@@ -14,14 +14,14 @@ def list_function_calls_f(function_name):
     return database.list_calls_function(function_name)
 
 
-@app_object.route("/client/list_function_calls_http/<http_request_id>/")
-def list_function_calls_http(http_request_id):
-    return database.list_calls_http(http_request_id)
+@app_object.route("/client/list_function_calls_transaction/<transaction_id>/")
+def list_function_calls_transaction(transaction_id):
+    return database.list_calls_transaction(transaction_id)
 
 
-@app_object.route("/client/list_function_calls_http_id/<http_request_id>/<function_id>/")
-def list_function_calls_http_id(http_request_id, function_id):
-    return database.list_calls_httpid(http_request_id, function_id)
+@app_object.route("/client/list_function_calls_transaction_id/<transaction_id>/<function_id>/")
+def list_function_calls_transaction_id(transaction_id, function_id):
+    return database.list_calls_transactionid(transaction_id, function_id)
 
 
 @app_object.route("/client/get_function_by_name/<function_name>/")
@@ -34,9 +34,11 @@ def get_function_by_id(function_id):
     return database.get_f_byid(function_id)
 
 
-@app_object.route("/client/get_http_by_id/<http_request_id>/")
-def get_http_by_id(http_request_id):
-    return database.get_http_byid(http_request_id)
+@app_object.route("/client/get_transaction_by_id/<transaction_id>/")
+def get_transaction_by_id(transaction_id):
+    tr = database.get_transaction_byid(transaction_id)
+    print(tr)
+    return tr
 
 
 @app_object.route("/client/get_call_by_id/<call_id>/")
@@ -44,9 +46,9 @@ def get_call_by_id(call_id):
     return database.get_call_byid(call_id)
 
 
-@app_object.route("/client/get_http_by_time/<time_of_request>/")
-def get_http_by_time(time_of_request):
-    return database.get_http_bytime(time_of_request)
+@app_object.route("/client/get_transaction_by_time/<time_of_request>/")
+def get_transaction_by_time(time_of_request):
+    return database.get_transaction_bytime(time_of_request)
 
 
 @app_object.route("/client/get_verdict_by_id/<verdict_id>/")
@@ -111,7 +113,12 @@ def get_assignment_by_id(assignment_id):
 
 @app_object.route("/client/get_path_condition_structure_by_id/<pcs_id>/")
 def get_path_condition_structure_by_id(pcs_id):
-    return database.get_pcs_byid(assignment_id)
+    return database.get_pcs_byid(pcs_id)
+
+
+@app_object.route("/client/get_path_conditions_by_function_call_id/<call_id>/")
+def get_path_conditions_by_function_call_id(call_id):
+    return database.get_path_conditions_by_function_call_id(call_id)
 
 
 @app_object.route("/client/get_path_condition_by_id/<pathcon_id>/")
