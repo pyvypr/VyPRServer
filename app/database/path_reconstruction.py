@@ -1,24 +1,84 @@
 """
-This module contains logic for path reconstruction and comparison.
-It currently uses search trees as an optimised method for observation search.
-The search tree method needs to be documented.
+Path reconstruction functions.
 """
-
-import os
-import sys
-import ast
-import pickle
-import json
-
+from .utils import get_connection
 from VyPR.SCFG.construction import CFG, CFGVertex, CFGEdge
 from VyPR.SCFG.parse_tree import ParseTree
 from VyPR.monitor_synthesis.formula_tree import LogicalNot
 
 
+def get_serialised_condition_from_id(id):
+    """
+    Given an ID, get the serialised condition that can be used in path reconstruction.
+    """
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    serialised_condition = cursor.execute(
+        "select serialised_condition from path_condition_structure where id = ?",
+        [id]
+    ).fetchone()[0]
+
+    connection.close()
+
+    return serialised_condition
+
+
+def get_path_conditions_from_observation(id):
+    """
+    Given an observation ID, find the sequence of path conditions leading to it.
+    To do this, we have to go backwards, since we first find the path condition before the observation,
+    and then find each successive path condition until we reach the beginning (no previous condition).
+    """
+    connection = get_connection()
+    cursor = connection.cursor()
+    result = cursor.execute(
+        """
+select path_condition.id, path_condition.serialised_condition from
+(path_condition inner join observation
+    on path_condition.id = observation.previous_condition)
+where observation.id = ?
+""",
+        [id]
+    ).fetchone()
+
+    while result:
+
+        previous_path_condition = result[0]
+        try:
+            reversed_path_conditions.append(result[1])
+        except:
+            reversed_path_conditions = [result[1]]
+        print("checking for path_condition with next_path_condition = %i" % previous_path_condition)
+        result = cursor.execute(
+            "select id, serialised_condition from path_condition where next_path_condition = ?",
+            [previous_path_condition]
+        ).fetchone()
+
+    connection.close()
+
+    return json.dumps(map(get_serialised_condition_from_id, reversed_path_conditions[::-1]))
+
+
+def compute_condition_sequence_and_path_length(observation_id):
+    """
+    Given an observation ID, find the path condition sequence leading to that observation.
+    """
+
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    condition_sequence_and_path_length = observation_id_to_condition_sequence_and_path_length(cursor, observation_id)
+
+    connection.close()
+
+    return condition_sequence_and_path_length
+
+
 def construct_new_search_tree(connection, cursor, scfg, root_observation, observation_list, instrumentation_point_id):
     """
-	Given a list of observations and an instrumentation point id, construct a new search tree.
-	"""
+    Given a list of observations and an instrumentation point id, construct a new search tree.
+    """
 
     # create a new root vertex
     # the intersection held by the root vertex must be empty - intersection over one observation doesn't
@@ -67,9 +127,9 @@ def construct_new_search_tree(connection, cursor, scfg, root_observation, observ
 
 def insert_observations_from_vertex(connection, cursor, observations, vertex_id, condition_sequences):
     """
-	Given a list of observations, a vertex id in search tree and a list of path condition sequences,
-	add the new path starting from that vertex.
-	"""
+    Given a list of observations, a vertex id in search tree and a list of path condition sequences,
+    add the new path starting from that vertex.
+    """
     print("inserting new path for observation sequence %s from vertex %i" % (str(observations), vertex_id))
     parent_vertex_id = vertex_id
     for (n, obs) in enumerate(observations):
@@ -96,10 +156,10 @@ def insert_observations_from_vertex(connection, cursor, observations, vertex_id,
 
 def get_qualifier_subsequence(function_qualifier):
     """
-	Given a fully qualified function name, iterate over it and find the file
-	in which the function is defined (this is the entry in the qualifier chain
-	before the one that causes an import error)/
-	"""
+    Given a fully qualified function name, iterate over it and find the file
+    in which the function is defined (this is the entry in the qualifier chain
+    before the one that causes an import error)/
+    """
 
     # tokenise the qualifier string so we have names and symbols
     # the symbol used to separate two names tells us what the relationship is
@@ -121,8 +181,8 @@ def get_qualifier_subsequence(function_qualifier):
 
 def construct_function_scfg(function):
     """
-	Given a function name, find the function definition in the service code and construct the SCFG.
-	"""
+    Given a function name, find the function definition in the service code and construct the SCFG.
+    """
 
     module = function[0:function.rindex(".")]
     function = function[function.rindex(".") + 1:]
@@ -177,9 +237,9 @@ def construct_function_scfg(function):
 
 def edges_from_condition_sequence(scfg, path_subchain, instrumentation_point_path_length):
     """
-	Given a sequence of (deserialised) conditions in path_subchain and the final path length,
-	reconstruct a path through the scfg, including loop multiplicity.
-	"""
+    Given a sequence of (deserialised) conditions in path_subchain and the final path length,
+    reconstruct a path through the scfg, including loop multiplicity.
+    """
     condition_index = 0
     curr = scfg.starting_vertices
     # path = [curr]
@@ -204,7 +264,8 @@ def edges_from_condition_sequence(scfg, path_subchain, instrumentation_point_pat
             # we have to decide whether it's a loop or a conditional
             if curr._name_changed == ["conditional"]:
                 print("traversing conditional %s with condition %s" % (curr, path_subchain[condition_index]))
-                # search the outgoing edges for an edge whose condition has the same length as path_subchain[condition_index]
+                # search the outgoing edges for an edge whose condition has the same length as path_subchain[
+                # condition_index]
                 for edge in curr.edges:
                     print("testing edge condition %s against condition %s" % \
                           (edge._condition[-1], path_subchain[condition_index][0]))
@@ -281,8 +342,8 @@ def edges_from_condition_sequence(scfg, path_subchain, instrumentation_point_pat
             print("condition index %i from condition chain length %i" % (condition_index, len(path_subchain)))
         elif curr._name_changed == ["post-conditional"]:
             print("traversing post-conditional")
-            # check the next vertex - if it's also a post-conditional, we move to that one but don't consume the condition
-            # if the next vertex isn't a post-conditional, we consume the condition and move to it
+            # check the next vertex - if it's also a post-conditional, we move to that one but don't consume the
+            # condition if the next vertex isn't a post-conditional, we consume the condition and move to it
             if curr.edges[0]._target_state._name_changed != ["post-conditional"]:
                 # consume the condition
                 condition_index += 1
@@ -331,7 +392,8 @@ def deserialise_condition(serialised_condition):
     if serialised_condition != "":
         if not (serialised_condition in ["conditional exited", "try-catch exited", "try-catch-main", "parameter",
                                          "exit conditional"]):
-            unserialised_condition = pickle.loads(serialised_condition)
+            # unserialised_condition = pickle.loads(serialised_condition)
+            unserialised_condition = serialised_condition
         else:
             unserialised_condition = serialised_condition
     else:
@@ -341,18 +403,18 @@ def deserialise_condition(serialised_condition):
 
 def observation_id_to_condition_sequence_and_path_length(cursor, observation_id):
     """
-	Given an observation, determine the sequence of path conditions satisfied to reach it.
-	This will be used for path reconstruction on the client side.
-	"""
+    Given an observation, determine the sequence of path conditions satisfied to reach it.
+    This will be used for path reconstruction on the client side.
+    """
     observation = cursor.execute(
         """
 select function.fully_qualified_name, verdict.function_call,
-		observation.instrumentation_point, observation.previous_condition,
-		observation.observed_value
+        observation.instrumentation_point, observation.previous_condition,
+        observation.observed_value
 from
 (((observation inner join verdict on observation.verdict == verdict.id)
-	inner join binding on verdict.binding == binding.id)
-		inner join function on binding.function == function.id)
+    inner join binding on verdict.binding == binding.id)
+        inner join function on binding.function == function.id)
 where observation.id == ?
 """, [observation_id]).fetchall()[0]
 
@@ -383,12 +445,13 @@ where observation.id == ?
     while current_path_condition_id != -1:
         path_id_chain.append(current_path_condition_id)
         current_path_condition = \
-        cursor.execute("select * from path_condition where id = ?", [current_path_condition_id]).fetchall()[0]
+            cursor.execute("select * from path_condition where id = ?", [current_path_condition_id]).fetchall()[0]
         current_path_condition_id = current_path_condition[-2]
         serialised_condition_id = current_path_condition[1]
         serialised_condition = \
-        cursor.execute("select * from path_condition_structure where id = ?", [serialised_condition_id]).fetchall()[0][
-            1]
+            cursor.execute("select * from path_condition_structure where id = ?", [serialised_condition_id]).fetchall()[
+                0][
+                1]
         unserialised_condition = deserialise_condition(serialised_condition)
         path_chain.append(unserialised_condition)
 
@@ -412,27 +475,27 @@ where observation.id == ?
     path_subchain = path_chain[0:path_id_chain.index(previous_path_condition_entry)]
     print("traversing using condition subchain %s" % path_subchain)
 
-    path_subchain = map(pickle.dumps, path_subchain)
+    # path_subchain = list(map(pickle.dumps, path_subchain))
 
     return {"path_subchain": path_subchain, "path_length": instrumentation_point_path_length}
 
 
 def reconstruct_path(cursor, scfg, observation_id):
     """
-	Given an observation, determine the function that generated it,
-	construct that function's SCFG, then reconstruct the path taken by the observation
-	through this SCFG.
-	"""
+    Given an observation, determine the function that generated it,
+    construct that function's SCFG, then reconstruct the path taken by the observation
+    through this SCFG.
+    """
 
     observation = cursor.execute(
         """
 select function.fully_qualified_name, verdict.function_call,
-		observation.instrumentation_point, observation.previous_condition,
-		observation.observed_value
+        observation.instrumentation_point, observation.previous_condition,
+        observation.observed_value
 from
 (((observation inner join verdict on observation.verdict == verdict.id)
-	inner join binding on verdict.binding == binding.id)
-		inner join function on binding.function == function.id)
+    inner join binding on verdict.binding == binding.id)
+        inner join function on binding.function == function.id)
 where observation.id == ?
 """, [observation_id]).fetchall()[0]
 
@@ -463,12 +526,13 @@ where observation.id == ?
     while current_path_condition_id != -1:
         path_id_chain.append(current_path_condition_id)
         current_path_condition = \
-        cursor.execute("select * from path_condition where id = ?", [current_path_condition_id]).fetchall()[0]
+            cursor.execute("select * from path_condition where id = ?", [current_path_condition_id]).fetchall()[0]
         current_path_condition_id = current_path_condition[-2]
         serialised_condition_id = current_path_condition[1]
         serialised_condition = \
-        cursor.execute("select * from path_condition_structure where id = ?", [serialised_condition_id]).fetchall()[0][
-            1]
+            cursor.execute("select * from path_condition_structure where id = ?", [serialised_condition_id]).fetchall()[
+                0][
+                1]
         unserialised_condition = deserialise_condition(serialised_condition)
         path_chain.append(unserialised_condition)
 
@@ -501,15 +565,15 @@ where observation.id == ?
 
 def reconstruct_paths(cursor, scfg, observation_ids):
     """
-	Given a sequence of observations
-	"""
+    Given a sequence of observations
+    """
     return map(lambda observation_id: reconstruct_path(cursor, scfg, observation_id), observation_ids)
 
 
 def path_to_condition_sequence(cursor, path, parametric=False):
     """
-	Iterate through the path given, converting it to a sequence of condition IDs.
-	"""
+    Iterate through the path given, converting it to a sequence of condition IDs.
+    """
     print("converting to condition sequence")
     print(path)
     # initialise the condition sequence with the empty condition
@@ -545,9 +609,9 @@ def path_to_condition_sequence(cursor, path, parametric=False):
 
 def construct_parametric_path(scfg, paths, grammar_rules_map, read_leaves=True):
     """
-	Given an SCFG and a list of paths obtained by reconstruction,
-	compute the parse trees and then give the intersection.
-	"""
+    Given an SCFG and a list of paths obtained by reconstruction,
+    compute the parse trees and then give the intersection.
+    """
     # compute parse trees
     parse_trees = []
     for (path_index, path) in enumerate(paths):
