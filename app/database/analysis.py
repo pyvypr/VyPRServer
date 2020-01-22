@@ -1,36 +1,13 @@
 """
 Module to provide functions to query the verdict database for the analysis library.
 """
-from .utils import get_connection
+from .utils import get_connection, query_db_all, query_db_one
 import sqlite3
 import json
 
 
-def query_db_one(query_string, arg):
-    connection = get_connection()
-    connection.row_factory = sqlite3.Row
-    # enables saving the rows as a dictionary with name of column as key
-    cursor = connection.cursor()
-    list1 = cursor.execute(query_string, arg)
-    f = list1.fetchone()
-    connection.close()
-    if f == None: return ("None")
-    return json.dumps([dict(f)])
-
-
-def query_db_all(query_string, arg):
-    connection = get_connection()
-    connection.row_factory = sqlite3.Row
-    cursor = connection.cursor()
-    list1 = cursor.execute(query_string, arg)
-    functions = list1.fetchall()
-    connection.close()
-    if functions == None: return ("None")
-    return json.dumps([dict(f) for f in functions])
-
-
-def list_functions2():
-    query_string = "select * from function;"
+def list_functions():
+    query_string = "select * from function"
     return query_db_all(query_string, [])
 
 
@@ -178,7 +155,6 @@ def get_path_conditions_by_function_call_id(call_id):
     connection = get_connection()
     connection.row_factory = sqlite3.Row
     cursor = connection.cursor()
-    query_string = "select * from path_condition where function_call = ?"
     path_condition_dicts = cursor.execute("select * from path_condition where function_call = ?", [call_id]).fetchall()
     path_condition_ids = map(lambda path_cond_dict : path_cond_dict["serialised_condition"], path_condition_dicts)
     # extract the path condition ids, then get the serialised path conditions
@@ -282,11 +258,6 @@ def list_verdicts_of_function_with_value(function_id, verdict_value):
     on verdict.binding=binding.id
     where binding.function=? and verdict.verdict=?"""
     return query_db_all(query_string, [function_id, verdict_value])
-
-
-def list_functions():
-    query_string = "select * from function"
-    return query_db_all(query_string, [])
 
 
 def get_assignment_dict_from_observation(id):
