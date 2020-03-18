@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" type="text/css" href="izgled.css">
+</head>
+<body>
+
+<h1>Hello</h1>
+<p>This is a paragraph.</p>
+
+<div class="output" id="demo">
+  Empty.
+</div>
+
+<button type="button" onclick="myFunction()">Try it</button>
+
+
+<script>
+function myFunction() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status==200) {
+      myFunction2(this);
+      //document.getElementById("demo").innerHTML=this.responseText;
+    }
+  };
+
+  xhttp.open("GET", "/client/function/", true);
+  xhttp.send();
+}
+
+
+
+function myFunction2(xml) {
+  var i,j;
+  var xmlDoc = xml.responseText;
+  //console.log(xmlDoc.length)
+  var json_lista=JSON.parse(xmlDoc);
+  var lista, element;
+
+  document.getElementById("demo").innerHTML = xmlDoc;
+}
+
+
+</script>
+
+</body>
+</html>

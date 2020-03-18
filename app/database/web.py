@@ -3,7 +3,61 @@ Module to provide functions for the web analysis tool to use.
 """
 from .utils import get_connection
 import json
+import pprint
+import pickle
+import base64
+from VyPR.monitor_synthesis.formula_tree import *
+from VyPR.QueryBuilding.formula_building import *
 
+
+
+#instead of defining functions and then setting repr to function, we shorten this with lambda functions
+#def my_repr_function(Atom):
+#    return "%s.duration() < %s(%s).length()" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
+#list of changed repr methods follows - just for class Atom for now
+
+StateValueInInterval.__repr__=\
+    lambda Atom: "%s(%s)._in(%s)" % (Atom._state, Atom._name, Atom._interval)
+
+StateValueInOpenInterval.__repr__=\
+    lambda Atom: "%s(%s)._in(%s)" % (Atom._state, Atom._name, Atom._interval)
+
+StateValueEqualTo.__repr__=\
+    lambda Atom: "%s(%s).equals(%s)" % (Atom._state, Atom._name, Atom._value)
+
+StateValueTypeEqualTo.__repr__=\
+    lambda Atom: "%s(%s).type().equals(%s)" % (Atom._state, Atom._name, Atom._value)
+
+StateValueEqualToMixed.__repr__=\
+    lambda Atom: "%s(%s).equals(%s(%s))" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
+StateValueLengthInInterval.__repr__=\
+    lambda Atom: "%s(%s).length()._in(%s)" % (Atom._state, Atom._name, Atom._interval)
+
+TransitionDurationInInterval.__repr__=\
+    lambda Atom: "(%s).duration()._in(%s)" % (Atom._transition, Atom._interval)
+
+TransitionDurationLessThanTransitionDurationMixed.__repr__=\
+    lambda Atom: "(%s).duration() < (%s).duration()" % (Atom._lhs, Atom._rhs)
+
+TransitionDurationLessThanStateValueMixed.__repr__=\
+    lambda Atom: "%s.duration() < %s(%s)" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
+
+TransitionDurationLessThanStateValueLengthMixed.__repr__ =\
+    lambda Atom: "%s.duration() < %s(%s).length()" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
+
+TimeBetweenInInterval.__repr__=\
+    lambda Atom: "timeBetween(%s, %s)._in(%s)" % (Atom._lhs, Atom._rhs, Atom._interval)
+
+TimeBetweenInOpenInterval.__repr__=\
+    lambda Atom: "timeBetween(%s, %s)._in(%s)" % (Atom._lhs, Atom._rhs, str(Atom._interval))
+
+#for states ??
+StaticState.my_repr_function=\
+    lambda object: "%s = changes(%s)"%(object._bind_variable_name, object._name_changed)
+
+StaticTransition.my_repr_function=\
+    lambda object: "%s = calls(%s)"%(object._bind_variable_name, object._operates_on)
 
 def list_verdicts(function_name):
     """
@@ -114,9 +168,18 @@ def web_list_functions():
     print("building function tree")
     for function in functions:
 
-        print(function)
+        print(function[1])
 
-        path = function[1].split(".")
+        full_name=function[1]
+        machine_rest=full_name.split("-")
+        machine=[machine_rest[0]]
+        path_rest = machine_rest[1].split(".")
+        last = path_rest[-1].split(":")
+        path_rest = path_rest[0:-1]+last
+        path=machine+path_rest
+
+        print(path)
+
         if not (dictionary_tree_structure.get(path[0])):
             dictionary_tree_structure[path[0]] = {}
         current_hierarchy_step = dictionary_tree_structure[path[0]]
@@ -126,12 +189,26 @@ def web_list_functions():
                 current_hierarchy_step[item] = {}
             current_hierarchy_step = current_hierarchy_step[item]
 
-        if current_hierarchy_step.get(path[-1]):
-            current_hierarchy_step[path[-1]].append(function)
-        else:
-            current_hierarchy_step[path[-1]] = [function]
+        hash = function[2]
+        prop = pickle.loads(base64.b64decode(json.loads(function[3])["property"]))
+        #print(type(prop))
+        bind_var = pickle.loads(base64.b64decode(json.loads(function[3])["bind_variables"]))
+        #print(bind_var.items()[0][1])
 
-    print(dictionary_tree_structure)
+        atom_str=prop.__repr__()
+
+        for var in bind_var.items():
+            #print(type(var[0]))
+            #print(type(var[1]))
+            spec = "Forall(%s).Check(%s)"%\
+                (var[1].my_repr_function(),atom_str.replace(var[1].__repr__(),var[0]))
+
+        if current_hierarchy_step.get(path[-1]):
+            current_hierarchy_step[path[-1]].append([hash,prop,bind_var])
+        else:
+            current_hierarchy_step[path[-1]] = [[hash,spec]]
+
+    #print(dictionary_tree_structure)
 
     connection.close()
 
