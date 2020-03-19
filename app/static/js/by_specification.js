@@ -12,14 +12,14 @@ var process_subtree_accordion = function(path, subtree, dom_element) {
 	if(Array.isArray(subtree)) {
 		var html_string = ""
 		for(var i=0; i<subtree.length; i++) {
-			html_string += ('<button type="button" class="list-group-item" function-id="' + subtree[i][0] + '" style="padding-left:' + padding + '">' + 
-					  	//'<h4 class="list-group-item-heading">' + subtree[1] + '</h4>' + 
-					  	'<p class="list-group-item-text code">' + subtree[i][5] + '</p>' + 
-					  	'<p class="list-group-item-text code">Check(</p>' + 
-					  	'<p class="list-group-item-text code">&nbsp;&nbsp;lambda ' + subtree[i][6] + ' : (</p>' + 
-					  	'<p class="list-group-item-text code">&nbsp;&nbsp;&nbsp;&nbsp;' + subtree[i][4] + '</p>' + 
-					  	'<p class="list-group-item-text code">&nbsp;&nbsp;)</p>' + 
-					  	'<p class="list-group-item-text code">)</p>' + 
+			html_string += ('<button type="button" class="list-group-item" function-id="' + subtree[i][0] + '" style="padding-left:' + padding + '">' +
+					  	//'<h4 class="list-group-item-heading">' + subtree[1] + '</h4>' +
+					  	'<p class="list-group-item-text code">' + subtree[i][1] + '</p>' +
+					  	//'<p class="list-group-item-text code">Check(</p>' +
+					  	//'<p class="list-group-item-text code">&nbsp;&nbsp;lambda ' + subtree[i][6] + ' : (</p>' +
+					  	//'<p class="list-group-item-text code">&nbsp;&nbsp;&nbsp;&nbsp;' + subtree[i][4] + '</p>' +
+					  	//'<p class="list-group-item-text code">&nbsp;&nbsp;)</p>' +
+					  	//'<p class="list-group-item-text code">)</p>' +
 					  '</button>');
 		}
 		$(dom_element).html(html_string);
@@ -33,14 +33,14 @@ var process_subtree_accordion = function(path, subtree, dom_element) {
 			var key = keys[i];
 			// create list inside the current list in the dom
 			var new_path = (path != "") ? (path + "-" + key) : key;
-			$(dom_element).append('<div class="panel panel-default">' + 
+			$(dom_element).append('<div class="panel panel-default">' +
 			  '<div class="panel-heading">' +
-			    '<h3 class="panel-title" id="external-' + new_path + '" style="padding-left: ' + padding + '">' + key + '</h3>' + 
-			  '</div>' + 
-			  '<div class="panel-body">' + 
-			    '<div class="list-group" id="' + new_path + '">' + 
-				'</div>' + 
-			  '</div>' + 
+			    '<h3 class="panel-title" id="external-' + new_path + '" style="padding-left: ' + padding + '">' + key + '</h3>' +
+			  '</div>' +
+			  '<div class="panel-body">' +
+			    '<div class="list-group" id="' + new_path + '">' +
+				'</div>' +
+			  '</div>' +
 			'</div>')
 			//$(dom_element).append('<p>' + key + '</p><ul id="' + new_path + '"></ul>');
 			process_subtree_accordion(new_path, subtree[key], $("#" + new_path));
