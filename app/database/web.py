@@ -10,11 +10,11 @@ from VyPR.monitor_synthesis.formula_tree import *
 from VyPR.QueryBuilding.formula_building import *
 
 
+"""
+list of changed repr methods follows - just for class Atom for now
+for each type of atom, it should display it similar to how it was given in the specification
+"""
 
-#instead of defining functions and then setting repr to function, we shorten this with lambda functions
-#def my_repr_function(Atom):
-#    return "%s.duration() < %s(%s).length()" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
-#list of changed repr methods follows - just for class Atom for now
 
 StateValueInInterval.__repr__=\
     lambda Atom: "%s(%s)._in(%s)" % (Atom._state, Atom._name, Atom._interval)
@@ -52,12 +52,24 @@ TimeBetweenInInterval.__repr__=\
 TimeBetweenInOpenInterval.__repr__=\
     lambda Atom: "timeBetween(%s, %s)._in(%s)" % (Atom._lhs, Atom._rhs, str(Atom._interval))
 
-#for states ??
+
+
+"""
+we need to display states also similar to how they are defined in the specification
+new function because other __repr__ is also needed
+TODO: other possible states ??
+"""
+
 StaticState.my_repr_function=\
     lambda object: "%s = changes(%s)"%(object._bind_variable_name, object._name_changed)
 
 StaticTransition.my_repr_function=\
     lambda object: "%s = calls(%s)"%(object._bind_variable_name, object._operates_on)
+
+
+
+
+
 
 def list_verdicts(function_name):
     """
@@ -166,17 +178,22 @@ def web_list_functions():
     # process the functions into a hierarchy by splitting the function names up by dots
     dictionary_tree_structure = {}
     print("building function tree")
+
     for function in functions:
 
         print(function[1])
 
-        full_name=function[1]
-        machine_rest=full_name.split("-")
-        machine=[machine_rest[0]]
+        full_name = function[1]
+
+        # the hierarchy also includes the machine name (server/client) separated by a hyphen
+        machine_rest = full_name.split("-")
+        machine = [machine_rest[0]]
         path_rest = machine_rest[1].split(".")
+
+        # finally, the name of the function is separated with a colon sometimes
         last = path_rest[-1].split(":")
         path_rest = path_rest[0:-1]+last
-        path=machine+path_rest
+        path = machine + path_rest
 
         print(path)
 
@@ -191,20 +208,29 @@ def web_list_functions():
 
         hash = function[2]
         prop = pickle.loads(base64.b64decode(json.loads(function[3])["property"]))
-        #print(type(prop))
         bind_var = pickle.loads(base64.b64decode(json.loads(function[3])["bind_variables"]))
-        #print(bind_var.items()[0][1])
 
-        atom_str=prop.__repr__()
+        atom_str = str(prop)
 
+        spec = ""
+        vars = ""
+
+        #vars will save a list of variables as "x, y, z" - used later in lambda
+        #spec begins with Forall(...) - each variable generates one of these
         for var in bind_var.items():
-            #print(type(var[0]))
-            #print(type(var[1]))
-            spec = "Forall(%s).Check(%s)"%\
-                (var[1].my_repr_function(),atom_str.replace(var[1].__repr__(),var[0]))
+            atom_str = atom_str.replace(str(var[1]),var[0])
+            if spec:
+                spec += "."
+                vars += ", "
+            spec += "Forall(%s)" % var[1].my_repr_function()
+            vars += var[0]
 
+        #finally, add the condition stored in atom_str to the specification
+        spec += ").Check(lambda %s: %s)" % (vars, atom_str)
+
+        #and store pairs (hash,specification) as leaves
         if current_hierarchy_step.get(path[-1]):
-            current_hierarchy_step[path[-1]].append([hash,prop,bind_var])
+            current_hierarchy_step[path[-1]].append([hash,spec])
         else:
             current_hierarchy_step[path[-1]] = [[hash,spec]]
 
