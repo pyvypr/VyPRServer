@@ -14,8 +14,9 @@ def list_functions():
 def list_calls_function(function_name):
     # based on the name of the function, list all function calls of the function with that name
     query_string = """select function_call.id, function_call.function, function_call.time_of_call, 
-    function_call.end_time_of_call, function_call.trans from (function inner join function_call on 
-    function.id=function_call.function) where function.fully_qualified_name like ? """
+    function_call.end_time_of_call, function_call.trans, function_call.path_condition_id_sequence
+    from (function inner join function_call on function.id=function_call.function)
+    where function.fully_qualified_name like ? """
     return query_db_all(query_string, [function_name])
 
 
@@ -23,7 +24,7 @@ def list_calls_transaction(transaction_id):
     # list all function_calls during the given transaction
     query_string = """
     select function_call.id, function_call.function, function_call.time_of_call,
-    function_call.end_time_of_call, function_call.trans
+    function_call.end_time_of_call, function_call.trans, function_call.path_condition_id_sequence
     from (trans inner join function_call on
         trans.id=function_call.trans)
     where trans.id=?"""
@@ -40,7 +41,8 @@ def list_calls_verdict(function_id, verdict_value):
     # returns a list of dictionaries with calls of the given function
     # such that their verdict value is 0 or 1 (verdict_value)
     query_string = """select function_call.id, function_call.function,
-    function_call.time_of_call, function_call.end_time_of_call,	function_call.trans from
+    function_call.time_of_call, function_call.end_time_of_call,
+    function_call.trans, function_call.path_condition_id_sequence from
     function_call inner join verdict on verdict.function_call=function_call.id
     inner join function on function_call.function=function.id
     where function.id=? and verdict.verdict=?"""
@@ -60,6 +62,12 @@ def get_f_byid(function_id):
 def get_transaction_byid(transaction_id):
     query_string = "select * from trans where id=?"
     return query_db_one(query_string, [transaction_id])
+
+
+def get_transaction_in_interval(lower_bound, upper_bound):
+    query_string = "select * from trans where time_of_transaction >= ? and time_of_transaction <= ?"
+    print(lower_bound, upper_bound)
+    return query_db_all(query_string, [lower_bound, upper_bound])
 
 
 def get_call_byid(call_id):
@@ -101,7 +109,7 @@ def get_falsifying_observation_call(call_id):
     # order by verdict limit 1 in order to find the first one wrt verdicts
     query_string = """select observation.id,observation.instrumentation_point,
     observation.verdict,observation.observed_value,observation.atom_index,
-    observation.previous_condition from
+    observation.previous_condition_offset from
     (observation inner join verdict on observation.verdict=verdict.id
     inner join function_call on verdict.function_call=function_call.id)
     where function_call.id=? and verdict.verdict=0
@@ -155,8 +163,10 @@ def get_path_conditions_by_function_call_id(call_id):
     connection = get_connection()
     connection.row_factory = sqlite3.Row
     cursor = connection.cursor()
-    path_condition_dicts = cursor.execute("select * from path_condition where function_call = ?", [call_id]).fetchall()
-    path_condition_ids = map(lambda path_cond_dict : path_cond_dict["serialised_condition"], path_condition_dicts)
+    path_condition_ids =\
+        json.loads(
+            cursor.execute("select path_condition_id_sequence from function_call where id = ?", [call_if]).fetchone()[0]
+        )
     # extract the path condition ids, then get the serialised path conditions
     serialised_conditions = list(map(
         lambda path_condition_id : cursor.execute(
@@ -221,7 +231,7 @@ def list_verdicts_from_binding(binding_id):
 def list_observations_call(call_id):
     query_string = """select observation.id, observation.instrumentation_point,
     observation.verdict,observation.observed_value,observation.atom_index,
-    observation.previous_condition from
+    observation.previous_condition_offset from
     observation inner join verdict on observation.verdict=verdict.id
     inner join function_call on verdict.function_call=function_call.id
     where function_call.id=?"""
@@ -236,7 +246,7 @@ def list_observations():
 def list_observations_of_point(point_id):
     query_string = """select observation.id, observation.instrumentation_point,
     observation.verdict,observation.observed_value,observation.atom_index,
-    observation.previous_condition from observation
+    observation.previous_condition_offset from observation
     where observation.instrumentation_point=?"""
     return query_db_all(query_string, [point_id])
 
