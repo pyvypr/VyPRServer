@@ -4,6 +4,7 @@ Module to provide functions for verdict database insertion.
 from .utils import get_connection
 import json
 import traceback
+import pickle
 
 
 def insert_function_call_data(call_data):
@@ -44,15 +45,7 @@ def insert_function_call_data(call_data):
 
     print("obtained function id")
 
-    cursor.execute(
-        "insert into function_call (function, time_of_call, end_time_of_call, trans) values(?, ?, ?, ?)",
-        [function_id, call_data["time_of_call"], call_data["end_time_of_call"], transaction_id])
-    function_call_id = cursor.lastrowid
-    connection.commit()
-
-    print("function call created")
-
-    # insert program path
+    # construct program path and add a json form of the sequence to the row function_call row
 
     program_path = call_data["program_path"]
 
@@ -66,15 +59,18 @@ def insert_function_call_data(call_data):
         empty_condition_id = empty_condition[0][0]
 
     new_program_path = [empty_condition_id] + program_path
-    reversed_program_path = new_program_path[::-1]
 
-    next_condition_id = -1
+    # perform the function call insertion
 
-    for (n, condition_id) in enumerate(reversed_program_path):
-        cursor.execute(
-            "insert into path_condition (serialised_condition, next_path_condition, function_call) values(?, ?, ?)",
-            [condition_id, next_condition_id, function_call_id])
-        next_condition_id = cursor.lastrowid
+    cursor.execute(
+        "insert into function_call (function, time_of_call, end_time_of_call, trans, path_condition_id_sequence)"
+        "values(?, ?, ?, ?, ?)",
+        [function_id, call_data["time_of_call"], call_data["end_time_of_call"], transaction_id,
+         json.dumps(new_program_path)])
+    function_call_id = cursor.lastrowid
+    connection.commit()
+
+    print("function call created")
 
     connection.commit()
     connection.close()
@@ -91,29 +87,6 @@ def insert_verdicts(verdict_dictionary):
     print("Performing verdicts insertion")
 
     function_call_id = verdict_dictionary["function_call_id"]
-
-    # get path condition IDs - they were inserted before any verdicts
-    # we get the sequence in reverse and then reverse it
-    current_in_path = cursor.execute(
-        "select * from path_condition where next_path_condition = -1 and function_call = ?",
-        [function_call_id]
-    ).fetchall()[0]
-    reversed_path_sequence = [current_in_path[0]]
-    next_in_path = cursor.execute(
-        "select * from path_condition where next_path_condition = ?",
-        [current_in_path[0]]
-    ).fetchall()
-    while len(next_in_path) == 1:
-        reversed_path_sequence.append(next_in_path[0][0])
-        next_in_path = cursor.execute(
-            "select * from path_condition where next_path_condition = ?",
-            [next_in_path[0][0]]
-        ).fetchall()
-
-    path_condition_sequence = reversed_path_sequence[::-1]
-
-    print("Path condition sequence is")
-    print(path_condition_sequence)
 
     for verdict in verdict_dictionary["verdicts"]:
 
@@ -140,12 +113,11 @@ def insert_verdicts(verdict_dictionary):
         collapsing_atom_sub_index = verdict["verdict"][5]
         atom_to_state_dict_map = verdict["verdict"][6]
 
-        path_condition_ids = []
-
         # create the verdict
         # we don't check for an existing verdict - there won't be repetitions here
         cursor.execute(
-            "insert into verdict (binding, verdict, time_obtained, function_call, collapsing_atom, collapsing_atom_sub_index) values (?, ?, ?, ?, ?, ?)",
+            "insert into verdict (binding, verdict, time_obtained, function_call, collapsing_atom,"
+            "collapsing_atom_sub_index) values (?, ?, ?, ?, ?, ?)",
             [new_binding_id, verdict_value, verdict_time_obtained, function_call_id, collapsing_atom_index,
              collapsing_atom_sub_index])
         new_verdict_id = cursor.lastrowid
@@ -156,10 +128,11 @@ def insert_verdicts(verdict_dictionary):
             # insert observation(s) for this atom_index
             print(observations_map[atom_index])
             for sub_index in observations_map[atom_index].keys():
-                last_condition = path_condition_sequence[path_map[atom_index][sub_index]]
+                last_condition = path_map[atom_index][sub_index]
                 cursor.execute(
                     "insert into observation (instrumentation_point, verdict, observed_value, observation_time, "
-                    "observation_end_time, previous_condition, atom_index, sub_index) values(?, ?, ?, ?, ?, ?, ?, ?)",
+                    "observation_end_time, previous_condition_offset, atom_index, sub_index) "
+                    "values(?, ?, ?, ?, ?, ?, ?, ?)",
                     [observations_map[atom_index][sub_index][1], new_verdict_id,
                      str(observations_map[atom_index][sub_index][0]), observations_map[atom_index][sub_index][2],
                      observations_map[atom_index][sub_index][3], last_condition, atom_index, sub_index]

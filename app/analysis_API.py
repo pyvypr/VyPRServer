@@ -90,6 +90,10 @@ def get_transaction_by_id(transaction_id):
 def get_transaction_by_time(time_of_request):
     return database.get_transaction_bytime(time_of_request)
 
+@app_object.route("/client/transaction/time/between/<lower_bound>/<upper_bound>/")
+def get_transaction_in_interval(lower_bound, upper_bound):
+    return database.get_transaction_in_interval(lower_bound, upper_bound)
+
 
 """
 Queries based on the function_call table.
