@@ -3,14 +3,15 @@ Module to provide database utility functions.
 """
 import sqlite3
 import json
+import app
 
-database_string = "verdicts.db"
+#database_string = "verdicts.db"
 
 
 def get_connection():
     # for now, let exceptions appear in the log
-    global database_string
-    return sqlite3.connect(database_string)
+    #global database_string
+    return sqlite3.connect(app.database_string)
 
 
 def query_db_one(query_string, arg):
