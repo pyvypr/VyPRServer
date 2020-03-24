@@ -15,7 +15,6 @@ list of changed repr methods follows - just for class Atom for now
 for each type of atom, it should display it similar to how it was given in the specification
 """
 
-
 StateValueInInterval.__repr__=\
     lambda Atom: "%s(%s)._in(%s)" % (Atom._state, Atom._name, Atom._interval)
 
@@ -59,6 +58,7 @@ we need to display states also similar to how they are defined in the specificat
 new function because other __repr__ is also needed
 TODO: other possible states ??
 """
+
 
 StaticState.my_repr_function=\
     lambda object: "%s = changes(%s)"%(object._bind_variable_name, object._name_changed)
@@ -209,6 +209,8 @@ def web_list_functions():
         hash = function[2]
         prop = pickle.loads(base64.b64decode(json.loads(function[3])["property"]))
         bind_var = pickle.loads(base64.b64decode(json.loads(function[3])["bind_variables"]))
+        print(prop)
+        print(bind_var)
 
         atom_str = str(prop)
 
@@ -226,7 +228,7 @@ def web_list_functions():
             vars += var[0]
 
         #finally, add the condition stored in atom_str to the specification
-        spec += ").Check(lambda %s: %s)" % (vars, atom_str)
+        spec += ".Check(lambda %s: %s)" % (vars, atom_str)
 
         #and store pairs (hash,specification) as leaves
         if current_hierarchy_step.get(path[-1]):
@@ -234,7 +236,7 @@ def web_list_functions():
         else:
             current_hierarchy_step[path[-1]] = [[hash,spec]]
 
-    #print(dictionary_tree_structure)
+    #pprint(dictionary_tree_structure)
 
     connection.close()
 

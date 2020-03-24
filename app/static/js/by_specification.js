@@ -33,9 +33,10 @@ var process_subtree_accordion = function(path, subtree, dom_element) {
 			var key = keys[i];
 			// create list inside the current list in the dom
 			var new_path = (path != "") ? (path + "-" + key) : key;
+			var content = (path == "") ? key : "\xa0\xa0\xa0\xa0\xa0\xa0\xa0" + key;
 			$(dom_element).append('<div class="panel panel-default">' +
 			  '<div class="panel-heading">' +
-			    '<h3 class="panel-title" id="external-' + new_path + '" style="padding-left: ' + padding + '">' + key + '</h3>' +
+			    '<h3 class="panel-title" id="external-' + new_path + '" style="padding-left: ' + padding + '">' + content + '</h3>' +
 			  '</div>' +
 			  '<div class="panel-body">' +
 			    '<div class="list-group" id="' + new_path + '">' +
