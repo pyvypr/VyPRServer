@@ -12,15 +12,11 @@ var process_subtree_accordion = function(path, subtree, dom_element) {
 	if(Array.isArray(subtree)) {
 		var html_string = ""
 		for(var i=0; i<subtree.length; i++) {
-			html_string += ('<button type="button" class="list-group-item" function-id="' + subtree[i][0] + '" style="padding-left:' + padding + '">' +
-					  	//'<h4 class="list-group-item-heading">' + subtree[1] + '</h4>' +
-					  	'<p class="list-group-item-text code">' + subtree[i][1] + '</p>' +
-					  	//'<p class="list-group-item-text code">Check(</p>' +
-					  	//'<p class="list-group-item-text code">&nbsp;&nbsp;lambda ' + subtree[i][6] + ' : (</p>' +
-					  	//'<p class="list-group-item-text code">&nbsp;&nbsp;&nbsp;&nbsp;' + subtree[i][4] + '</p>' +
-					  	//'<p class="list-group-item-text code">&nbsp;&nbsp;)</p>' +
-					  	//'<p class="list-group-item-text code">)</p>' +
-					  '</button>');
+			str = subtree[i][1]
+			str = decodeHTML(str)
+			console.log(str)
+			html_string += ('<button type="button" class="list-group-item" function-id="' + subtree[i][0] +
+				'" style="padding-left:' + padding + '">' + str + '</button>')
 		}
 		$(dom_element).html(html_string);
 	} else {
@@ -28,22 +24,24 @@ var process_subtree_accordion = function(path, subtree, dom_element) {
 		for (var key in subtree) {
 			keys.push(key);
 		}
-		console.log(keys);
+		console.log("path="+path+"; keys="+ keys);
+
 		for(var i=0; i<keys.length; i++) {
 			var key = keys[i];
 			// create list inside the current list in the dom
 			var new_path = (path != "") ? (path + "-" + key) : key;
-			var content = (path == "") ? key : "\xa0\xa0\xa0\xa0\xa0\xa0\xa0" + key;
-			$(dom_element).append('<div class="panel panel-default">' +
-			  '<div class="panel-heading">' +
-			    '<h3 class="panel-title" id="external-' + new_path + '" style="padding-left: ' + padding + '">' + content + '</h3>' +
-			  '</div>' +
-			  '<div class="panel-body">' +
-			    '<div class="list-group" id="' + new_path + '">' +
-				'</div>' +
-			  '</div>' +
-			'</div>')
+			if (path != ""){
+				$(dom_element).append('<div class="panel panel-default">' +
+			  	'<div class="panel-heading">' +
+			    	'<h3 class="panel-title" id="external-' + new_path + '" style="padding-left: ' + padding + '">' + key + '</h3>' +
+			  	'</div>' +
+			  	'<div class="panel-body">' +
+			    	'<div class="list-group" id="' + new_path + '">' +
+					'</div>' +
+			  	'</div>' +
+					'</div>')
 			//$(dom_element).append('<p>' + key + '</p><ul id="' + new_path + '"></ul>');
+			}
 			process_subtree_accordion(new_path, subtree[key], $("#" + new_path));
 		}
 	}
@@ -52,14 +50,55 @@ var process_subtree_accordion = function(path, subtree, dom_element) {
 var build_accordion = function() {
 	// get the data from the "#function-list-data" element, and
 	// recursively construct an accordion.
-
+	console.log($("#function-list-data").html())
 	function_list_data = JSON.parse($("#function-list-data").html());
+	dom_elem = $("#function-list")
+	content = ""
+
+	for(var key in function_list_data){
+		key = String(key)
+		//content += '<button class="tablinks" onclick="show_functions(function_list_data,dom_elem,String('+
+			//					key + '))">' + key + '</button>'
+		content += ('<button class="tablinks" onclick="process_subtree_accordion('+
+							key+',function_list_data['+key+'],$("#function-list"))">' + key + '</button>')
+	}
+
+	$(dom_elem).append('<div class="panel panel-default">' +
+		'<div class="panel-heading">' +
+			'<h3 class="panel-title" id="external-" style="padding-left: 1em">' +
+				content + '</h3>' +
+		'</div>' +
+		'<div class="panel-body">' +
+			'<div class="list-group" id="">' +
+		'</div>' +
+		'</div>' +
+		'</div>')
+
+
 
 	for(var key in function_list_data) {
-		process_subtree_accordion("", function_list_data, $("#function-list"));
+		process_subtree_accordion(key, function_list_data[key], $("#function-list"));
 	}
 
 	apply_accordion_clicks();
+}
+
+var string_to_html = function(str){
+	str = str.split('&lt;').join('<');
+	str = str.split('&gt;').join('>');
+	str = str.split('&amp;').join('&');
+	return str
+}
+
+var decodeHTML = function (html) {
+	var txt = document.createElement('textarea');
+	txt.innerHTML = html;
+	return txt.value;
+}
+
+var show_functions = function(function_list_data,dom_elem,key){
+	console.log(key)
+	process_subtree_accordion(str(key), function_list_data[key], $("#function-list"));
 }
 
 var apply_accordion_clicks = function() {
