@@ -1,5 +1,8 @@
 """
 Module to provide functions for the web analysis tool to use.
+
+TODO: delete functions that refer to fake_vypr_var from the tree
+      add quotes where they should be in the specification !!!
 """
 from .utils import get_connection
 import json
@@ -209,8 +212,6 @@ def web_list_functions():
         hash = function[2]
         prop = pickle.loads(base64.b64decode(json.loads(function[3])["property"]))
         bind_var = pickle.loads(base64.b64decode(json.loads(function[3])["bind_variables"]))
-        print(prop)
-        print(bind_var)
 
         atom_str = str(prop)
 
@@ -220,17 +221,17 @@ def web_list_functions():
         #vars will save a list of variables as "x, y, z" - used later in lambda
         #spec begins with Forall(...) - each variable generates one of these
         for var in bind_var.items():
-            atom_str = atom_str.replace(str(var[1]),var[0])
+            atom_str = atom_str.replace(str(var[1]),var[0],1)
             if spec:
                 vars += ", "
-            spec += '<p class="list-group-item-text code">Forall(%s).</p>'% var[1].my_repr_function()
+            spec += '<p class="list-group-item-text code">Forall(%s).\ </p>'% var[1].my_repr_function()
             vars += var[0]
 
         #finally, add the condition stored in atom_str to the specification
-        spec +="""<p class="list-group-item-text code">Check(</p>
-            <p class="list-group-item-text code">&nbsp;&nbsp;lambda %s : (</p>
+        spec +="""<p class="list-group-item-text code">Check( </p>
+            <p class="list-group-item-text code">&nbsp;&nbsp;lambda %s : ( </p>
             <p class="list-group-item-text code">&nbsp;&nbsp;&nbsp;&nbsp; %s </p>
-            <p class="list-group-item-text code">&nbsp;&nbsp;)</p> 
+            <p class="list-group-item-text code">&nbsp;&nbsp;) </p>
             <p class="list-group-item-text code">)</p>"""%(vars,atom_str)
 
         #and store pairs (hash,specification) as leaves
