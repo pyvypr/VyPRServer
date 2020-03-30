@@ -8,13 +8,14 @@ var truth_map = {1 : "No Violation", 0 : "Violation"};
 
 var process_subtree_accordion = function(path, subtree, dom_element) {
 	// given a subtree, build the accordion.
+
 	var padding = String(path.length * 2) + "px";
 	if(Array.isArray(subtree)) {
 		var html_string = ""
 		for(var i=0; i<subtree.length; i++) {
 			str = subtree[i][1]
 			str = decodeHTML(str)
-			console.log(str)
+
 			html_string += ('<button type="button" class="list-group-item" function-id="' + subtree[i][0] +
 				'" style="padding-left:' + padding + '">' + str + '</button>')
 		}
@@ -31,7 +32,7 @@ var process_subtree_accordion = function(path, subtree, dom_element) {
 			// create list inside the current list in the dom
 			var new_path = (path != "") ? (path + "-" + key) : key;
 			if (path != ""){
-				$(dom_element).append('<div class="panel panel-default">' +
+				$(dom_element).append('<div class="panel panel-default" style="inherit">' +
 			  	'<div class="panel-heading">' +
 			    	'<h3 class="panel-title" id="external-' + new_path + '" style="padding-left: ' + padding + '">' + key + '</h3>' +
 			  	'</div>' +
@@ -50,35 +51,34 @@ var process_subtree_accordion = function(path, subtree, dom_element) {
 var build_accordion = function() {
 	// get the data from the "#function-list-data" element, and
 	// recursively construct an accordion.
-	console.log($("#function-list-data").html())
+	//console.log($("#function-list-data").html())
 	function_list_data = JSON.parse($("#function-list-data").html());
 	dom_elem = $("#function-list")
-	content = ""
+	content = '<div class="tab">'
 
 	for(var key in function_list_data){
 		key = String(key)
-		//content += '<button class="tablinks" onclick="show_functions(function_list_data,dom_elem,String('+
-			//					key + '))">' + key + '</button>'
-		content += ('<button class="tablinks" onclick="process_subtree_accordion('+
-							key+',function_list_data['+key+'],$("#function-list"))">' + key + '</button>')
+		content += ('<button class="tablinks">'+ key + '</button>')
 	}
 
-	$(dom_elem).append('<div class="panel panel-default">' +
-		'<div class="panel-heading">' +
-			'<h3 class="panel-title" id="external-" style="padding-left: 1em">' +
-				content + '</h3>' +
-		'</div>' +
-		'<div class="panel-body">' +
-			'<div class="list-group" id="">' +
-		'</div>' +
-		'</div>' +
-		'</div>')
+	content += '</div>'
 
+	$(dom_elem).append(content)
 
-
-	for(var key in function_list_data) {
-		process_subtree_accordion(key, function_list_data[key], $("#function-list"));
+	for(var key in function_list_data){
+		key = String(key)
+		$(dom_elem).append('<div id="tab-' + key + '" class="tabcontent"> ')
+		dom_elem2 = $("#tab-"+key)
+		process_subtree_accordion(key, function_list_data[key], $(dom_elem2));
 	}
+
+	tablinks = document.getElementsByClassName("tablinks")
+	for (i = 0; i < tablinks.length; i++) {
+		console.log(tablinks[i]);
+		tablinks[i].onclick = function(){show_functions(event,"tab-"+this.innerHTML);};
+	}
+
+	show_functions("onclick", "")
 
 	apply_accordion_clicks();
 }
@@ -96,9 +96,23 @@ var decodeHTML = function (html) {
 	return txt.value;
 }
 
-var show_functions = function(function_list_data,dom_elem,key){
+var show_functions = function(evt, key){
 	console.log(key)
-	process_subtree_accordion(str(key), function_list_data[key], $("#function-list"));
+	var i, tabcontent, tablinks;
+	tabcontent = document.getElementsByClassName("tabcontent");
+	for (i = 0; i < tabcontent.length; i++) {
+		tabcontent[i].setAttribute('style', 'display: none');
+		console.log(tabcontent[i])
+	}
+	tablinks = document.getElementsByClassName("tablinks");
+	for (i = 0; i < tablinks.length; i++) {
+		tablinks[i].className = tablinks[i].className.replace(" active", "");
+	}
+	if (key != "") {
+		document.getElementById(key).setAttribute('style', 'display = "block"');
+		evt.currentTarget.className += " active";
+	}
+
 }
 
 var apply_accordion_clicks = function() {
