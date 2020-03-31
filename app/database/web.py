@@ -35,19 +35,11 @@ StateValueEqualToMixed.__repr__ = \
 StateValueLengthInInterval.__repr__ = \
     lambda Atom: "%s(%s).length()._in(%s)" % (Atom._state, Atom._name, Atom._interval)
 
-<<<<<<< HEAD
-TransitionDurationInInterval.__repr__ = \
-    lambda Atom: "(%s).duration()._in(%s)" % (Atom._transition, Atom._interval)
-
-TransitionDurationLessThanTransitionDurationMixed.__repr__ = \
-    lambda Atom: "(%s).duration() < (%s).duration()" % (Atom._lhs, Atom._rhs)
-=======
 TransitionDurationInInterval.__repr__=\
     lambda Atom: "%s.duration()._in(%s)" % (Atom._transition, Atom._interval)
 
 TransitionDurationLessThanTransitionDurationMixed.__repr__=\
     lambda Atom: "%s.duration() < %s.duration()" % (Atom._lhs, Atom._rhs)
->>>>>>> 00eff25fa946505cefa4ab7ed89c0e2c423a0b63
 
 TransitionDurationLessThanStateValueMixed.__repr__ = \
     lambda Atom: "%s.duration() < %s(%s)" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
@@ -142,6 +134,7 @@ def list_calls_during_request(transaction_id, function_name):
     connection = get_connection()
     cursor = connection.cursor()
 
+    print("getting calls")
     function_calls = cursor.execute("select * from function_call where trans = ? and function = ?",
                                     [transaction_id, function_name]).fetchall()
 
@@ -245,16 +238,11 @@ def web_list_functions():
             spec += '<p class="list-group-item-text code">Forall(%s).\ </p>' % var[1].my_repr_function()
             vars += var[0]
 
-<<<<<<< HEAD
-        # finally, add the condition stored in atom_str to the specification
-        spec += """<p class="list-group-item-text code">Check( </p>
-=======
         for var in bind_var.items():
             atom_str = atom_str.replace(str(var[1]),var[0])
 
         # finally, add the condition stored in atom_str to the specification
         spec +="""<p class="list-group-item-text code">Check( </p>
->>>>>>> 00eff25fa946505cefa4ab7ed89c0e2c423a0b63
             <p class="list-group-item-text code">&nbsp;&nbsp;lambda %s : ( </p>
             <p class="list-group-item-text code">&nbsp;&nbsp;&nbsp;&nbsp; %s </p>
             <p class="list-group-item-text code">&nbsp;&nbsp;) </p>
