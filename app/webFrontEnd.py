@@ -37,9 +37,9 @@ def about():
     return render_template("about.html")
 
 
-@app_object.route("/list_http_requests/<function_id>/")
-def list_http_requests(function_id):
-    return jsonify(data=database.list_http_requests(function_id))
+@app_object.route("/list_transactions/<function_id>/")
+def list_transactions(function_id):
+    return jsonify(data=database.list_transactions(function_id))
 
 
 @app_object.route("/list_function_calls/<http_request_id>/<function_name>/")

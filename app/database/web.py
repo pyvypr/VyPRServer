@@ -12,49 +12,46 @@ import base64
 from VyPR.monitor_synthesis.formula_tree import *
 from VyPR.QueryBuilding.formula_building import *
 
-
 """
 list of changed repr methods follows - just for class Atom for now
 for each type of atom, it should display it similar to how it was given in the specification
 """
 
-StateValueInInterval.__repr__=\
+StateValueInInterval.__repr__ = \
     lambda Atom: "%s(%s)._in(%s)" % (Atom._state, Atom._name, Atom._interval)
 
-StateValueInOpenInterval.__repr__=\
+StateValueInOpenInterval.__repr__ = \
     lambda Atom: "%s(%s)._in(%s)" % (Atom._state, Atom._name, Atom._interval)
 
-StateValueEqualTo.__repr__=\
+StateValueEqualTo.__repr__ = \
     lambda Atom: "%s(%s).equals(%s)" % (Atom._state, Atom._name, Atom._value)
 
-StateValueTypeEqualTo.__repr__=\
+StateValueTypeEqualTo.__repr__ = \
     lambda Atom: "%s(%s).type().equals(%s)" % (Atom._state, Atom._name, Atom._value)
 
-StateValueEqualToMixed.__repr__=\
+StateValueEqualToMixed.__repr__ = \
     lambda Atom: "%s(%s).equals(%s(%s))" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
 
-StateValueLengthInInterval.__repr__=\
+StateValueLengthInInterval.__repr__ = \
     lambda Atom: "%s(%s).length()._in(%s)" % (Atom._state, Atom._name, Atom._interval)
 
-TransitionDurationInInterval.__repr__=\
+TransitionDurationInInterval.__repr__ = \
     lambda Atom: "(%s).duration()._in(%s)" % (Atom._transition, Atom._interval)
 
-TransitionDurationLessThanTransitionDurationMixed.__repr__=\
+TransitionDurationLessThanTransitionDurationMixed.__repr__ = \
     lambda Atom: "(%s).duration() < (%s).duration()" % (Atom._lhs, Atom._rhs)
 
-TransitionDurationLessThanStateValueMixed.__repr__=\
+TransitionDurationLessThanStateValueMixed.__repr__ = \
     lambda Atom: "%s.duration() < %s(%s)" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
 
-TransitionDurationLessThanStateValueLengthMixed.__repr__ =\
+TransitionDurationLessThanStateValueLengthMixed.__repr__ = \
     lambda Atom: "%s.duration() < %s(%s).length()" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
 
-TimeBetweenInInterval.__repr__=\
+TimeBetweenInInterval.__repr__ = \
     lambda Atom: "timeBetween(%s, %s)._in(%s)" % (Atom._lhs, Atom._rhs, Atom._interval)
 
-TimeBetweenInOpenInterval.__repr__=\
+TimeBetweenInOpenInterval.__repr__ = \
     lambda Atom: "timeBetween(%s, %s)._in(%s)" % (Atom._lhs, Atom._rhs, str(Atom._interval))
-
-
 
 """
 we need to display states also similar to how they are defined in the specification
@@ -62,16 +59,11 @@ new function because other __repr__ is also needed
 TODO: other possible states ??
 """
 
+StaticState.my_repr_function = \
+    lambda object: "%s = changes(%s)" % (object._bind_variable_name, object._name_changed)
 
-StaticState.my_repr_function=\
-    lambda object: "%s = changes(%s)"%(object._bind_variable_name, object._name_changed)
-
-StaticTransition.my_repr_function=\
-    lambda object: "%s = calls(%s)"%(object._bind_variable_name, object._operates_on)
-
-
-
-
+StaticTransition.my_repr_function = \
+    lambda object: "%s = calls(%s)" % (object._bind_variable_name, object._operates_on)
 
 
 def list_verdicts(function_name):
@@ -118,6 +110,8 @@ def list_transactions(function_id):
     cursor = connection.cursor()
 
     transactions = cursor.execute("select * from trans").fetchall()
+
+    print("getting transactions with function id %s" % function_id)
 
     # list only the requests for which there is a call to the function with function_id
     final_requests = []
@@ -195,7 +189,7 @@ def web_list_functions():
 
         # finally, the name of the function is separated with a colon sometimes
         last = path_rest[-1].split(":")
-        path_rest = path_rest[0:-1]+last
+        path_rest = path_rest[0:-1] + last
         path = machine + path_rest
 
         print(path)
@@ -218,32 +212,32 @@ def web_list_functions():
         spec = ''
         vars = ''
 
-        #vars will save a list of variables as "x, y, z" - used later in lambda
-        #spec begins with Forall(...) - each variable generates one of these
+        # vars will save a list of variables as "x, y, z" - used later in lambda
+        # spec begins with Forall(...) - each variable generates one of these
         for var in bind_var.items():
-            atom_str = atom_str.replace(str(var[1]),var[0],1)
+            atom_str = atom_str.replace(str(var[1]), var[0], 1)
             if spec:
                 vars += ", "
-            spec += '<p class="list-group-item-text code">Forall(%s).\ </p>'% var[1].my_repr_function()
+            spec += '<p class="list-group-item-text code">Forall(%s).\ </p>' % var[1].my_repr_function()
             vars += var[0]
 
-        #finally, add the condition stored in atom_str to the specification
-        spec +="""<p class="list-group-item-text code">Check( </p>
+        # finally, add the condition stored in atom_str to the specification
+        spec += """<p class="list-group-item-text code">Check( </p>
             <p class="list-group-item-text code">&nbsp;&nbsp;lambda %s : ( </p>
             <p class="list-group-item-text code">&nbsp;&nbsp;&nbsp;&nbsp; %s </p>
             <p class="list-group-item-text code">&nbsp;&nbsp;) </p>
-            <p class="list-group-item-text code">)</p>"""%(vars,atom_str)
+            <p class="list-group-item-text code">)</p>""" % (vars, atom_str)
 
-        #and store pairs (hash,specification) as leaves
+        # and store pairs (hash,specification) as leaves
         if current_hierarchy_step.get(path[-1]):
-            current_hierarchy_step[path[-1]].append([hash,spec])
+            current_hierarchy_step[path[-1]].append([function[0], hash, spec])
         else:
-            current_hierarchy_step[path[-1]] = [[hash,spec]]
+            current_hierarchy_step[path[-1]] = [[function[0], hash, spec]]
 
-    #pprint(dictionary_tree_structure)
+    # pprint(dictionary_tree_structure)
 
     connection.close()
-    dictionary_tree_structure["client"]={"app":[[hash,spec]]}
+    #dictionary_tree_structure["client"] = {"app": [[hash, spec]]}
     return dictionary_tree_structure
 
 

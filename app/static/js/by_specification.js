@@ -13,7 +13,7 @@ var process_subtree_accordion = function(path, subtree, dom_element) {
 	if(Array.isArray(subtree)) {
 		var html_string = ""
 		for(var i=0; i<subtree.length; i++) {
-			str = subtree[i][1];
+			str = subtree[i][2];
 			str = decodeHTML(str);
 
 			html_string += ('<button type="button" class="list-group-item" function-id="' + subtree[i][0] +
@@ -166,8 +166,9 @@ var apply_function_list_click = function() {
 		$("#function-call-list").slideUp();
 		var function_id = $(e.target).closest(".list-group-item").attr("function-id");
 		selected_function_id = function_id;
-		$.get("/list_http_requests/" + function_id, function(data) {
-			$("#http-request-list").html("");
+		$.get("/list_transactions/" + function_id, function(data) {
+		    $("#http-request-list").html("");
+		    data = data["data"];
 			for(var i=0; i<data.length; i++) {
 				var button = document.createElement("button");
 				button.className = "list-group-item";
