@@ -13,11 +13,11 @@ var process_subtree_accordion = function(path, subtree, dom_element) {
 	if(Array.isArray(subtree)) {
 		var html_string = ""
 		for(var i=0; i<subtree.length; i++) {
-			str = subtree[i][1]
-			str = decodeHTML(str)
+			str = subtree[i][1];
+			str = decodeHTML(str);
 
 			html_string += ('<button type="button" class="list-group-item" function-id="' + subtree[i][0] +
-				'" style="padding-left:' + padding + '">' + str + '</button>')
+				'" style="padding-left:' + padding + '">' + str + '</button>');
 		}
 		$(dom_element).html(html_string);
 	} else {
@@ -51,34 +51,49 @@ var process_subtree_accordion = function(path, subtree, dom_element) {
 var build_accordion = function() {
 	// get the data from the "#function-list-data" element, and
 	// recursively construct an accordion.
-	//console.log($("#function-list-data").html())
-	function_list_data = JSON.parse($("#function-list-data").html());
-	dom_elem = $("#function-list")
-	content = '<div class="tab">'
+	// the machine part of the path is shown as a tab
 
+	function_list_data = JSON.parse($("#function-list-data").html());
+	dom_elem = $("#function-list");
+	content = '<div class="tab">';
+
+	// if we don't want the first tab to be open on the page load, set to 0
+	is_first = 1;
+
+	//construct the tabs with machine names as buttons
 	for(var key in function_list_data){
-		key = String(key)
-		content += ('<button class="tablinks">'+ key + '</button>')
+		key = String(key);
+		if (is_first){
+			content += ('<button id="default-open" class="tablinks">'+ key + '</button>');
+		}
+		else{
+			content += ('<button class="tablinks">'+ key + '</button>');
+		}
 	}
 
-	content += '</div>'
+	content += '</div>';
 
-	$(dom_elem).append(content)
+	$(dom_elem).append(content);
 
+	//for each machine, build an accordion with the corresponding functions - from tree[key]
 	for(var key in function_list_data){
-		key = String(key)
-		$(dom_elem).append('<div id="tab-' + key + '" class="tabcontent"> ')
-		dom_elem2 = $("#tab-"+key)
+		key = String(key);
+		$(dom_elem).append('<div id="tab-' + key + '" class="tabcontent"> </div>');
+		dom_elem2 = $("#tab-"+key);
 		process_subtree_accordion(key, function_list_data[key], $(dom_elem2));
 	}
 
+	//add onclick event to the buttons
 	tablinks = document.getElementsByClassName("tablinks")
 	for (i = 0; i < tablinks.length; i++) {
 		console.log(tablinks[i]);
 		tablinks[i].onclick = function(){show_functions(event,"tab-"+this.innerHTML);};
 	}
 
-	show_functions("onclick", "")
+	// if we want no functions to be shown on page load, just the tab buttons
+		//uncomment following line and erase the one below it
+	//show_functions("onclick", "")
+	document.getElementById("default-open").click();
 
 	apply_accordion_clicks();
 }
@@ -97,6 +112,11 @@ var decodeHTML = function (html) {
 }
 
 var show_functions = function(evt, key){
+	//upon clicking on a button with id 'tab-machine_name', hide all functions
+	//by setting the tabcontent element display to none
+	//then, append 'active' to the id of the selected button
+	//and make its tabcontent element visible
+
 	console.log(key)
 	var i, tabcontent, tablinks;
 	tabcontent = document.getElementsByClassName("tabcontent");
