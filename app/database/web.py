@@ -1,7 +1,7 @@
 """
 Module to provide functions for the web analysis tool to use.
 
-TODO: delete functions that refer to fake_vypr_var from the tree
+TODO: fix states representation in specification
       add quotes where they should be in the specification !!!
 """
 from .utils import get_connection
@@ -37,10 +37,10 @@ StateValueLengthInInterval.__repr__=\
     lambda Atom: "%s(%s).length()._in(%s)" % (Atom._state, Atom._name, Atom._interval)
 
 TransitionDurationInInterval.__repr__=\
-    lambda Atom: "(%s).duration()._in(%s)" % (Atom._transition, Atom._interval)
+    lambda Atom: "%s.duration()._in(%s)" % (Atom._transition, Atom._interval)
 
 TransitionDurationLessThanTransitionDurationMixed.__repr__=\
-    lambda Atom: "(%s).duration() < (%s).duration()" % (Atom._lhs, Atom._rhs)
+    lambda Atom: "%s.duration() < %s.duration()" % (Atom._lhs, Atom._rhs)
 
 TransitionDurationLessThanStateValueMixed.__repr__=\
     lambda Atom: "%s.duration() < %s(%s)" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
@@ -64,10 +64,10 @@ TODO: other possible states ??
 
 
 StaticState.my_repr_function=\
-    lambda object: "%s = changes(%s)"%(object._bind_variable_name, object._name_changed)
+    lambda object: "%s = changes('%s')"%(object._bind_variable_name, object._name_changed)
 
 StaticTransition.my_repr_function=\
-    lambda object: "%s = calls(%s)"%(object._bind_variable_name, object._operates_on)
+    lambda object: "%s = calls('%s')"%(object._bind_variable_name, object._operates_on)
 
 
 
@@ -184,6 +184,16 @@ def web_list_functions():
 
     for function in functions:
 
+        # first, we want to check if the specification is referring to 'fake_vypr_var'
+        # if it is, we will not store this function in the tree
+        #  because the specification given by the user was empty
+        bind_var = pickle.loads(base64.b64decode(json.loads(function[3])["bind_variables"]))
+        var = bind_var.items()[0]
+        print(type(var[1]))
+        if (type(var[1]) is StaticState):
+            if (var[1]._name_changed == 'fake_vypr_var'): continue
+
+
         print(function[1])
 
         full_name = function[1]
@@ -200,6 +210,9 @@ def web_list_functions():
 
         print(path)
 
+
+        # constructing the tree
+
         if not (dictionary_tree_structure.get(path[0])):
             dictionary_tree_structure[path[0]] = {}
         current_hierarchy_step = dictionary_tree_structure[path[0]]
@@ -209,17 +222,20 @@ def web_list_functions():
                 current_hierarchy_step[item] = {}
             current_hierarchy_step = current_hierarchy_step[item]
 
+
+        # storing (hash,specification) as a leaf of the tree
+
         hash = function[2]
         prop = pickle.loads(base64.b64decode(json.loads(function[3])["property"]))
-        bind_var = pickle.loads(base64.b64decode(json.loads(function[3])["bind_variables"]))
+        # bind_var was decoded in the first step of the loop
 
         atom_str = str(prop)
 
         spec = ''
         vars = ''
 
-        #vars will save a list of variables as "x, y, z" - used later in lambda
-        #spec begins with Forall(...) - each variable generates one of these
+        # vars will save a list of variables as "x, y, z" - used later in lambda
+        # spec begins with Forall(...) - each variable generates one of these
         for var in bind_var.items():
             atom_str = atom_str.replace(str(var[1]),var[0],1)
             if spec:
@@ -227,14 +243,17 @@ def web_list_functions():
             spec += '<p class="list-group-item-text code">Forall(%s).\ </p>'% var[1].my_repr_function()
             vars += var[0]
 
-        #finally, add the condition stored in atom_str to the specification
+        for var in bind_var.items():
+            atom_str = atom_str.replace(str(var[1]),var[0])
+
+        # finally, add the condition stored in atom_str to the specification
         spec +="""<p class="list-group-item-text code">Check( </p>
             <p class="list-group-item-text code">&nbsp;&nbsp;lambda %s : ( </p>
             <p class="list-group-item-text code">&nbsp;&nbsp;&nbsp;&nbsp; %s </p>
             <p class="list-group-item-text code">&nbsp;&nbsp;) </p>
             <p class="list-group-item-text code">)</p>"""%(vars,atom_str)
 
-        #and store pairs (hash,specification) as leaves
+        # and store pairs (hash,specification) as leaves
         if current_hierarchy_step.get(path[-1]):
             current_hierarchy_step[path[-1]].append([hash,spec])
         else:
