@@ -66,7 +66,3 @@ def list_function_calls_from_verdict_and_path(verdict, path):
                                          truth_map={1: "Satisfaction", 0: "Violation"})
 
     return template_with_data
-
-@app_object.route("/first_attempt/")
-def list_functions_try():
-    return render_template("js_first_attempt.html")
