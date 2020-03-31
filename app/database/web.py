@@ -6,7 +6,7 @@ TODO: fix states representation in specification
 """
 from .utils import get_connection
 import json
-import pprint
+import dateutil.parser
 import pickle
 import base64
 from VyPR.monitor_synthesis.formula_tree import *
@@ -134,7 +134,17 @@ def list_calls_from_id(function_id):
     connection = get_connection()
     cursor = connection.cursor()
     function_calls = cursor.execute("select * from function_call where function = ?", [function_id]).fetchall()
-    return function_calls
+    # perform any processing on each function call that we need
+    modified_calls = []
+    for function_call in function_calls:
+        new_call = list(function_call)
+        new_call.append(
+            (dateutil.parser.parse(new_call[3]) - dateutil.parser.parse(new_call[2])).total_seconds()
+        )
+        new_call[2] = dateutil.parser.parse(new_call[2]).strftime("%d/%M/%Y %H:%m:%S")
+        new_call[3] = dateutil.parser.parse(new_call[3]).strftime("%d/%M/%Y %H:%m:%S")
+        modified_calls.append(new_call)
+    return modified_calls
 
 
 def list_calls_during_request(transaction_id, function_name):

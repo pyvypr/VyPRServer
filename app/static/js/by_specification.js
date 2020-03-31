@@ -168,7 +168,7 @@ var apply_function_list_click = function() {
 			for(var i=0; i<data.length; i++) {
 				var button = document.createElement("button");
 				button.className = "list-group-item";
-				button.innerHTML = "<b>Start:</b> " + data[i][2] + ", <b>End:</b> " + data[i][3];
+				button.innerHTML = "<b>Start:</b> " + data[i][2] + ", <b>lasting:</b> " + data[i][6] + " seconds";
 				$(button).attr("function-call-id", data[i][0]);
 				$("#function-call-list").append(button);
 			}
