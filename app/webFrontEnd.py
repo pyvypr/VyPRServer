@@ -18,11 +18,6 @@ def specification():
     functions = database.web_list_functions()
     # process the property serialisation for each function to turn it into an understandable string
     # representation of the property
-
-    print(functions)
-
-    #functions = deserialise_property_tree(functions)
-    #return json.dumps(functions)
     return render_template("by_specification.html", functions=json.dumps(functions))
 
 
@@ -42,9 +37,9 @@ def list_transactions(function_id):
     return jsonify(data=database.list_transactions(function_id))
 
 
-@app_object.route("/list_function_calls/<http_request_id>/<function_name>/")
-def list_function_calls(http_request_id, function_name):
-    return jsonify(data=database.list_calls_during_request(http_request_id, function_name))
+@app_object.route("/list_function_calls/<function_id>/")
+def list_function_calls(function_id):
+    return jsonify(data=database.list_calls_from_id(function_id))
 
 
 @app_object.route("/list_verdicts/<function_call_id>/")

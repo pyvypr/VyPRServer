@@ -127,6 +127,16 @@ def list_transactions(function_id):
     return final_requests
 
 
+def list_calls_from_id(function_id):
+    """
+    Given a function id (which implicitly also fixes a property), list the calls found.
+    """
+    connection = get_connection()
+    cursor = connection.cursor()
+    function_calls = cursor.execute("select * from function_call where function = ?", [function_id]).fetchall()
+    return function_calls
+
+
 def list_calls_during_request(transaction_id, function_name):
     """
     Given an transaction id, list the function calls of the given function during that request.

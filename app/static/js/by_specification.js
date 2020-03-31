@@ -150,10 +150,6 @@ var apply_title_click = function() {
 		$("#function-list").slideToggle();
 	});
 
-	$("#http-request-title").click(function() {
-		$("#http-request-list").slideToggle();
-	});
-
 	$("#function-call-title").click(function() {
 		$("#function-call-list").slideToggle();
 	});
@@ -162,19 +158,19 @@ var apply_title_click = function() {
 var apply_function_list_click = function() {
 	$("#function-list").find(".list-group-item").click(function(e) {
 		$("#function-list").slideUp();
-		$("#http-request-list").slideDown();
-		$("#function-call-list").slideUp();
+		$("#function-call-list").html("<p>Loading function calls.  This can take some time if there are many.</p>");
+		$("#function-call-list").slideDown();
 		var function_id = $(e.target).closest(".list-group-item").attr("function-id");
 		selected_function_id = function_id;
-		$.get("/list_transactions/" + function_id, function(data) {
-		    $("#http-request-list").html("");
+		$.get("/list_function_calls/" + function_id, function(data) {
+		    $("#function-call-list").html("");
 		    data = data["data"];
 			for(var i=0; i<data.length; i++) {
 				var button = document.createElement("button");
 				button.className = "list-group-item";
-				button.innerHTML = data[i][1];
-				$(button).attr("http-request-id", data[i][0]);
-				$("#http-request-list").append(button);
+				button.innerHTML = "<b>Start:</b> " + data[i][2] + ", <b>End:</b> " + data[i][3];
+				$(button).attr("function-call-id", data[i][0]);
+				$("#function-call-list").append(button);
 			}
 			apply_http_request_list_click();
 		});
