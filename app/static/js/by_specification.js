@@ -162,6 +162,7 @@ var apply_function_list_click = function() {
 		$("#function-call-list").slideDown();
 		var function_id = $(e.target).closest(".list-group-item").attr("function-id");
 		selected_function_id = function_id;
+		var specification_code = $(e.target).parent().html();
 		$.get("/list_function_calls/" + function_id, function(data) {
 		    // load the list of function calls
 		    $("#function-call-list").html("");
@@ -178,7 +179,8 @@ var apply_function_list_click = function() {
 			// now load the function/property information in and put it on the page
 			$.get("/get_source_code/" + function_id, function(code_data) {
 			    // here we will process the source code + property information and display on the page
-			    $("#verdict-list").html("");
+			    $("#verdict-list").html("<div id='specification_listing'>" + specification_code +
+			        "</div><div class='code_listing'></div>");
 			    var code_data = JSON.parse(code_data);
 			    var code_lines = code_data["code"];
 			    var current_line = code_data["start_line"];
