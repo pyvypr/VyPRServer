@@ -181,9 +181,11 @@ var apply_function_list_click = function() {
 			    $("#verdict-list").html("");
 			    var code_data = JSON.parse(code_data);
 			    var code_lines = code_data["code"];
+			    var current_line = code_data["start_line"];
 			    for(var i=0; i < code_lines.length; i++) {
 			        var line_div = document.createElement("div");
-			        line_div.innerHTML = code_lines[i].replace(/\t/g, "&nbsp;&nbsp;&nbsp;");
+			        line_div.innerHTML = "<b>" + current_line + "</b> " + code_lines[i].replace(/\t/g, "&nbsp;&nbsp;&nbsp;");
+			        current_line++;
 			        line_div.className = "code_listing_line"
 			        $("#verdict-list").append(line_div);
 			    }
