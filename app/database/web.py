@@ -384,8 +384,8 @@ def get_code(function_id):
     lines = code.split('\n')
 
     f_code = lines[start:end]
-    f_code = "\n".join(f_code)
-    print(f_code)
+    #f_code = "\n".join(f_code)
+    #print(f_code)
     return f_code
 
 
