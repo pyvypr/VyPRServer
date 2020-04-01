@@ -64,6 +64,5 @@ def list_function_calls_from_verdict_and_path(verdict, path):
 
 @app_object.route("/get_source_code/<function_id>/")
 def get_source_code(function_id):
-    code = database.get_code(function_id)
-    dict = {"code": code}
-    return json.dumps(dict)
+    code_dict = database.get_code(function_id)
+    return json.dumps(code_dict)
