@@ -352,6 +352,9 @@ def get_code(function_id):
     function = cursor.execute("select fully_qualified_name, property from function where id = ?", [function_id]).fetchone()
     func = function[0]
     location = app.monitored_service_path
+    if (location==None):
+        error_dict = {"error" : "Please parse the monitored service path as an argument (--path)"}
+        return error_dict
 
     if "-" in func[0:func.index(".")]:
         func = func[func.index("-")+1:]
@@ -378,15 +381,18 @@ def get_code(function_id):
     function_def = list(filter(lambda entry: (type(entry) is ast.FunctionDef and entry.name == actual_function_name),
               current_step.body if type(current_step) is ast.ClassDef else current_step))[0]
 
-    start = function_def.body[0].lineno - 2
+    start = function_def.lineno - 1
     end = function_def.body[-1].lineno - 1
 
     lines = code.split('\n')
 
     f_code = lines[start:end]
-    #f_code = "\n".join(f_code)
-    #print(f_code)
-    return f_code
+
+    dict = {"start_line" : start,
+            "end_line": end,
+            "code" : f_code}
+
+    return dict
 
 
 def get_qualifier_subsequence(function_qualifier):
