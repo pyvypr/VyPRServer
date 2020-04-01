@@ -11,6 +11,9 @@ import pickle
 import base64
 from VyPR.monitor_synthesis.formula_tree import *
 from VyPR.QueryBuilding.formula_building import *
+import app
+import ast
+import os
 
 """
 list of changed repr methods follows - just for class Atom for now
@@ -340,3 +343,69 @@ def get_transaction_function_call_pairs(verdict, path):
             del final_map["functions"][function[0]]
 
     return final_map
+
+
+def get_code(function_id):
+
+    connection = get_connection()
+    cursor = connection.cursor()
+    function = cursor.execute("select fully_qualified_name, property from function where id = ?", [function_id]).fetchone()
+    func = function[0]
+    location = app.monitored_service_path
+
+    if "-" in func[0:func.index(".")]:
+        func = func[func.index("-")+1:]
+
+    module = func[0:func.rindex(".")]
+    func = func[func.rindex(".") + 1:]
+    file_name = module.replace(".", "/") + ".py.inst"
+    # extract asts from the code in the file
+    code = "".join(open(os.path.join(location, file_name), "r").readlines())
+    asts = ast.parse(code)
+    qualifier_subsequence = get_qualifier_subsequence(func)
+    func = func.replace(":", ".")
+    function_name = func.split(".")
+    # find the function definition
+    actual_function_name = function_name[-1]
+    hierarchy = function_name[:-1]
+    current_step = asts.body
+
+    # traverse sub structures
+    for step in hierarchy:
+        current_step = filter(lambda entry: (type(entry) is ast.ClassDef and entry.name == step), current_step)[0]
+
+    # find the final function definition
+    function_def = list(filter(lambda entry: (type(entry) is ast.FunctionDef and entry.name == actual_function_name),
+              current_step.body if type(current_step) is ast.ClassDef else current_step))[0]
+
+    start = function_def.body[0].lineno - 2
+    end = function_def.body[-1].lineno - 1
+
+    lines = code.split('\n')
+
+    f_code = lines[start:end]
+    f_code = "\n".join(f_code)
+    print(f_code)
+    return f_code
+
+
+def get_qualifier_subsequence(function_qualifier):
+    """Given a fully qualified function name, iterate over it and find the file in which the function is defined (
+    this is the entry in the qualifier chain before the one that causes an import error) """
+
+    # tokenise the qualifier string so we have names and symbols
+    # the symbol used to separate two names tells us what the relationship is
+    # a/b means a is a directory and b is contained within it
+    # a.b means b is a member of a, so a is either a module or a class
+
+    tokens = []
+    last_position = 0
+    for (n, character) in enumerate(list(function_qualifier)):
+        if character in [".", "/"]:
+            tokens.append(function_qualifier[last_position:n])
+            tokens.append(function_qualifier[n])
+            last_position = n + 1
+        elif n == len(function_qualifier) - 1:
+            tokens.append(function_qualifier[last_position:])
+
+    return tokens
