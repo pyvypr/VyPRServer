@@ -388,8 +388,8 @@ def get_code(function_id):
 
     f_code = lines[start:end]
 
-    dict = {"start_line" : start,
-            "end_line": end,
+    dict = {"start_line" : start+1,
+            "end_line": end+1,
             "code" : f_code}
 
     return dict
