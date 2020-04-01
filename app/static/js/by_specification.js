@@ -163,37 +163,22 @@ var apply_function_list_click = function() {
 		var function_id = $(e.target).closest(".list-group-item").attr("function-id");
 		selected_function_id = function_id;
 		$.get("/list_function_calls/" + function_id, function(data) {
+		    // load the list of function calls
 		    $("#function-call-list").html("");
 		    data = data["data"];
 			for(var i=0; i<data.length; i++) {
 				var button = document.createElement("button");
 				button.className = "list-group-item";
-				button.innerHTML = "<b>Start:</b> " + data[i][2] + ", <b>lasting:</b> " + data[i][6] + " seconds";
-				$(button).attr("function-call-id", data[i][0]);
-				$("#function-call-list").append(button);
-			}
-			apply_http_request_list_click();
-		});
-	});
-};
-
-var apply_http_request_list_click = function() {
-	$("#http-request-list").children(".list-group-item").click(function(e) {
-		$("#function-list").slideUp();
-		$("#http-request-list").slideUp();
-		$("#function-call-list").slideDown();
-		var http_request_id = $(e.target).closest(".list-group-item").attr("http-request-id");
-		selected_http_request_id = http_request_id;
-		$.get("/list_function_calls/" + http_request_id + "/" + selected_function_id, function(data) {
-			$("#function-call-list").html("");
-			for(var i=0; i<data.length; i++) {
-				var button = document.createElement("button");
-				button.className = "list-group-item";
-				button.innerHTML = data[i][2];
+				button.innerHTML = "<input type='checkbox' function-call-id='" + data[i][0]  + "'/><b>Start:</b> " +
+				    data[i][2] + ", <b>lasting:</b> " + data[i][6] + " seconds";
 				$(button).attr("function-call-id", data[i][0]);
 				$("#function-call-list").append(button);
 			}
 			apply_function_call_list_click();
+			// now load the function/property information in and put it on the page
+			$.get("/get_function_property_data/" + function_id, function(new_data) {
+			    // here we will process the source code + property information and display on the page
+			});
 		});
 	});
 };
@@ -206,14 +191,17 @@ var apply_function_call_list_click = function() {
 		var function_call_id = $(e.target).closest(".list-group-item").attr("function-call-id");
 		selected_function_call_id = function_call_id;
 		$("#verdict-list").html("");
-		$.get("/list_verdicts/" + function_call_id, function(data) {
-			for(var i=0; i<data.length; i++) {
-				var li = document.createElement("div");
-				li.className = "list-group-item";
-				li.innerHTML = '<h4 class="list-group-item-heading">Lines ' + data[i][0] + '<span class="badge ' + truth_map[Number(data[i][1])] + '">' + truth_map[Number(data[i][1])] + '</span></h4>' +
-				'<p class="list-group-item-text">reached at ' + data[i][2] + '</p>';
-				$("#verdict-list").append(li);
-			}
+		// toggle the checkbox for the box that was clicked
+		$(e.target).children("input[type=checkbox]").prop("checked",
+		    !$(e.target).children("input[type=checkbox]").prop("checked"));
+		// get all the checked boxes and, from there, get a list of function call IDs
+		var function_call_ids = $(e.target).parent().parent().find("input:checked").map(function(i, d) {
+		    return $(d).attr("function-call-id");
+		}).get();
+		// send a request to the server with the function call IDs that have been selected
+		$.post("/get_function_calls_data/", {"ids" : function_call_ids}).done(function(data) {
+		    // here we will process the information from the function calls and
+		    // put it on the page with with the source code and property information
 		});
 	});
 };
