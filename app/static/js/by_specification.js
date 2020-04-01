@@ -176,8 +176,17 @@ var apply_function_list_click = function() {
 			}
 			apply_function_call_list_click();
 			// now load the function/property information in and put it on the page
-			$.get("/get_function_property_data/" + function_id, function(new_data) {
+			$.get("/get_source_code/" + function_id, function(code_data) {
 			    // here we will process the source code + property information and display on the page
+			    $("#verdict-list").html("");
+			    var code_data = JSON.parse(code_data);
+			    var code_lines = code_data["code"];
+			    for(var i=0; i < code_lines.length; i++) {
+			        var line_div = document.createElement("div");
+			        line_div.innerHTML = code_lines[i].replace(/\t/g, "&nbsp;&nbsp;&nbsp;");
+			        line_div.className = "code_listing_line"
+			        $("#verdict-list").append(line_div);
+			    }
 			});
 		});
 	});
