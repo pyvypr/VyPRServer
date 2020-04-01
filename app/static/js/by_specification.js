@@ -53,12 +53,12 @@ var build_accordion = function() {
 	// recursively construct an accordion.
 	// the machine part of the path is shown as a tab
 
-	function_list_data = JSON.parse($("#function-list-data").html());
-	dom_elem = $("#function-list");
-	content = '<div class="tab">';
+	var function_list_data = JSON.parse($("#function-list-data").html());
+	var dom_elem = $("#function-list");
+	var content = '<div class="tab">';
 
 	// if we don't want the first tab to be open on the page load, set to 0
-	is_first = 1;
+	var is_first = 1;
 
 	//construct the tabs with machine names as buttons
 	for(var key in function_list_data){
@@ -84,7 +84,7 @@ var build_accordion = function() {
 	}
 
 	//add onclick event to the buttons
-	tablinks = document.getElementsByClassName("tablinks")
+	var tablinks = document.getElementsByClassName("tablinks")
 	for (i = 0; i < tablinks.length; i++) {
 		console.log(tablinks[i]);
 		tablinks[i].onclick = function(){show_functions(event,"tab-"+this.innerHTML);};
