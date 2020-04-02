@@ -258,7 +258,8 @@ def web_list_functions():
             atom_str = atom_str.replace(str(var[1]), var[0], 1)
             if spec:
                 vars += ", "
-            spec += '<p class="list-group-item-text code">Forall(%s).\ </p>' % var[1].my_repr_function()
+            spec += '<p class="list-group-item-text code" id="bind-variable-name-' + var[0] +\
+                    '">Forall(%s).\ </p>' % var[1].my_repr_function()
             vars += var[0]
 
         for var in bind_var.items():
