@@ -195,18 +195,20 @@ var apply_function_list_click = function() {
 
 			    for(var i=0; i < code_lines.length; i++) {
 			        var line_div = document.createElement("div");
-			        line_div.innerHTML = "<b>" + current_line + "</b> " + code_lines[i].replace(/\t/g, "&nbsp;&nbsp;&nbsp;");
+			        var content = "<b>" + current_line + "</b> " + code_lines[i].replace(/\t/g, "&nbsp;&nbsp;&nbsp;");
 			        line_div.className = "code_listing_line";
 
 							if (line_numbers.indexOf(current_line)!=-1){
 								line_div.id = "line-number-" + current_line;
+								content += '<span id="span-bindings-line-' + current_line +
+																			'" style="float: right; padding:5px"> </span>';
 							}
+							line_div.innerHTML = content;
 							current_line++;
 			        $("#verdict-list").append(line_div);
 			    }
 
 					var quantification_ids = [];
-					//var spec = document.getElementsByClassName("list-group-item-text code")
 					var spec = $("#specification_listing").children();
 					for (i=0; i<spec.length; i++){
 						if (spec[i].id!=""){
@@ -215,17 +217,17 @@ var apply_function_list_click = function() {
 					}
 
 					for (var i=0; i<bindings_list.length; i++){
-						binding = bindings_list[i];
-						line_numbers = binding["binding_statement_lines"];
+						var binding = bindings_list[i];
+						var line_numbers = binding["binding_statement_lines"];
 
 						for (var j=0; j<line_numbers.length; j++){
 							var no = line_numbers[j]
 							var color = code_highlight_palette[j];
 							$("#line-number-"+no).attr('style',"background-color : " + color);
+							$("#span-bindings-line-"+no).append(" "+binding["id"]);
 
 							for (k=0; k<spec.length; k++){
-								obj = spec[k];
-								console.log(obj.id)
+								var obj = spec[k];
 								if (obj.id==quantification_ids[j]){
 									$(obj).attr('style',"background-color : " + color);
 								}
