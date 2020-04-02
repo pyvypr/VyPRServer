@@ -349,8 +349,10 @@ def get_code(function_id):
 
     connection = get_connection()
     cursor = connection.cursor()
+
     function = cursor.execute("select fully_qualified_name, property from function where id = ?", [function_id]).fetchone()
     func = function[0]
+
     location = app.monitored_service_path
     if (location==None):
         error_dict = {"error" : "Please parse the monitored service path as an argument (--path)"}
@@ -368,6 +370,7 @@ def get_code(function_id):
     qualifier_subsequence = get_qualifier_subsequence(func)
     func = func.replace(":", ".")
     function_name = func.split(".")
+
     # find the function definition
     actual_function_name = function_name[-1]
     hierarchy = function_name[:-1]
@@ -392,6 +395,16 @@ def get_code(function_id):
             "end_line": end+1,
             "code" : f_code}
 
+    bindings = cursor.execute("""select id, binding_space_index, binding_statement_lines from binding
+                        where function = ?""", [function_id]).fetchall()
+    bindings_list = []
+    for b in bindings:
+        d = {"id" : b[0], "binding_space_index" : b[1], "binding_statement_lines" : b[2]}
+        bindings_list.append(d)
+
+    dict["bindings"] = bindings_list
+
+    connection.close()
     return dict
 
 
@@ -415,3 +428,8 @@ def get_qualifier_subsequence(function_qualifier):
             tokens.append(function_qualifier[last_position:])
 
     return tokens
+
+
+def get_calls_data(ids_dict):
+    ids = ids_dict["ids"]
+    return 0
