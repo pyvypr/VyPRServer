@@ -399,7 +399,7 @@ def get_code(function_id):
                         where function = ?""", [function_id]).fetchall()
     bindings_list = []
     for b in bindings:
-        d = {"id" : b[0], "binding_space_index" : b[1], "binding_statement_lines" : b[2]}
+        d = {"id" : b[0], "binding_space_index" : b[1], "binding_statement_lines" : json.loads(b[2])}
         bindings_list.append(d)
 
     dict["bindings"] = bindings_list
