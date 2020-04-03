@@ -279,9 +279,9 @@ def web_list_functions():
             current_hierarchy_step[path[-1]] = [[function[0], hash, spec]]
 
     # pprint(dictionary_tree_structure)
-
+    #dictionary_tree_structure["client"] = {"app": [[function[0], hash, spec]]}
     connection.close()
-    #dictionary_tree_structure["client"] = {"app": [[hash, spec]]}
+
     return dictionary_tree_structure
 
 
@@ -354,6 +354,7 @@ def get_code(function_id):
     function = cursor.execute("select fully_qualified_name, property from function where id = ?", [function_id]).fetchone()
     func = function[0]
 
+    #check if the monitored service path was given as an argument
     location = app.monitored_service_path
     if (location==None):
         error_dict = {"error" : "Please parse the monitored service path as an argument (--path)"}
@@ -385,17 +386,22 @@ def get_code(function_id):
     function_def = list(filter(lambda entry: (type(entry) is ast.FunctionDef and entry.name == actual_function_name),
               current_step.body if type(current_step) is ast.ClassDef else current_step))[0]
 
+    #we want to now exact line numbers of these ast objects
     start = function_def.lineno - 1
     end = function_def.body[-1].lineno - 1
 
     lines = code.split('\n')
 
+    #take the section of code between the line numbers - this is the source code
+    #of the function of interest without the rest of the code
     f_code = lines[start:end]
 
     dict = {"start_line" : start+1,
             "end_line": end+1,
             "code" : f_code}
 
+
+    #now get data about bindings and add them to the dictionary structure
     bindings = cursor.execute("""select id, binding_space_index, binding_statement_lines from binding
                         where function = ?""", [function_id]).fetchall()
     bindings_list = []
