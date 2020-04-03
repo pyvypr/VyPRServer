@@ -166,8 +166,8 @@ var apply_function_list_click = function() {
 		var specification_code = $(e.target).parent().html();
 		$.get("/list_function_calls/" + function_id, function(data) {
 		    // load the list of function calls
-		    $("#function-call-list").html("");
-		    data = data["data"];
+			$("#function-call-list").html("");
+			data = data["data"];
 			for(var i=0; i<data.length; i++) {
 				var button = document.createElement("button");
 				button.className = "list-group-item";
@@ -182,10 +182,12 @@ var apply_function_list_click = function() {
 			    // here we will process the source code + property information and display on the page
 			    $("#verdict-list").html("<div id='specification_listing'>" + specification_code +
 			        "</div><div class='code_listing'></div>");
-			    var code_data = JSON.parse(code_data);
-			    var code_lines = code_data["code"];
-			    var current_line = code_data["start_line"];
+					var code_data = JSON.parse(code_data);
+					var code_lines = code_data["code"];
+					var current_line = code_data["start_line"];
 
+					// we also want to display binding reference at the end of each line
+					// first, go through bindings and collect all line numbers they refer to
 					var bindings_list = code_data["bindings"];
 					var line_numbers = [];
 					for (var i=0; i<bindings_list.length; i++){
@@ -193,21 +195,26 @@ var apply_function_list_click = function() {
 						line_numbers = line_numbers.concat(binding["binding_statement_lines"]);
 					}
 
-			    for(var i=0; i < code_lines.length; i++) {
-			        var line_div = document.createElement("div");
-			        var content = "<b>" + current_line + "</b> " + code_lines[i].replace(/\t/g, "&nbsp;&nbsp;&nbsp;");
-			        line_div.className = "code_listing_line";
+					// add each line as a div element, if it is in the list of binding statement lines,
+					// also add a span element to the content of the line - later, we will add binding labels to it
+					for(var i=0; i < code_lines.length; i++) {
+						var line_div = document.createElement("div");
+						var content = "<b>" + current_line + "</b> " + code_lines[i].replace(/\t/g, "&nbsp;&nbsp;&nbsp;");
+						line_div.className = "code_listing_line";
 
-							if (line_numbers.indexOf(current_line)!=-1){
-								line_div.id = "line-number-" + current_line;
-								content += '<span id="span-bindings-line-' + current_line +
-																			'" style="float: right; padding:5px"> </span>';
-							}
-							line_div.innerHTML = content;
-							current_line++;
-			        $("#verdict-list").append(line_div);
-			    }
+						if (line_numbers.indexOf(current_line)!=-1){
+							line_div.id = "line-number-" + current_line;
+							content += '<span id="span-bindings-line-' + current_line + '" style="float: right; padding:5px"> </span>';
+						}
+						line_div.innerHTML = content;
+						current_line++;
+						$("#verdict-list").append(line_div);
+					}
 
+					// we want to highlight the quantification in the specification code
+					// with the same color as the line of code it refers to
+					// quantifier lines have ids stating the bind variable name
+					// other lines in the specification don't have ids
 					var quantification_ids = [];
 					var spec = $("#specification_listing").children();
 					for (i=0; i<spec.length; i++){
@@ -216,6 +223,10 @@ var apply_function_list_click = function() {
 						}
 					}
 
+					// finally, for each binding, add that binding label
+					// to the span elements of lines they refer to
+					// then for each binding line go through the specification to find the quantification
+					// that refers to that line and highlight it the same color as the line in the code
 					for (var i=0; i<bindings_list.length; i++){
 						var binding = bindings_list[i];
 						var line_numbers = binding["binding_statement_lines"];
@@ -225,7 +236,6 @@ var apply_function_list_click = function() {
 							var color = code_highlight_palette[j];
 							$("#line-number-"+no).attr('style',"background-color : " + color);
 							$("#span-bindings-line-"+no).append(" "+binding["id"]);
-
 							for (k=0; k<spec.length; k++){
 								var obj = spec[k];
 								if (obj.id==quantification_ids[j]){
@@ -233,8 +243,8 @@ var apply_function_list_click = function() {
 								}
 							}
 
-						}
 					}
+				}
 
 			});
 		});
