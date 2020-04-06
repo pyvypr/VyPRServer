@@ -15,8 +15,9 @@
 	    <h3 class="panel-title">Criteria</h3>
 	  </div>
 	  <div class="panel-body">
-	    <p>To see verdict data, you must specify the function whose verification results in verdicts,
-	    the http request to take calls of the function from, and a specific call of the function.</p>
+	    <p>Start by selecting a function and property.  This will show you a list of calls of the function,
+		and its source code on the right of your screen.  Select one or more calls to see information collected
+		during them displayed with the source code.</p>
 	  </div>
 	</div>
 
@@ -26,23 +27,12 @@
 
 	  	<div class="panel panel-success">
 		  <div class="panel-heading">
-		    <h3 class="panel-title" id="function-title">Function / Property</h3>
+		    <h3 class="panel-title" id="function-title">Machine / Function / Property</h3>
 		  </div>
 		  <div class="panel-body">
 		    <div class="list-group" id="function-list">
 		      <div id="function-list-data">{{ functions }}</div>
-			</div>
-		  </div>
-		</div>
-
-	  	<div class="panel panel-success">
-		  <div class="panel-heading">
-		    <h3 class="panel-title" id="http-request-title">HTTP Request</h3>
-		  </div>
-		  <div class="panel-body">
-		    <div class="list-group" id="http-request-list">
-		    	<div class="please-select">Select a function first.</div>
-			</div>
+				</div>
 		  </div>
 		</div>
 
@@ -67,10 +57,10 @@
 
 	  	<div class="panel panel-success">
 		  <div class="panel-heading">
-		    <h3 class="panel-title">Verdict</h3>
+		    <h3 class="panel-title">Code View</h3>
 		  </div>
 		  <div class="panel-body" id="verdict-list">
-		  	<div class="please-select">Select a function call first.</div>
+		  	<div class="please-select">Select a function and then one or more calls, first.</div>
 		  </div>
 		</div>
 

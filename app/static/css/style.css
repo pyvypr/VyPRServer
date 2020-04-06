@@ -63,6 +63,25 @@ div.please-select {
 	background: red!important;
 }
 
+#verdict-list #specification_listing {
+    padding: 10px;
+    border-bottom: 2px solid black;
+}
+
+#verdict-list .code_listing_line {
+    font-family: courier new;
+    padding: 2px;
+}
+
+#function-call-list {
+    max-height: 500px;
+    overflow: hidden scroll;
+}
+
+#function-call-list input[type=checkbox] {
+    margin-right: 20px;
+}
+
 #function-list-data {
 	visibility: hidden;
 	display: none;
@@ -126,4 +145,29 @@ table.function-list-table td {
 
 .list-group-item-text.code {
 	font-family: courier;
+}
+
+.tab {
+	overflow: hidden;
+	background-color: #d6e9c6;	
+}
+
+.tablinks {
+	background-color: inherit;
+	float: left;
+	border: none;
+	outline: none;
+	cursor: pointer;
+	padding: 10px;
+	transition: 0.3s;
+	font-size: 14px;
+}
+
+.tablinks:hover {
+  background-color: #bcdba3;
+}
+
+/* Create an active/current tablink class */
+.tab button.active {
+  background-color: #95c66c;
 }

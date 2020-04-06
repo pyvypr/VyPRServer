@@ -5,6 +5,7 @@ from app import app_object
 from flask import request, jsonify, render_template
 from . import database
 from .utils import deserialise_property_tree, deserialise_property
+import json
 
 
 @app_object.route("/", methods=["get"])
@@ -17,11 +18,6 @@ def specification():
     functions = database.web_list_functions()
     # process the property serialisation for each function to turn it into an understandable string
     # representation of the property
-
-    print(functions)
-
-    functions = deserialise_property_tree(functions)
-
     return render_template("by_specification.html", functions=json.dumps(functions))
 
 
@@ -36,14 +32,14 @@ def about():
     return render_template("about.html")
 
 
-@app_object.route("/list_http_requests/<function_id>/")
-def list_http_requests(function_id):
-    return jsonify(data=database.list_http_requests(function_id))
+@app_object.route("/list_transactions/<function_id>/")
+def list_transactions(function_id):
+    return jsonify(data=database.list_transactions(function_id))
 
 
-@app_object.route("/list_function_calls/<http_request_id>/<function_name>/")
-def list_function_calls(http_request_id, function_name):
-    return jsonify(data=database.list_calls_during_request(http_request_id, function_name))
+@app_object.route("/list_function_calls/<function_id>/")
+def list_function_calls(function_id):
+    return jsonify(data=database.list_calls_from_id(function_id))
 
 
 @app_object.route("/list_verdicts/<function_call_id>/")
@@ -65,3 +61,13 @@ def list_function_calls_from_verdict_and_path(verdict, path):
                                          truth_map={1: "Satisfaction", 0: "Violation"})
 
     return template_with_data
+
+@app_object.route("/get_source_code/<function_id>/")
+def get_source_code(function_id):
+    code_dict = database.get_code(function_id)
+    return json.dumps(code_dict)
+
+@app_object.route("/get_function_calls_data/<dict>/")
+def get_function_calls_data(dict):
+    data = database.get_calls_data(dict)
+    return json.dumps(data)

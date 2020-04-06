@@ -6,6 +6,22 @@ from . import database
 import json
 from flask import request
 
+
+"""
+Endpoint which shuts down the server
+"""
+@app_object.route("/shutdown/", methods=['GET'])
+def shutdown():
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
+
+
+
+
+
+
 """
 Queries based on paths.
 """
