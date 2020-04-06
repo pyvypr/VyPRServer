@@ -144,8 +144,8 @@ def list_calls_from_id(function_id):
         new_call.append(
             (dateutil.parser.parse(new_call[3]) - dateutil.parser.parse(new_call[2])).total_seconds()
         )
-        new_call[2] = dateutil.parser.parse(new_call[2]).strftime("%d/%M/%Y %H:%m:%S")
-        new_call[3] = dateutil.parser.parse(new_call[3]).strftime("%d/%M/%Y %H:%m:%S")
+        new_call[2] = dateutil.parser.parse(new_call[2]).strftime("%d/%m/%Y %H:%M:%S")
+        new_call[3] = dateutil.parser.parse(new_call[3]).strftime("%d/%m/%Y %H:%M:%S")
         modified_calls.append(new_call)
     return modified_calls
 
