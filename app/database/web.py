@@ -11,9 +11,12 @@ import pickle
 import base64
 from VyPR.monitor_synthesis.formula_tree import *
 from VyPR.QueryBuilding.formula_building import *
+from VyPR.SCFG.construction import *
 import app
 import ast
 import os
+#from sets import Set
+
 
 """
 list of changed repr methods follows - just for class Atom for now
@@ -415,6 +418,135 @@ def get_code(function_id):
     return dict
 
 
+def get_calls_data(ids_list):
+    """
+    Given a list of function call IDs, using path condition sequence,
+     reconstruct the path taken to an instrumentation point
+
+    """
+    print(ids_list)
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    ids = list_to_sql_string(ids_list)
+
+    query_string = "select id, function, time_of_call, end_time_of_call, trans, path_condition_id_sequence from function_call where id in %s;" % ids
+    calls = cursor.execute(query_string).fetchall()
+    print(calls)
+
+
+    #check if the monitored service path was given as an argument
+    location = app.monitored_service_path
+    if (location==None):
+        error_dict = {"error" : "Please parse the monitored service path as an argument (--path)"}
+        return error_dict
+
+
+    # get the scfg of the function called by these calls and get all their path_condition_id_sequences
+    # but without duplicate instances of sequences - store them as keys in dictionary 'sequences'
+    # the corresponding value is a list of the IDs of the calls that generated the sequence (key)
+    function = cursor.execute("select fully_qualified_name, property from function where id = ?", [calls[0][1]]).fetchone()
+    func = function[0]
+    scfg = get_scfg(func, location)
+    sequences = {}
+    inst_point_ids = set()
+    lines = set()
+
+    for call in calls:
+        seq = call[5] # get the list of path condition ids
+        if seq not in sequences.keys():
+            sequences[seq]=[call[0]]
+        else:
+            sequences[seq].append(call[0])
+
+
+    for seq in sequences:
+        #if there are more calls that generated the sequence, take the first one
+        call_id = sequences[seq][0]
+        # get the list of path conditions defined by the ids above
+        subchain = []
+        for condition in json.loads(seq):
+            query_string = "select serialised_condition from path_condition_structure where id = %s;" % condition
+            condition_string = cursor.execute(query_string).fetchone()[0]
+            subchain.append(condition_string)
+        print(subchain)
+
+        # get observations generated during this function call
+        observations = cursor.execute("""select observation.id, observation.instrumentation_point,
+            observation.previous_condition_offset from
+            (observation inner join verdict on observation.verdict == verdict.id)
+            where verdict.function_call = ?""", [call_id]).fetchall()
+
+        # reconstruct the path to each observation to find the line in the code
+        # that generates that observation (last element in the found path)
+        for obs in observations:
+            instrumentation_point_path_length = cursor.execute("""select reaching_path_length from
+                instrumentation_point where id = ?""", [obs[1]]).fetchone()
+            path = edges_from_condition_sequence(scfg, subchain[1:(obs[2]+1)], instrumentation_point_path_length[0])
+            path_elem = path[-1]
+            inst_point_ids.add(obs[1])
+            #TODO: path_elem type can be edge(_instruction), but also vertex(_structure_obj)
+            lines.add((obs[1],path_elem._instruction.lineno))
+
+    print("Instrumentation points' IDs: %s" % inst_point_ids)
+    print("Pairs (instrumentation point ID, line number): %s" % lines)
+
+
+    # now we want to group the instrumenation points by binding
+
+    # first, get the list of all binding IDs
+    # then, create a dictionary whose keys will be binding IDs
+    # and the value will be a list of instrumentation points and line numbers
+    # (also stored as dictionaries)
+    query_string = """select distinct binding from binding_instrumentation_point_pair
+        where instrumentation_point in %s""" % list_to_sql_string(inst_point_ids)
+    binding_ids = cursor.execute(query_string).fetchall()
+    print(binding_ids)
+
+    inst_point_by_binding = {}
+
+    for id in binding_ids:
+        id = str(id[0])
+        points_list = cursor.execute("""select instrumentation_point.id, instrumentation_point.serialised_condition_sequence,
+            instrumentation_point.reaching_path_length from
+            (instrumentation_point inner join binding_instrumentation_point_pair on instrumentation_point.id == binding_instrumentation_point_pair.instrumentation_point)
+            where binding_instrumentation_point_pair.binding = ?""", [id]).fetchall()
+        points_dict = []
+        for point in points_list:
+            dict = {"id" : point[0],
+                    "serialised_condition_sequence" : point[1],
+                    "reaching_path_length" : point[2],
+                    "code_line" : None}
+            for pair in lines:
+                if (pair[0]==dict["id"]):
+                    dict["code_line"] = pair[1]
+            points_dict.append(dict)
+
+        inst_point_by_binding[id] = points_dict
+
+    print(inst_point_by_binding)
+
+    return inst_point_by_binding
+
+
+
+
+"""
+Auxiliary functions for path reconstruction
+
+"""
+def list_to_sql_string(ids_list):
+    """ Create a string which stores the list of ids as (1, 2, 3, 4)
+     to be compatible with the sqlite query syntax: select * from ... where id in (1, 2, 3, 4)
+     """
+    ids="("
+    for id in ids_list:
+        if ids!="(":
+            ids=ids+", "
+        ids = ids + str(id)
+    ids = ids + ")"
+    return ids
+
 def get_qualifier_subsequence(function_qualifier):
     """Given a fully qualified function name, iterate over it and find the file in which the function is defined (
     this is the entry in the qualifier chain before the one that causes an import error) """
@@ -436,7 +568,185 @@ def get_qualifier_subsequence(function_qualifier):
 
     return tokens
 
+def get_scfg(func, location):
+    if "-" in func[0:func.index(".")]:
+        func = func[func.index("-")+1:]
 
-def get_calls_data(ids_dict):
-    ids = ids_dict["ids"]
-    return 0
+    module = func[0:func.rindex(".")]
+    func = func[func.rindex(".") + 1:]
+    file_name = module.replace(".", "/") + ".py.inst"
+    # extract asts from the code in the file
+    code = "".join(open(os.path.join(location, file_name), "r").readlines())
+    asts = ast.parse(code)
+    qualifier_subsequence = get_qualifier_subsequence(func)
+    func = func.replace(":", ".")
+    function_name = func.split(".")
+    # find the function definition
+    actual_function_name = function_name[-1]
+    hierarchy = function_name[:-1]
+    current_step = asts.body
+    # traverse sub structures
+    for step in hierarchy:
+        current_step = filter(lambda entry: (type(entry) is ast.ClassDef and entry.name == step), current_step)[0]
+    # find the final function definition
+    function_def = list(filter(lambda entry: (type(entry) is ast.FunctionDef and entry.name == actual_function_name),
+                          current_step.body if type(current_step) is ast.ClassDef else current_step))[0]
+    # construct the scfg of the code inside the function
+    scfg = CFG()
+    scfg.process_block(function_def.body)
+    return scfg
+
+def edges_from_condition_sequence(scfg, path_subchain, instrumentation_point_path_length):
+    """
+    Given a sequence of (deserialised) conditions in path_subchain and the final path length,
+    reconstruct a path through the scfg, including loop multiplicity.
+    If instrumentation_point_path_length = -1, we assume we're reconstructing a complete path through the SCFG.
+    """
+    #print("reconstruction with path subchain %s" % str(path_subchain))
+    condition_index = 0
+    curr = scfg.starting_vertices
+    #path = [curr]
+    path = []
+    cumulative_conditions = []
+    while condition_index < len(path_subchain):
+        #path.append(curr)
+        #print(curr._name_changed)
+        if len(curr.edges) > 1:
+            # more than 1 outgoing edges means we have a branching point
+
+            #TODO: need to handle parameters in condition sequences
+            if path_subchain[condition_index] == "parameter":
+                if curr._name_changed == ["conditional"]:
+                    # add the vertex to the path, skip past the construct
+                    # and increment the condition index
+                    path.append(curr)
+                    curr = curr.post_conditional_vertex
+                    condition_index += 1
+                    continue
+
+            # we have to decide whether it's a loop or a conditional
+            if curr._name_changed == ["conditional"]:
+                #print("traversing conditional %s with condition %s" % (curr, path_subchain[condition_index]))
+                # path_subchain[condition_index] is the index of the branch to follow if we're dealing with a conditional
+                path.append(curr.edges[int(path_subchain[condition_index])])
+                curr = curr.edges[int(path_subchain[condition_index])]._target_state
+                condition_index += 1
+            elif curr._name_changed == ["loop"]:
+                #print("traversing loop %s with condition %s" % (curr, path_subchain[condition_index]))
+                if path_subchain[condition_index] == "enter-loop":
+                    #print("finding edge entering the loop")
+                    # condition isn't a negation, so follow the edge leading into the loop
+                    for edge in curr.edges:
+                        #print(edge._condition)
+                        if edge._condition == ["enter-loop"]:
+                            #print("traversing edge with positive loop condition")
+                            cumulative_conditions.append("for")
+                            # follow this edge
+                            curr = edge._target_state
+                            path.append(edge)
+                            break
+                    # make sure the next branching point consumes the next condition in the chain
+                    condition_index += 1
+                else:
+                    #print("finding edge skipping the loop")
+                    # go straight past the loop
+                    for edge in curr.edges:
+                        if edge._condition == ["end-loop"]:
+                            #print("traversing edge with negative loop condition")
+                            cumulative_conditions.append(edge._condition)
+                            # follow this edge
+                            curr = edge._target_state
+                            path.append(edge)
+                            break
+                    # make sure the next branching point consumes the next condition in the chain
+                    condition_index += 1
+            elif curr._name_changed == ["try-catch"]:
+                #print("traversing try-catch")
+                # for now assume that we immediately traverse the no-exception branch
+                #print(curr)
+                # search the outgoing edges for the edge leading to the main body
+                for edge in curr.edges:
+                    #print("testing edge with condition %s against cumulative condition %s" %\
+                    #		(edge._condition, cumulative_conditions + [path_subchain[condition_index]]))
+                    if edge._condition[-1] == "try-catch-main":
+                        #print("traversing edge with condition %s" % edge._condition)
+                        curr = edge._target_state
+                        path.append(edge)
+                        cumulative_conditions.append(edge._condition[-1])
+                        break
+                condition_index += 1
+            else:
+                # probably the branching point at the end of a loop - currently these aren't explicitly marked
+                # the behaviour here with respect to consuming branching conditions will be a bit different
+                if path_subchain[condition_index] == "enter-loop":
+                    # go back to the start of the loop without consuming the condition
+                    #print("going back around the loop from last instruction")
+                    relevant_edge = list(filter(lambda edge : edge._condition == 'loop-jump', curr.edges))[0]
+                    curr = relevant_edge._target_state
+                    path.append(relevant_edge)
+                else:
+                    # go past the loop
+                    #print(curr.edges)
+                    #print("ending loop from last instruction")
+                    relevant_edge = list(filter(lambda edge : edge._condition == 'post-loop', curr.edges))[0]
+                    curr = relevant_edge._target_state
+                    path.append(relevant_edge)
+                    # consume the negative condition
+                    condition_index += 1
+
+            #print("condition index %i from condition chain length %i" % (condition_index, len(path_subchain)))
+        elif curr._name_changed == ["post-conditional"]:
+            #print("traversing post-conditional")
+            # check the next vertex - if it's also a post-conditional, we move to that one but don't consume the condition
+            # if the next vertex isn't a post-conditional, we consume the condition and move to it
+            if curr.edges[0]._target_state._name_changed != ["post-conditional"]:
+                # consume the condition
+                condition_index += 1
+            path.append(curr.edges[0])
+            curr = curr.edges[0]._target_state
+            #print("resulting state after conditional is %s" % curr)
+            #print("condition index %i from condition chain length %i" % (condition_index, len(path_subchain)))
+        elif curr._name_changed == ["post-loop"]:
+            #print("traversing post-loop")
+            # condition is consumed when branching at the end of the loop is detected, so no need to do it here
+            #print("adding %s outgoing from %s to path" % (curr.edges[0], curr))
+            path.append(curr.edges[0])
+            curr = curr.edges[0]._target_state
+            #print("condition index %i from condition chain length %i" % (condition_index, len(path_subchain)))
+        elif curr._name_changed == ["post-try-catch"]:
+            #print("traversing post-try-catch")
+            if curr.edges[0]._target_state._name_changed != ["post-try-catch"]:
+                # consume the condition
+                condition_index += 1
+            path.append(curr.edges[0])
+            curr = curr.edges[0]._target_state
+            #print("condition index %i from condition chain length %i" % (condition_index, len(path_subchain)))
+        else:
+            #print("no branching at %s" % curr)
+            path.append(curr.edges[0])
+            curr = curr.edges[0]._target_state
+            #print("condition index %i from condition chain length %i" % (condition_index, len(path_subchain)))
+
+    #print("finishing path traversal with path length %i" % instrumentation_point_path_length)
+
+    # traverse the remainder of the branch using the path length of the instrumentation point
+    # that generated the observation we're looking at
+    # print("starting remainder of traversal from vertex %s" % curr)
+    if instrumentation_point_path_length != -1:
+        # the length here needs to be changed depending on what the most recent construct the graph encountered was
+        # or we need to move the vertex back one in the case that it advanced "too far".
+        offset = -1 if curr._path_length == 1 else 0
+        limit = (instrumentation_point_path_length + offset) if len(path_subchain) > 0 else instrumentation_point_path_length
+        for i in range(limit):
+            #path.append(curr)
+            path.append(curr.edges[0])
+            curr = curr.edges[0]._target_state
+    else:
+        # we're reconstructing a complete path through the SCFG, so go until we get to a final state
+        while len(curr.edges) > 0:
+            path.append(curr.edges[0])
+            curr = curr.edges[0]._target_state
+
+    #path.append(curr)
+
+    return path
