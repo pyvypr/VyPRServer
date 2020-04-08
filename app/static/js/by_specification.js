@@ -266,6 +266,7 @@ var apply_function_call_list_click = function() {
 		var function_call_ids = $(e.target).parent().parent().find("input:checked").map(function(i, d) {
 		    return $(d).attr("function-call-id");
 		}).get();
+		console.log(function_call_ids)
 		// send a request to the server with the function call IDs that have been selected
 		$.post("/get_function_calls_data/", {"ids" : function_call_ids}).done(function(data) {
 		    // here we will process the information from the function calls and
