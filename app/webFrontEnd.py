@@ -67,7 +67,8 @@ def get_source_code(function_id):
     code_dict = database.get_code(function_id)
     return json.dumps(code_dict)
 
-@app_object.route("/get_function_calls_data/<dict>/")
-def get_function_calls_data(dict):
-    data = database.get_calls_data(dict)
+@app_object.route("/get_function_calls_data/",methods=["GET", "POST"])
+def get_function_calls_data():
+    ids_list = request.form.getlist('ids[]')
+    data = database.get_calls_data(ids_list)
     return json.dumps(data)
