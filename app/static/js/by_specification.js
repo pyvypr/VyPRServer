@@ -201,11 +201,11 @@ var apply_function_list_click = function() {
 						var line_div = document.createElement("div");
 						var content = "<b>" + current_line + "</b> " + code_lines[i].replace(/\t/g, "&nbsp;&nbsp;&nbsp;");
 						line_div.className = "code_listing_line";
+						line_div.id = "line-number-" + current_line;
 
-						if (line_numbers.indexOf(current_line)!=-1){
-							line_div.id = "line-number-" + current_line;
-							content += '<span id="span-bindings-line-' + current_line + '" style="float: right; padding:5px"> </span>';
-						}
+						//if (line_numbers.indexOf(current_line)!=-1)
+						content += '<span id="span-bindings-line-' + current_line + '" style="float: right; padding:5px"> </span>';
+
 						line_div.innerHTML = content;
 						current_line++;
 						$("#verdict-list").append(line_div);
@@ -235,16 +235,15 @@ var apply_function_list_click = function() {
 							var no = line_numbers[j]
 							var color = code_highlight_palette[j];
 							$("#line-number-"+no).attr('style',"background-color : " + color);
-							$("#span-bindings-line-"+no).append(" "+binding["id"]);
+							//$("#span-bindings-line-"+no).append(" "+binding["id"]);
 							for (k=0; k<spec.length; k++){
 								var obj = spec[k];
 								if (obj.id==quantification_ids[j]){
 									$(obj).attr('style',"background-color : " + color);
 								}
 							}
-
+						}
 					}
-				}
 
 			});
 		});
@@ -258,7 +257,7 @@ var apply_function_call_list_click = function() {
 		$("#function-call-list").slideDown();
 		var function_call_id = $(e.target).closest(".list-group-item").attr("function-call-id");
 		selected_function_call_id = function_call_id;
-		$("#verdict-list").html("");
+		//$("#verdict-list").html("");
 		// toggle the checkbox for the box that was clicked
 		$(e.target).children("input[type=checkbox]").prop("checked",
 		    !$(e.target).children("input[type=checkbox]").prop("checked"));
@@ -271,6 +270,69 @@ var apply_function_call_list_click = function() {
 		$.post("/get_function_calls_data/", {"ids" : function_call_ids}).done(function(data) {
 		    // here we will process the information from the function calls and
 		    // put it on the page with with the source code and property information
+				console.log(data);
+				tree = JSON.parse(data);
+
+				code_lines = document.getElementsByClassName("code_listing_line");
+				var start_line = parseInt(code_lines[0].id.split("-").slice(-1));
+				var show_lines = [];
+
+				// first, add span elements which indicate the binding at inst points
+				// the first loop cleans up the bindings present before selection
+				for (var i=0; i<code_lines.length; i++){
+					var line_id = code_lines[i].id.split("-");
+					var id_line_number = line_id[line_id.length-1];
+					$("#span-bindings-line-"+id_line_number).html("");
+				}
+
+				// for each binding, collect the relevant line numbers from the leaves
+				// add the binding id to the html of the span element
+				for (binding in tree){
+					var line_numbers = [];
+					for (atom in tree[binding]){
+						for (subatom in tree[binding][atom]){
+							list = tree[binding][atom][subatom];
+							for (var i=0; i<list.length; i++){
+								if (line_numbers.indexOf(list[i]["code_line"])==-1){
+									line_numbers.push(list[i]["code_line"]);
+								}
+							}
+						}
+					}
+					for (var i=0; i<line_numbers.length; i++){
+						no = line_numbers[i];
+						$("#span-bindings-line-"+no).append(" "+binding);
+					}
+					// show_lines stores all relevant line_numbers - we will hide the rest
+					show_lines = show_lines.concat(line_numbers);
+				}
+
+				console.log(show_lines)
+				show_lines = show_lines.sort();
+
+				//except for lines stored in leaves, we want to display the first line
+				// and in this case, three lines around each instrumentation point
+				var more_lines = [start_line];
+				for (var i=0; i<show_lines.length; i++){
+					var current_line_number = show_lines[i];
+					for (var j=1; j<3; j++){
+						more_lines.push(current_line_number+j);
+						more_lines.push(current_line_number-j)
+					}
+				}
+				show_lines = show_lines.concat(more_lines);
+
+				for (var i=0; i<code_lines.length; i++){
+					var line_id = code_lines[i].id.split("-");
+					var id_line_number = line_id[line_id.length-1];
+					if (show_lines.indexOf(parseInt(id_line_number))==-1){
+						$("#line-number-"+id_line_number).hide();
+					}
+					else{
+						$("#line-number-"+id_line_number).show();
+					}
+				}
+
 		});
 	});
 };
