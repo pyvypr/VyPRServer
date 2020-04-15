@@ -54,10 +54,10 @@ TransitionDurationLessThanStateValueLengthMixed.__repr__ = \
     lambda Atom: "%s.duration() < %s(%s).length()" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
 
 TimeBetweenInInterval.__repr__ = \
-    lambda Atom: "timeBetween(%s, %s)._in(%s)" % (Atom._lhs, Atom._rhs, Atom._interval)
+    lambda Atom: '<span class="atom">timeBetween(<span class="subatom">%s</span>, <span class="subatom">%s</span>)._in(%s) </span> ' % (Atom._lhs, Atom._rhs, Atom._interval)
 
 TimeBetweenInOpenInterval.__repr__ = \
-    lambda Atom: "timeBetween(%s, %s)._in(%s)" % (Atom._lhs, Atom._rhs, str(Atom._interval))
+    lambda Atom: '<span class="atom">timeBetween(<span class="subatom">%s</span>, <span class="subatom">%s</span>)._in(%s) </span> ' % (Atom._lhs, Atom._rhs, str(Atom._interval))
 
 """
 we need to display states also similar to how they are defined in the specification
@@ -492,41 +492,49 @@ def get_calls_data(ids_list):
     print("Pairs (instrumentation point ID, line number): %s" % lines)
 
 
-    # now we want to group the instrumenation points by binding
+    # now we want to group the instrumenation points by bindings and atoms
 
-    # first, get the list of all binding IDs
+    # first, get the list of all (binding, atom_index, sub_index, instrumentation_point) combinations
     # then, create a dictionary whose keys will be binding IDs
-    # and the value will be a list of instrumentation points and line numbers
+    # and the value for that key is a dict with atom indices as keys, and then subatom indices
+    # finally, value stored in the leaf of this tree is a list of instrumentation points and line numbers
     # (also stored as dictionaries)
-    query_string = """select distinct binding from binding_instrumentation_point_pair
-        where instrumentation_point in %s""" % list_to_sql_string(inst_point_ids)
-    binding_ids = cursor.execute(query_string).fetchall()
-    print(binding_ids)
+    query_string = """select distinct verdict.binding, observation.atom_index, observation.sub_index,
+    instrumentation_point.id, instrumentation_point.serialised_condition_sequence, instrumentation_point.reaching_path_length
+    from ((observation inner join verdict on observation.verdict == verdict.id) inner join
+    instrumentation_point on observation.instrumentation_point == instrumentation_point.id)
+    where observation.instrumentation_point in %s""" % list_to_sql_string(inst_point_ids)
+    binding_atom_list = cursor.execute(query_string).fetchall()
 
-    inst_point_by_binding = {}
+    tree = {}
 
-    for id in binding_ids:
-        id = str(id[0])
-        points_list = cursor.execute("""select instrumentation_point.id, instrumentation_point.serialised_condition_sequence,
-            instrumentation_point.reaching_path_length from
-            (instrumentation_point inner join binding_instrumentation_point_pair on instrumentation_point.id == binding_instrumentation_point_pair.instrumentation_point)
-            where binding_instrumentation_point_pair.binding = ?""", [id]).fetchall()
-        points_dict = []
-        for point in points_list:
-            dict = {"id" : point[0],
-                    "serialised_condition_sequence" : point[1],
-                    "reaching_path_length" : point[2],
-                    "code_line" : None}
-            for pair in lines:
-                if (pair[0]==dict["id"]):
-                    dict["code_line"] = pair[1]
-            points_dict.append(dict)
+    for elem in binding_atom_list:
+        if elem[0] not in tree.keys():
+            tree[elem[0]] = {}
 
-        inst_point_by_binding[id] = points_dict
+    for key in tree.keys():
+        subtree = tree[key]
+        for elem in binding_atom_list:
+            if elem[1] not in subtree.keys():
+                subtree[elem[1]] = {}
 
-    print(inst_point_by_binding)
+    for elem in binding_atom_list:
+        tree[elem[0]][elem[1]][elem[2]] = []
 
-    return inst_point_by_binding
+    for elem in binding_atom_list:
+        dict = {"id" : elem[3],
+                "serialised_condition_sequence" : elem[4],
+                "reaching_path_length" : elem[5],
+                "code_line" : None}
+        for pair in lines:
+            if (pair[0]==dict["id"]):
+                dict["code_line"] = pair[1]
+
+        tree[elem[0]][elem[1]][elem[2]].append(dict)
+
+    print(tree)
+
+    return tree
 
 
 
