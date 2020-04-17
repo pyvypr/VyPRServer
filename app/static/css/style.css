@@ -149,7 +149,7 @@ table.function-list-table td {
 
 .tab {
 	overflow: hidden;
-	background-color: #d6e9c6;	
+	background-color: #d6e9c6;
 }
 
 .tablinks {
@@ -170,4 +170,17 @@ table.function-list-table td {
 /* Create an active/current tablink class */
 .tab button.active {
   background-color: #95c66c;
+}
+
+.binding-button{
+	background-color: inherit;
+	float: left;
+	border: none;
+	outline: none;
+	cursor: pointer;
+	transition: 0.3s;
+}
+
+.binding-button:hover{
+	text-decoration: underline;
 }
