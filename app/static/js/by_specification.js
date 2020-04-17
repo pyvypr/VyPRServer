@@ -283,6 +283,7 @@ var apply_function_call_list_click = function() {
 					var line_id = code_lines[i].id.split("-");
 					var id_line_number = line_id[line_id.length-1];
 					$("#span-bindings-line-"+id_line_number).html("");
+					$("#line-number-"+id_line_number).attr('style',"background-color : transparent");
 				}
 
 				// for each binding, collect the relevant line numbers from the leaves
@@ -301,16 +302,18 @@ var apply_function_call_list_click = function() {
 					}
 					for (var i=0; i<line_numbers.length; i++){
 						no = line_numbers[i];
-						$("#span-bindings-line-"+no).append(" "+binding);
+						$("#span-bindings-line-"+no).append('<button class="binding-button" ' +
+							'onclick="highlight_lines([' + line_numbers + '])"> ' + binding + '</button>');
+						$("#line-number-"+no).attr('binding',"yes");
+						$("#line-number-"+no).attr('style',"background-color : #f2f7f4");
 					}
 					// show_lines stores all relevant line_numbers - we will hide the rest
 					show_lines = show_lines.concat(line_numbers);
 				}
 
-				console.log(show_lines)
 				show_lines = show_lines.sort();
 
-				//except for lines stored in leaves, we want to display the first line
+				//in addition to the lines stored in leaves, we want to display the first line
 				// and in this case, three lines around each instrumentation point
 				var more_lines = [start_line];
 				for (var i=0; i<show_lines.length; i++){
@@ -336,6 +339,17 @@ var apply_function_call_list_click = function() {
 		});
 	});
 };
+
+var highlight_lines = function(list){
+	unhighlight = $('[binding="yes"]');
+	for (var i=0; i<unhighlight.length; i++){
+		$(unhighlight[i]).attr('style',"background-color : #f2f7f4");
+	}
+	for (var i=0; i<list.length; i++){
+		no = list[i];
+		$("#line-number-"+no).attr('style',"background-color : #c9f2da");
+	}
+}
 
 $("document").ready(function() {
 	build_accordion();
