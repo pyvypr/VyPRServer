@@ -1,8 +1,7 @@
 """
 Module to provide functions for the web analysis tool to use.
 
-TODO: fix states representation in specification
-      add quotes where they should be in the specification !!!
+TODO: add quotes where they should be in the specification, other states?
 """
 from .utils import get_connection
 import json
@@ -19,45 +18,93 @@ import os
 
 
 """
-list of changed repr methods follows - just for class Atom for now
+list of changed repr methods follows - for Atoms and LogicalOr, And and Not
 for each type of atom, it should display it similar to how it was given in the specification
+if we also need __repr__ functions without HTML, they are listed at the end of the code
+- in that case, we can rename these
 """
 
 StateValueInInterval.__repr__ = \
-    lambda Atom: "%s(%s)._in(%s)" % (Atom._state, Atom._name, Atom._interval)
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span>._in(%s)
+        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
 
 StateValueInOpenInterval.__repr__ = \
-    lambda Atom: "%s(%s)._in(%s)" % (Atom._state, Atom._name, Atom._interval)
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span>._in(%s)
+        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
 
 StateValueEqualTo.__repr__ = \
-    lambda Atom: "%s(%s).equals(%s)" % (Atom._state, Atom._name, Atom._value)
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span>.equals(%s)
+        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._value)
 
 StateValueTypeEqualTo.__repr__ = \
-    lambda Atom: "%s(%s).type().equals(%s)" % (Atom._state, Atom._name, Atom._value)
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span>.type().equals(%s)
+        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._value)
 
 StateValueEqualToMixed.__repr__ = \
-    lambda Atom: "%s(%s).equals(%s(%s))" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span>.equals(
+        <span class="subatom" subatom-index="1">%s(%s)</span>)
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
+StateValueLengthLessThanStateValueLengthMixed.__repr__ = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span>.length() <
+        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
 
 StateValueLengthInInterval.__repr__ = \
-    lambda Atom: "%s(%s).length()._in(%s)" % (Atom._state, Atom._name, Atom._interval)
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span>.length()._in(%s)
+        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
 
 TransitionDurationInInterval.__repr__=\
-    lambda Atom: "%s.duration()._in(%s)" % (Atom._transition, Atom._interval)
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s</span>.duration()._in(%s)
+        </span>""" % (atoms_list.index(Atom), Atom._transition, Atom._interval)
 
 TransitionDurationLessThanTransitionDurationMixed.__repr__=\
-    lambda Atom: "%s.duration() < %s.duration()" % (Atom._lhs, Atom._rhs)
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s</span>.duration() <
+        <span class="subatom" subatom-index="1">%s</span>.duration()
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs)
 
 TransitionDurationLessThanStateValueMixed.__repr__ = \
-    lambda Atom: "%s.duration() < %s(%s)" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s</span>.duration() <
+        <span class="subatom" subatom-index="1">%s(%s) </span>
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
 
 TransitionDurationLessThanStateValueLengthMixed.__repr__ = \
-    lambda Atom: "%s.duration() < %s(%s).length()" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s</span>.duration() <
+        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
 
 TimeBetweenInInterval.__repr__ = \
-    lambda Atom: '<span class="atom">timeBetween(<span class="subatom">%s</span>, <span class="subatom">%s</span>)._in(%s) </span> ' % (Atom._lhs, Atom._rhs, Atom._interval)
+    lambda Atom: """<span class="atom" atom-index="%i">timeBetween(
+        <span class="subatom" subatom-index="0">%s</span>,
+        <span class="subatom" subatom-index="1">%s</span>)._in(%s)
+        </span> """ % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._interval)
 
 TimeBetweenInOpenInterval.__repr__ = \
-    lambda Atom: '<span class="atom">timeBetween(<span class="subatom">%s</span>, <span class="subatom">%s</span>)._in(%s) </span> ' % (Atom._lhs, Atom._rhs, str(Atom._interval))
+    lambda Atom: """<span class="atom" atom-index="%i">timeBetween(
+        <span class="subatom" subatom-index="0">%s</span>,
+        <span class="subatom" subatom-index="1">%s</span>)._in(%s)
+        </span> """ % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, str(Atom._interval))
+
+LogicalAnd.__repr__= \
+    lambda object: ('land(%s' % (object.operands[0])) + (', %s'%str for str in object.operands[1:]) + ')'
+
+LogicalOr.__repr__= \
+    lambda object: ('lor(%s' % (object.operands[0])) + (', %s'%str for str in object.operands[1:]) + ')'
+
+LogicalNot.__repr__ = \
+    lambda object: 'lnot(%s)' % object.operand
+
 
 """
 we need to display states also similar to how they are defined in the specification
@@ -250,7 +297,12 @@ def web_list_functions():
         prop = pickle.loads(base64.b64decode(json.loads(function[3])["property"]))
         # bind_var was decoded in the first step of the loop
 
+        global atoms_list
+        atoms_list = []
+        property_to_atoms_list(prop)
+
         atom_str = str(prop)
+
 
         spec = ''
         vars = ''
@@ -541,8 +593,28 @@ def get_calls_data(ids_list):
 
 """
 Auxiliary functions for path reconstruction
-
 """
+
+atoms_list = []
+def property_to_atoms_list(prop):
+    """
+    Given a deserialised property, recurse down the formula structure and add atoms
+    to the global variable atoms_list
+    """
+    global atoms_list
+    if ((type(prop) is LogicalOr) or (type(prop) is LogicalAnd)):
+        sub_formulas = prop.operands
+        for sub_formula in sub_formulas:
+            property_to_atoms_list(sub_formula)
+
+    elif type(prop) is LogicalNot:
+        property_to_atoms_list(prop.operand)
+
+    else:
+        atoms_list.append(prop)
+
+    return
+
 def list_to_sql_string(ids_list):
     """ Create a string which stores the list of ids as (1, 2, 3, 4)
      to be compatible with the sqlite query syntax: select * from ... where id in (1, 2, 3, 4)
@@ -758,3 +830,57 @@ def edges_from_condition_sequence(scfg, path_subchain, instrumentation_point_pat
     #path.append(curr)
 
     return path
+
+
+"""
+Atoms __repr__ functions without HTML additions - in case we need them ever
+
+
+StateValueInInterval.__repr__ = \
+    lambda Atom: "%s(%s)._in(%s)" % (Atom._state, Atom._name, Atom._interval)
+
+StateValueInOpenInterval.__repr__ = \
+    lambda Atom: "%s(%s)._in(%s)" % (Atom._state, Atom._name, Atom._interval)
+
+StateValueEqualTo.__repr__ = \
+    lambda Atom: "%s(%s).equals(%s)" % (Atom._state, Atom._name, Atom._value)
+
+StateValueTypeEqualTo.__repr__ = \
+    lambda Atom: "%s(%s).type().equals(%s)" % (Atom._state, Atom._name, Atom._value)
+
+StateValueEqualToMixed.__repr__ = \
+    lambda Atom: "%s(%s).equals(%s(%s))" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
+StateValueLengthLessThanStateValueLengthMixed.__repr__ = \
+    lambda Atom: "%s(%s).length() < %s(%s).length()" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
+StateValueLengthInInterval.__repr__ = \
+    lambda Atom: "%s(%s).length()._in(%s)" % (Atom._state, Atom._name, Atom._interval)
+
+TransitionDurationInInterval.__repr__=\
+    lambda Atom: "%s.duration()._in(%s)" % (Atom._transition, Atom._interval)
+
+TransitionDurationLessThanTransitionDurationMixed.__repr__=\
+    lambda Atom: "%s.duration() < %s.duration()" % (Atom._lhs, Atom._rhs)
+
+TransitionDurationLessThanStateValueMixed.__repr__ = \
+    lambda Atom: "%s.duration() < %s(%s)" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
+
+TransitionDurationLessThanStateValueLengthMixed.__repr__ = \
+    lambda Atom: "%s.duration() < %s(%s).length()" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
+
+TimeBetweenInInterval.__repr__ = \
+    lambda Atom: "timeBetween(%s, %s)._in(%s)" % (Atom._lhs, Atom._rhs, Atom._interval)
+
+TimeBetweenInOpenInterval.__repr__ = \
+    lambda Atom: "timeBetween(%s, %s)._in(%s)" % (Atom._lhs, Atom._rhs, str(Atom._interval))
+
+LogicalAnd.__repr__= \
+    lambda object: ('land(%s' % (object.operands[0])) + (', %s'%str for str in object.operands[1:]) + ')'
+
+LogicalOr.__repr__= \
+    lambda object: ('lor(%s' % (object.operands[0])) + (', %s'%str for str in object.operands[1:]) + ')'
+
+LogicalNot.__repr__ = \
+    lambda object: 'lnot(%s)' % object.operand
+"""
