@@ -184,3 +184,8 @@ table.function-list-table td {
 .binding-button:hover{
 	text-decoration: underline;
 }
+
+.subatom:hover{
+	text-decoration: underline;
+	cursor: pointer;
+}
