@@ -85,7 +85,7 @@ var build_accordion = function() {
 	}
 
 	//add onclick event to the buttons
-	var tablinks = document.getElementsByClassName("tablinks")
+	var tablinks = document.getElementsByClassName("tablinks");
 	for (i = 0; i < tablinks.length; i++) {
 		console.log(tablinks[i]);
 		tablinks[i].onclick = function(){show_functions(event,"tab-"+this.innerHTML);};
@@ -288,6 +288,10 @@ var apply_function_call_list_click = function() {
 
 				// for each binding, collect the relevant line numbers from the leaves
 				// add the binding id to the html of the span element
+				remove_bindings = $('[binding="yes"]');
+				for (var i=0; i<remove_bindings.length; i++){
+					$(remove_bindings[i]).attr('binding', "");
+				}
 				for (binding in tree){
 					var line_numbers = [];
 					for (atom in tree[binding]){
@@ -302,8 +306,16 @@ var apply_function_call_list_click = function() {
 					}
 					for (var i=0; i<line_numbers.length; i++){
 						no = line_numbers[i];
-						$("#span-bindings-line-"+no).append('<button class="binding-button" ' +
-							'onclick="highlight_lines([' + line_numbers + '])"> ' + binding + '</button>');
+						var tree_string=JSON.stringify(tree[binding]);
+						console.log(tree_string)
+						$("#span-bindings-line-"+no).append('<button class="binding-button" binding-button=' +
+							binding + '>' + binding + '</button>');
+						var bind_buttons = $('[binding-button='+binding+']');
+						for (var j=0; j<bind_buttons.length; j++){
+							//bind_buttons[j].onclick=function(){highlight_lines(line_numbers,tree_string)}
+							$(bind_buttons[j]).attr('tree',tree_string);
+							$(bind_buttons[j]).attr('onClick','highlight_lines(['+line_numbers+'],this)');
+						}
 						$("#line-number-"+no).attr('binding',"yes");
 						$("#line-number-"+no).attr('style',"background-color : #f2f7f4");
 					}
@@ -340,16 +352,43 @@ var apply_function_call_list_click = function() {
 	});
 };
 
-var highlight_lines = function(list){
-	unhighlight = $('[binding="yes"]');
+var highlight_lines = function(list, obj = undefined){
+	var unhighlight = $('[binding="yes"]');
 	for (var i=0; i<unhighlight.length; i++){
 		$(unhighlight[i]).attr('style',"background-color : #f2f7f4");
 	}
 	for (var i=0; i<list.length; i++){
 		no = list[i];
-		$("#line-number-"+no).attr('style',"background-color : #c9f2da");
+		$("#line-number-"+no).attr('style',"background-color : #d8f0a8");
 	}
+
+	if (typeof(obj)=='undefined') return;
+	var tree_string = $(obj).attr('tree');
+
+	var tree = JSON.parse(tree_string);
+	for (atom in tree){
+		var subtree = tree[atom];
+		var subs = $('[atom-index="' + atom + '"]').children();
+		for (var i=0; i<subs.length; i++){
+			$(subs[i]).attr('subtree', JSON.stringify(subtree));
+			$(subs[i]).attr('onclick', 'subatom_click(this)');
+		}
+	}
+
 }
+
+var subatom_click = function(obj){
+	var sub_index = $(obj).attr('subatom-index');
+	var subtree = JSON.parse($(obj).attr('subtree'));
+	var inst_points_list = subtree[sub_index];
+	console.log(inst_points_list)
+	var lines_list = [];
+	for (var i=0; i<inst_points_list.length; i++){
+		lines_list.push(inst_points_list[i]["code_line"]);
+	}
+	highlight_lines(lines_list);
+}
+
 
 $("document").ready(function() {
 	build_accordion();
