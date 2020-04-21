@@ -189,3 +189,9 @@ table.function-list-table td {
 	text-decoration: underline;
 	cursor: pointer;
 }
+
+.empty-line{
+	background-color: #f5f5f5;
+	margin: 0 0 0;
+	display: none;
+}
