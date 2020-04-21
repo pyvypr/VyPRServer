@@ -172,10 +172,17 @@ table.function-list-table td {
   background-color: #95c66c;
 }
 
+.span-binding{
+	float: right;
+	overflow: hidden;
+	vertical-align: top;
+}
+
 .binding-button{
 	background-color: inherit;
 	float: left;
-	border: none;
+	border-radius: 30%;
+	border: 1px solid black;
 	outline: none;
 	cursor: pointer;
 	transition: 0.3s;
@@ -185,7 +192,16 @@ table.function-list-table td {
 	text-decoration: underline;
 }
 
-.subatom:hover{
+.subatom-clickable{
+	color: #205cbd;
+}
+
+.subatom-clickable-active{
+	font-weight: bold;
+	color: #205cbd;
+}
+
+.subatom-clickable:hover{
 	text-decoration: underline;
 	cursor: pointer;
 }
