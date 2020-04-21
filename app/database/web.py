@@ -558,6 +558,16 @@ def get_calls_data(ids_list):
     where observation.instrumentation_point in %s""" % list_to_sql_string(inst_point_ids)
     binding_atom_list = cursor.execute(query_string).fetchall()
 
+    new_list = []
+    for elem in binding_atom_list:
+        elem = list(elem)
+        tmp = cursor.execute("""select binding_space_index from
+            binding where id=? and function=?""", [elem[0],calls[0][1]]).fetchone()[0]
+        elem[0] = tmp
+        new_list.append(elem)
+
+    binding_atom_list = new_list
+
     tree = {}
 
     for elem in binding_atom_list:
