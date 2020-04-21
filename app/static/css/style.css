@@ -179,10 +179,11 @@ table.function-list-table td {
 }
 
 .binding-button{
-	background-color: inherit;
+	background-color: #696a6b;
+	color: white;
 	float: left;
 	border-radius: 30%;
-	border: 1px solid black;
+	border: 1px solid #696a6b;
 	outline: none;
 	cursor: pointer;
 	transition: 0.3s;
@@ -194,11 +195,17 @@ table.function-list-table td {
 
 .subatom-clickable{
 	color: #205cbd;
+	border-radius: 16%;
+	border: 2px solid #def1fc;
+	background-color: #def1fc;
 }
 
 .subatom-clickable-active{
 	font-weight: bold;
 	color: #205cbd;
+	border-radius: 16%;
+	border: 2px solid #def1fc;
+	background-color: #def1fc;
 }
 
 .subatom-clickable:hover{
