@@ -205,6 +205,7 @@ var apply_function_list_click = function() {
 
 						//if (line_numbers.indexOf(current_line)!=-1)
 						content += '<span id="span-bindings-line-' + current_line + '" style="float: right; padding:5px"> </span>';
+						content += '<p class="empty-line" id="empty-line-' + current_line + '"> ... <br> </p>';
 
 						line_div.innerHTML = content;
 						current_line++;
@@ -235,6 +236,7 @@ var apply_function_list_click = function() {
 							var no = line_numbers[j]
 							var color = code_highlight_palette[j];
 							$("#line-number-"+no).attr('style',"background-color : " + color);
+							$("#line-number-"+no).attr('save-background-color',color);
 							//$("#span-bindings-line-"+no).append(" "+binding["id"]);
 							for (k=0; k<spec.length; k++){
 								var obj = spec[k];
@@ -317,7 +319,7 @@ var apply_function_call_list_click = function() {
 							$(bind_buttons[j]).attr('onClick','highlight_lines(['+line_numbers+'],this)');
 						}
 						$("#line-number-"+no).attr('binding',"yes");
-						$("#line-number-"+no).attr('style',"background-color : #f2f7f4");
+						$("#line-number-"+no).attr('style',"background-color : #ebf2ee");
 					}
 					// show_lines stores all relevant line_numbers - we will hide the rest
 					show_lines = show_lines.concat(line_numbers);
@@ -348,6 +350,15 @@ var apply_function_call_list_click = function() {
 					}
 				}
 
+				// insert a spacing where there is a jump in line numbers
+				show_lines = show_lines.sort(function(a, b){return a - b});
+
+				for (var i=0; i<show_lines.length; i++){
+					if (show_lines[i] < (show_lines[i+1] - 1)){
+						$("#empty-line-"+show_lines[i]).show();
+					}
+				}
+
 		});
 	});
 };
@@ -355,11 +366,12 @@ var apply_function_call_list_click = function() {
 var highlight_lines = function(list, obj = undefined){
 	var unhighlight = $('[binding="yes"]');
 	for (var i=0; i<unhighlight.length; i++){
-		$(unhighlight[i]).attr('style',"background-color : #f2f7f4");
+		$(unhighlight[i]).attr('style',"background-color : #ebf2ee");
 	}
 	for (var i=0; i<list.length; i++){
-		no = list[i];
-		$("#line-number-"+no).attr('style',"background-color : #d8f0a8");
+		var no = list[i];
+		var color = $("#line-number-"+no).attr('save-background-color');
+		$("#line-number-"+no).attr('style',"background-color : " + color);
 	}
 
 	if (typeof(obj)=='undefined') return;
