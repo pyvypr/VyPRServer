@@ -199,7 +199,7 @@ var apply_function_list_click = function() {
 					// also add a span element to the content of the line - later, we will add binding labels to it
 					for(var i=0; i < code_lines.length; i++) {
 						var line_div = document.createElement("div");
-						var content = "<b>" + current_line + "</b> " + code_lines[i].replace(/\t/g, "&nbsp;&nbsp;&nbsp;");
+						var content = "<b>" + current_line + "</b> " + code_lines[i].replace(/\t/g, "&nbsp;&nbsp;&nbsp;").replace(/^[ \t]+/mg, html_space_replace);
 						line_div.className = "code_listing_line";
 						line_div.id = "line-number-" + current_line;
 
@@ -251,6 +251,16 @@ var apply_function_list_click = function() {
 		});
 	});
 };
+
+var html_space_replace = function(){
+	var leadingSpaces = arguments[0].length;
+  var str = '';
+  while(leadingSpaces > 0) {
+    str += '&nbsp;';
+    leadingSpaces--;
+  }
+  return str;
+}
 
 var apply_function_call_list_click = function() {
 	$("#function-call-list").children(".list-group-item").click(function(e) {
@@ -422,7 +432,6 @@ var highlight_lines = function(list, obj = undefined){
 	for (atom in tree){
 		var subtree = tree[atom];
 		var subs = $($("#specification_listing").find('span.atom[atom-index="' + atom + '"]')[0]).children();
-		console.log(subs.length)
 		for (var i=0; i<subs.length; i++){
 			$(subs[i]).attr('class', "subatom-clickable");
 			$(subs[i]).attr('subtree', JSON.stringify(subtree));
@@ -438,7 +447,7 @@ var subatom_click = function(obj){
 	var sub_index = $(obj).attr('subatom-index');
 	var subtree = JSON.parse($(obj).attr('subtree'));
 	var inst_points_list = subtree[sub_index];
-	console.log(inst_points_list)
+	
 	var lines_list = [];
 	for (var i=0; i<inst_points_list.length; i++){
 		var no = inst_points_list[i]["code_line"];
