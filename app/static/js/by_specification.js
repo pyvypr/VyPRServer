@@ -163,7 +163,7 @@ var apply_function_list_click = function() {
 		$("#function-call-list").slideDown();
 		var function_id = $(e.target).closest(".list-group-item").attr("function-id");
 		selected_function_id = function_id;
-		var specification_code = $(e.target).parent().html();
+		var specification_code = $(e.target).closest(".list-group-item").html();
 		$.get("/list_function_calls/" + function_id, function(data) {
 		    // load the list of function calls
 			$("#function-call-list").html("");
@@ -418,9 +418,11 @@ var highlight_lines = function(list, obj = undefined){
 	// make the subatoms clickable
 	var tree_string = $(obj).attr('tree');
 	var tree = JSON.parse(tree_string);
+
 	for (atom in tree){
 		var subtree = tree[atom];
-		var subs = $('[atom-index="' + atom + '"]').children();
+		var subs = $($("#specification_listing").find('span.atom[atom-index="' + atom + '"]')[0]).children();
+		console.log(subs.length)
 		for (var i=0; i<subs.length; i++){
 			$(subs[i]).attr('class', "subatom-clickable");
 			$(subs[i]).attr('subtree', JSON.stringify(subtree));
