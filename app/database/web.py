@@ -594,6 +594,19 @@ def get_calls_data(ids_list):
 
         tree[elem[0]][elem[1]][elem[2]].append(dict)
 
+    for binding_key in tree.keys():
+        print(binding_key)
+        subtree = tree[binding_key]
+        bind_lines = json.loads(cursor.execute("""select binding_statement_lines from binding
+            where binding_space_index=? and function=?""", [binding_key, calls[0][1]]).fetchone()[0])
+        print(bind_lines)
+        print(type(bind_lines))
+        subtree["-1"] = {"-1" : []}
+        for line in bind_lines:
+            dict = {"id": None, "serialised_condition_sequence": None, "reaching_path_length": None,
+                            "code_line": line}
+            subtree["-1"]["-1"].append(dict)
+
     print(tree)
 
     return tree
