@@ -611,6 +611,34 @@ def get_calls_data(ids_list):
 
     return tree
 
+def get_atom_type(atom_index, inst_point_id):
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    #atom_index defines an atom uniquely provided that we know the property
+    prop_hash = cursor.execute("""select distinct function.property from
+    (((function inner join function_call on function.id==function_call.function) inner join
+       verdict on function_call.id==verdict.function_call) inner join observation
+       on observation.verdict==verdict.id)
+       where observation.instrumentation_point=?""", [inst_point_id]).fetchone()[0]
+
+    print(prop_hash)
+    atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
+        and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
+    atom_deserialised = pickle.loads(base64.b64decode(atom_structure))
+    print(type(atom_deserialised))
+
+    if type(atom_deserialised) in [StateValueEqualToMixed, StateValueLengthLessThanStateValueLengthMixed,
+        TransitionDurationLessThanTransitionDurationMixed, TransitionDurationLessThanStateValueMixed,
+        TransitionDurationLessThanStateValueLengthMixed]:
+        return 'mixed'
+
+    elif type(atom_deserialised) in [TimeBetweenInInterval, TimeBetweenInOpenInterval]:
+        return 'timeBetween'
+
+    else:
+        return 'simple'
+
 
 
 
