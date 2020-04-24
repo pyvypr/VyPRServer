@@ -72,3 +72,8 @@ def get_function_calls_data():
     ids_list = request.form.getlist('ids[]')
     data = database.get_calls_data(ids_list)
     return json.dumps(data)
+
+@app_object.route("/get_atom_type/<atom_index>/<inst_point_id>/")
+def get_atom_type(atom_index, inst_point_id):
+    atom_type = database.get_atom_type(atom_index, inst_point_id)
+    return json.dumps(atom_type)
