@@ -231,3 +231,7 @@ table.function-list-table td {
 .code_listing_line-clickable:hover .dropdown-content{
 	display: block;
 }
+
+.dropdown-menu-option{
+	cursor: pointer;
+}
