@@ -611,6 +611,7 @@ def get_calls_data(ids_list):
 
     return tree
 
+
 def get_atom_type(atom_index, inst_point_id):
     connection = get_connection()
     cursor = connection.cursor()
@@ -638,6 +639,8 @@ def get_atom_type(atom_index, inst_point_id):
 
     else:
         return 'simple'
+
+    connection.close()
 
 
 
