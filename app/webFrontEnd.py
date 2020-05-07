@@ -20,6 +20,13 @@ def specification():
     # representation of the property
     return render_template("by_specification.html", functions=json.dumps(functions))
 
+@app_object.route("/specification_vue/", methods=["get"])
+def specification_vue():
+    functions = database.web_list_functions()
+    # process the property serialisation for each function to turn it into an understandable string
+    # representation of the property
+    return render_template("by_specification_vue.html", functions=json.dumps(functions))
+
 
 @app_object.route("/verdict/", methods=["get"])
 def verdict():

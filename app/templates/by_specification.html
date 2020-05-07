@@ -4,6 +4,10 @@
 <script type="text/javascript" src="{{ url_for('static', filename='js/by_specification.js') }}"></script>
 {% endblock %}
 
+{% block css_import %}
+<link href="{{ url_for('static', filename='css/specification.css') }}" rel="stylesheet" />
+{% endblock %}
+
 {% block body %}
 
 <div class="container-fluid">
@@ -68,6 +72,7 @@
 
 	</div>
 
+</div>
 </div>
 
 {% endblock %}

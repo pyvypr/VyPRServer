@@ -1,0 +1,88 @@
+.tab {
+	overflow: hidden;
+	background-color: #d6e9c6;
+}
+
+.tablinks {
+	background-color: inherit;
+	float: left;
+	border: none;
+	outline: none;
+	cursor: pointer;
+	padding: 10px;
+	transition: 0.3s;
+	font-size: 14px;
+}
+
+.tablinks:hover {
+  background-color: #bcdba3;
+}
+
+/* Create an active/current tablink class */
+.tab button.active {
+  background-color: #95c66c;
+}
+
+.span-binding{
+	float: right;
+	overflow: hidden;
+	vertical-align: top;
+}
+
+.binding-button{
+	background-color: #696a6b;
+	color: white;
+	float: left;
+	border-radius: 30%;
+	border: 1px solid #696a6b;
+	outline: none;
+	cursor: pointer;
+	transition: 0.3s;
+}
+
+.binding-button:hover{
+	text-decoration: underline;
+}
+
+.subatom-clickable{
+	color: #205cbd;
+	border-radius: 16%;
+	border: 2px solid #def1fc;
+	background-color: #def1fc;
+}
+
+.subatom-clickable-active{
+	font-weight: bold;
+	color: #205cbd;
+	border-radius: 16%;
+	border: 2px solid #def1fc;
+	background-color: #def1fc;
+}
+
+.subatom-clickable:hover{
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.empty-line{
+	background-color: #f5f5f5;
+	margin: 0 0 0;
+	display: none;
+}
+
+.dropdown-content{
+	display: none;
+	position: absolute;
+	background-color: #f7f4e9;
+  max-width: 300px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  padding: 12px 16px;
+}
+
+.code_listing_line-clickable:hover .dropdown-content{
+	display: block;
+}
+
+.dropdown-menu-option{
+	cursor: pointer;
+}
