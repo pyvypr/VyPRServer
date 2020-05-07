@@ -72,7 +72,7 @@ Vue.component("subtreelevel", {
 
 	after adding the header for the current level, iterate through the lower level to repeat the process
 	if the subtreelist is empty, this is an indicator that we reached the last level
-	- this means it is time to display the specifications monitored for the function - the recursion stops here*/
+	- this means it is time to display the specification - the recursion stops here*/
   props: ['htmlcontent', 'path', 'panelid', 'stylepadding', 'keyname'],
 	template: `
 		<div class="panel panel-default" style="inherit">
@@ -84,7 +84,10 @@ Vue.component("subtreelevel", {
 					<subtreelevel v-for="(level,index) in this.subtreeslist" :key="index" :htmlcontent="level.nextcontent"
 					:path="level.nextpath" :panelid="level.panelid" :stylepadding="level.stylepadding"
 					:keyname="level.keyname"></subtreelevel>
-					<div v-if="!this.subtreelist" v-html="this.subHTML">
+					<div v-if="!this.subtreelist">
+						<button v-for="(b, index) in this.buttons" type="button" class="list-group-item"
+							:function-id="b.functionid" :style="b.padding" v-html="b.str"
+							@click="selectFunction(b.functionid, b.str)"></button>
 					</div>
 				</div>
 			</div>
@@ -99,15 +102,13 @@ Vue.component("subtreelevel", {
 		// check if the last level is reached - if it is, return an empty subtrees list to indicate this
 		// also return the HTML needed to build the element with the specification
     if(Array.isArray(subtree)) {
-  		var html_string = ""
+  		var buttons = [];
   		for(var i=0; i<subtree.length; i++) {
   			var str = subtree[i][2];
   			str = decodeHTML(str);
-  			html_string += ('<button type="button" class="list-group-item" function-id="' + subtree[i][0] +
-  				'" style="padding-left:' + padding + '">' + str + '</button>');
+  			buttons.push({ functionid: subtree[i][0], padding : "padding-left:" + padding, str : str});
   		}
-  		this.subHTML = html_string;
-      return {subHTML: html_string, subtreeslist:[]}
+      return {buttons: buttons, subtreeslist:[]}
 
 		// if this is not the last level, iterate through the keys in the subtree and return the list
 		// based on which new subtree components will be defined
@@ -132,7 +133,29 @@ Vue.component("subtreelevel", {
   		}
       return {subtreeslist : dicts_list}
   	}
-  }
+  },
+	methods : {
+		selectFunction: function(id, specification_code){
+			console.log(id)
+			$("#function-list").slideUp();
+			$("#function-call-list").html("<p>Loading function calls.  This can take some time if there are many.</p>");
+			$("#function-call-list").slideDown();
+			axios.get('/list_function_calls/'+id).then(function(response){
+				var data = response.data["data"];
+
+				$("#function-call-list").html("");
+				for(var i=0; i<data.length; i++) {
+					var button = document.createElement("button");
+					button.className = "list-group-item";
+					button.innerHTML = "<input type='checkbox' function-call-id='" + data[i][0]  + "'/><b>Start:</b> " +
+					    data[i][2] + ", <b>lasting:</b> " + data[i][6] + " seconds";
+					$(button).attr("function-call-id", data[i][0]);
+					$("#function-call-list").append(button);
+				}
+
+			})
+		}
+	}
 })
 
 Vue.component("function-calls", {
