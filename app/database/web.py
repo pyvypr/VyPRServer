@@ -334,7 +334,7 @@ def web_list_functions():
             current_hierarchy_step[path[-1]] = [[function[0], hash, spec]]
 
     # pprint(dictionary_tree_structure)
-    #dictionary_tree_structure["client"] = {"app": [[function[0], hash, spec]]}
+    dictionary_tree_structure["client"] = {"app": [[function[0], hash, spec]]}
     connection.close()
 
     return dictionary_tree_structure
