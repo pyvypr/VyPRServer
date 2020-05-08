@@ -15,34 +15,20 @@ Vue.component("machine-function-property", {
         <div class="list-group" id="function-list">
           <div id="function-list-data"></div>
           <div class="tab">
-            <button v-for="(value,key) in tree" class="tablinks" @click="selectTab(key)">{{key}}</button>
+            <button v-for="(value,key) in tree" :class="(key===showTab)? 'tablinks active':'tablinks' " @click="selectTab(key)">{{key}}</button>
           </div>
-          <subtree v-for="(value,key) in tree" :key="key" :id="key" :content="value"> </subtree>
+          <subtree v-for="(value,key) in tree" v-show="(key === showTab)" :key="key" :id="key" :content="value"> </subtree>
         </div>
       </div>
     </div>`,
+	data() {
+		return {showTab: ""}
+	},
 	methods : {
 		selectTab: function(selectedTab){
 			// selectedTab contains the ID of the tabcontent element which needs to be displayed
-			console.log(selectedTab)
-			var i, tabcontent, tablinks;
-			tabcontent = $(".tabcontent");
-			for (i = 0; i < tabcontent.length; i++) {
-				tabcontent[i].setAttribute('style', 'display: none');
-			}
-			tablinks = $(".tablinks")
-			for (i=0; i<tablinks.length; i++) {
-				tablinks[i].className = "tablinks";
-			}
-			if (selectedTab != "") {
-				$("#"+selectedTab).attr('style', 'display = "block"');
-				tablinks = $(".tablinks");
-				for (i=0; i<tablinks.length; i++){
-					if (tablinks[i].innerHTML == selectedTab){
-						tablinks[i].className += " active"
-					}
-				}
-			}
+			this.showTab = selectedTab;
+
 		}
 	},
 	mounted() {
@@ -106,7 +92,7 @@ Vue.component("subtreelevel", {
   		for(var i=0; i<subtree.length; i++) {
   			var str = subtree[i][2];
   			str = decodeHTML(str);
-  			buttons.push({ functionid: subtree[i][0], padding : "padding-left:" + padding, str : str});
+  			buttons.push({functionid: subtree[i][0], padding : "padding-left:" + padding, str : str});
   		}
       return {buttons: buttons, subtreeslist:[]}
 
