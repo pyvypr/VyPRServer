@@ -11,13 +11,13 @@ def list_functions():
     return query_db_all(query_string, [])
 
 
-def list_calls_function(function_name):
+def list_calls_function(id):
     # based on the name of the function, list all function calls of the function with that name
     query_string = """select function_call.id, function_call.function, function_call.time_of_call, 
     function_call.end_time_of_call, function_call.trans, function_call.path_condition_id_sequence
     from (function inner join function_call on function.id=function_call.function)
-    where function.fully_qualified_name like ? """
-    return query_db_all(query_string, [function_name])
+    where function.id like ? """
+    return query_db_all(query_string, [id])
 
 
 def list_calls_transaction(transaction_id):
@@ -118,7 +118,7 @@ def get_falsifying_observation_call(call_id):
 
 
 def get_property_byhash(hash):
-    query_string = "select * from property where hash like ?"
+    query_string = "select * from property where hash=?"
     return query_db_one(query_string, [hash])
 
 

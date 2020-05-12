@@ -62,9 +62,9 @@ def get_function_by_name(function_name):
     return database.get_f_byname(function_name)
 
 
-@app_object.route("/client/function/name/<function_name>/function_calls/")
-def get_function_calls_from_function_name(function_name):
-    return database.list_calls_function(function_name)
+@app_object.route("/client/function/id/<id>/function_calls/")
+def get_function_calls_from_function_id(id):
+    return database.list_calls_function(id)
 
 
 @app_object.route("/client/function/id/<function_id>/")
