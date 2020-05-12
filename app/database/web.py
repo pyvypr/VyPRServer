@@ -243,8 +243,9 @@ def web_list_functions():
     cursor = connection.cursor()
 
     functions = cursor.execute(
-        "select function.id, function.fully_qualified_name, function.property, property.serialised_structure from " + \
-        "(function inner join property on function.property=property.hash)").fetchall()
+        """select function.id, function.fully_qualified_name, property.hash, property.serialised_structure
+            from (function inner join function_property_pair on function.id==function_property_pair.function)
+            inner join property on function_property_pair.property_hash=property.hash""").fetchall()
 
     # process the functions into a hierarchy by splitting the function names up by dots
     dictionary_tree_structure = {}
@@ -406,7 +407,9 @@ def get_code(function_id):
     connection = get_connection()
     cursor = connection.cursor()
 
-    function = cursor.execute("select fully_qualified_name, property from function where id = ?", [function_id]).fetchone()
+    function = cursor.execute("""select function.fully_qualified_name, function_property_pair.property_hash
+    from (function inner join function_property_pair on function.id==function_property_pair.function)
+    where function.id = ?""", [function_id]).fetchone()
     func = function[0]
 
     #check if the monitored service path was given as an argument
@@ -497,7 +500,9 @@ def get_calls_data(ids_list):
     # get the scfg of the function called by these calls and get all their path_condition_id_sequences
     # but without duplicate instances of sequences - store them as keys in dictionary 'sequences'
     # the corresponding value is a list of the IDs of the calls that generated the sequence (key)
-    function = cursor.execute("select fully_qualified_name, property from function where id = ?", [calls[0][1]]).fetchone()
+    function = cursor.execute("""select function.fully_qualified_name, function_property_pair.property_hash
+    from (function inner join function_property_pair on function.id==function_property_pair.function)
+    where function.id = ?""", [calls[0][1]]).fetchone()
     func = function[0]
     scfg = get_scfg(func, location)
     sequences = {}
@@ -617,11 +622,11 @@ def get_atom_type(atom_index, inst_point_id):
     cursor = connection.cursor()
 
     #atom_index defines an atom uniquely provided that we know the property
-    prop_hash = cursor.execute("""select distinct function.property from
-    (((function inner join function_call on function.id==function_call.function) inner join
-       verdict on function_call.id==verdict.function_call) inner join observation
-       on observation.verdict==verdict.id)
-       where observation.instrumentation_point=?""", [inst_point_id]).fetchone()[0]
+    prop_hash = cursor.execute("""select distinct function_property_pair.property_hash from
+    (((function_property_pair inner join function_call on function_property_pair.function==function_call.function)
+    inner join verdict on function_call.id==verdict.function_call) inner join observation
+       on observation.verdict==verdict.id) where observation.instrumentation_point=?""",
+       [inst_point_id]).fetchone()[0]
 
     print(prop_hash)
     atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
