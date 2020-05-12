@@ -1,17 +1,24 @@
 CREATE TABLE function (
     id integer primary key autoincrement,
-    fully_qualified_name text not null,
-    property text not null,
-    foreign key(property) references property(hash)
+    fully_qualified_name text not null
+);
+CREATE TABLE function_property_pair (
+    function integer not null,
+    property_hash text not null,
+    foreign key(function) references function(id),
+    foreign key(property_hash) references property(hash),
+    primary key(function, property_hash)
 );
 CREATE TABLE property (
     hash text primary key,
-    serialised_structure text not null
+    serialised_structure text not null,
+    index_in_specification_file integer not null
 );
 CREATE TABLE binding (
     id integer primary key autoincrement,
     binding_space_index int not null,
     function int not null,
+    property_hash text not null,
     binding_statement_lines text not null,
     foreign key(function) references function(id)
 );

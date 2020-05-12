@@ -118,7 +118,7 @@ def get_falsifying_observation_call(call_id):
 
 
 def get_property_byhash(hash):
-    query_string = "select * from property where hash like ?"
+    query_string = "select * from property where hash=?"
     return query_db_one(query_string, [hash])
 
 

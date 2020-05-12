@@ -14,8 +14,6 @@ def insert_function_call_data(call_data):
     connection = get_connection()
     cursor = connection.cursor()
 
-    print(str(call_data))
-
     # insert transaction
     # since this data is received from the monitored service potentially
     # multiple times per transaction, we have to check whether a transaction
@@ -31,19 +29,22 @@ def insert_function_call_data(call_data):
     else:
         transaction_id = transactions[0][0]
 
-    print("transaction created")
-
     # insert call
 
     try:
 
-        function_id = cursor.execute("select id from function where fully_qualified_name = ? and property = ?",
-                                     (call_data["function_name"], call_data["property_hash"])).fetchall()[0][0]
+        function_id = cursor.execute(
+            "select id from function where fully_qualified_name = ?",
+            [
+                call_data["function_name"]
+            ]
+        ).fetchall()[0][0]
 
     except Exception:
-        traceback.print_exc()
-
-    print("obtained function id")
+        raise Exception(
+            "Function '%s' not found.  The problem is probably that instrumentation was not run." %
+            call_data["function_name"]
+        )
 
     # construct program path and add a json form of the sequence to the row function_call row
 
@@ -68,14 +69,9 @@ def insert_function_call_data(call_data):
         [function_id, call_data["time_of_call"], call_data["end_time_of_call"], transaction_id,
          json.dumps(new_program_path)])
     function_call_id = cursor.lastrowid
-    connection.commit()
-
-    print("function call created")
 
     connection.commit()
     connection.close()
-
-    print("program path created")
 
     return {"function_call_id": function_call_id, "function_id": function_id}
 
@@ -84,24 +80,24 @@ def insert_verdicts(verdict_dictionary):
     connection = get_connection()
     cursor = connection.cursor()
 
-    print("Performing verdicts insertion")
+    print(verdict_dictionary)
 
     function_call_id = verdict_dictionary["function_call_id"]
 
     for verdict in verdict_dictionary["verdicts"]:
 
-        print("inserting verdict")
-        print(verdict)
-        print(type(verdict))
-
         # use the binding space index and the function id to get the binding id
-        results = cursor.execute(
-            "select * from binding where binding_space_index = ? and function = ?",
-            [verdict["bind_space_index"], verdict_dictionary["function_id"]]
-        ).fetchall()
-        new_binding_id = int(results[0][0])
-
-        print("obtained binding id")
+        try:
+            results = cursor.execute(
+                "select * from binding where binding_space_index = ? and function = ? and property_hash = ?",
+                [verdict["bind_space_index"], verdict_dictionary["function_id"], verdict_dictionary["property_hash"]]
+            ).fetchall()
+            new_binding_id = int(results[0][0])
+        except:
+            raise Exception(
+                "No binding was found at index %i for function ID %i and property hash '%s'" %
+                (verdict["bind_space_index"], verdict_dictionary["function_id"], verdict_dictionary["property_hash"])
+            )
 
         verdict_value = verdict["verdict"][0]
         verdict_time_obtained = verdict["verdict"][1]
@@ -122,11 +118,8 @@ def insert_verdicts(verdict_dictionary):
              collapsing_atom_sub_index])
         new_verdict_id = cursor.lastrowid
 
-        print("inserted verdict - now performing observation insertion")
-
         for atom_index in observations_map:
             # insert observation(s) for this atom_index
-            print(observations_map[atom_index])
             for sub_index in observations_map[atom_index].keys():
                 last_condition = path_map[atom_index][sub_index]
                 cursor.execute(
@@ -144,7 +137,6 @@ def insert_verdicts(verdict_dictionary):
 
                 state_dict = atom_to_state_dict_map[atom_index][sub_index]
                 if state_dict:
-                    print(state_dict)
                     for var in state_dict.keys():
                         # check if this assignment already exists
                         assignments = cursor.execute(
@@ -190,8 +182,14 @@ def insert_property(property_dictionary):
             "property": property_dictionary["serialised_formula_structure"]
         }
         serialised_structure = json.dumps(serialised_structure)
-        cursor.execute("insert into property (hash, serialised_structure) values (?, ?)",
-                       [property_dictionary["formula_hash"], serialised_structure])
+        cursor.execute(
+            "insert into property (hash, serialised_structure, index_in_specification_file) values (?, ?, ?)",
+            [
+                property_dictionary["formula_hash"],
+                serialised_structure,
+                property_dictionary["formula_index"]
+            ]
+        )
     except:
         # for now, the error was probably because of dupicate properties if instrumentation was run again.
         # instrumentation should only ever be run for new versions of code, so at some point
@@ -211,15 +209,32 @@ def insert_property(property_dictionary):
                            [property_dictionary["formula_hash"], pair[1], pair[0]])
             atom_index_to_db_index.append(cursor.lastrowid)
 
-        print(atom_index_to_db_index)
+        # check for existence of the function
+        function_check = cursor.execute(
+            "select * from function where fully_qualified_name = ?", [property_dictionary["function"]]
+        ).fetchall()
 
-        # insert the function
-        cursor.execute("insert into function (fully_qualified_name, property) values (?, ?)",
-                       [property_dictionary["function"], property_dictionary["formula_hash"]])
+        if len(function_check) == 0:
+            # insert the function
+            cursor.execute("insert into function (fully_qualified_name) values (?)", [property_dictionary["function"]])
+            function_id = cursor.lastrowid
+        else:
+            # the function already exists
+            function_id = function_check[0][0]
+
+        # insert the function/property pair
+        cursor.execute(
+            "insert into function_property_pair values (?, ?)",
+            [
+                function_id,
+                property_dictionary["formula_hash"]
+            ]
+        )
+
+        # commit the insertions
         connection.commit()
         connection.close()
-        print("property and function inserted")
-        return atom_index_to_db_index, cursor.lastrowid
+        return atom_index_to_db_index, function_id
     except:
         # for now, the error was probably because of dupicate properties if instrumentation was run again.
         # instrumentation should only ever be run for new versions of code, so at some point
@@ -240,10 +255,16 @@ def insert_binding(binding_dictionary):
     cursor = connection.cursor()
 
     try:
-        print(binding_dictionary)
-        cursor.execute("insert into binding (binding_space_index, function, binding_statement_lines) values (?, ?, ?)",
-                       [binding_dictionary["binding_space_index"], binding_dictionary["function"],
-                        json.dumps(binding_dictionary["binding_statement_lines"])])
+        cursor.execute(
+            "insert into binding (binding_space_index, function, binding_statement_lines, property_hash)"
+            " values (?, ?, ?, ?)",
+            [
+                binding_dictionary["binding_space_index"],
+                binding_dictionary["function"],
+                json.dumps(binding_dictionary["binding_statement_lines"]),
+                binding_dictionary["property_hash"]
+            ]
+        )
         new_id = cursor.lastrowid
         connection.commit()
         connection.close()
@@ -270,7 +291,6 @@ def insert_instrumentation_point(dictionary):
     cursor = connection.cursor()
 
     try:
-        print(dictionary)
         # TODO: add existence checks
         # insert instrumentation point
         cursor.execute(
@@ -308,7 +328,6 @@ def insert_branching_condition(dictionary):
     connection = get_connection()
     cursor = connection.cursor()
     try:
-        print(dictionary)
         # check for existence
         result = cursor.execute("select * from path_condition_structure where serialised_condition = ?",
                                 [dictionary["serialised_condition"]]).fetchall()
