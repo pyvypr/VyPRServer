@@ -13,10 +13,16 @@ def list_functions():
 
 def list_calls_function(id):
     # based on the name of the function, list all function calls of the function with that name
-    query_string = """select function_call.id, function_call.function, function_call.time_of_call, 
+    query_string = """select function_call.id, function_call.function, function_call.time_of_call,
     function_call.end_time_of_call, function_call.trans, function_call.path_condition_id_sequence
     from (function inner join function_call on function.id=function_call.function)
     where function.id like ? """
+    return query_db_all(query_string, [id])
+
+def list_properties_function(id):
+    query_string = """select property.hash, property.serialised_structure, property.index_in_specification_file
+    from (property inner join function_property_pair on property.hash == function_property_pair.property_hash)
+    where function_property_pair.function = ?"""
     return query_db_all(query_string, [id])
 
 
@@ -133,6 +139,7 @@ def get_binding_byid(id):
 
 
 def get_bindings_from_function_property_pair(id):
+    #TODO CHANGE
     query_string = "select * from binding where function=?"
     return query_db_all(query_string, [id])
 
@@ -209,6 +216,7 @@ def list_verdicts_byvalue(value):
 
 
 def list_verdicts_function_property_byvalue(value):
+    #TODO CHANGE
     query_string = """select verdict.id, verdict.binding, verdict.verdict,
     verdict.time_obtained, function_call.function, function.fully_qualified_name,
     function_call.time_of_call, function.property
@@ -254,6 +262,19 @@ def list_observations_of_point(point_id):
 def list_verdicts_with_value_of_call(call_id, verdict_value):
     query_string = "select * from verdict where function_call=? and verdict=?"
     return query_db_all(query_string, [call_id, verdict_value])
+
+def list_verdicts_of_call_by_property(call_id, property_hash):
+    query_string = """select verdict.id, verdict.binding, verdict.verdict, verdict.time_obtained,
+    verdict.function_call, verdict.collapsing_atom from (verdict inner join binding
+    on verdict.binding == binding.id) where verdict.function_call = ? and binding.property_hash = ? """
+    return query_db_all(query_string, [call_id, property_hash])
+
+def list_verdicts_with_value_of_call_by_property(call_id, verdict_value, property_hash):
+    query_string = """select verdict.id, verdict.binding, verdict.verdict, verdict.time_obtained,
+    verdict.function_call, verdict.collapsing_atom from (verdict inner join binding
+    on verdict.binding == binding.id) where verdict.function_call = ? and binding.property_hash = ?
+    and verdict.verdict = ?"""
+    return query_db_all(query_string, [call_id, property_hash, verdict_value])
 
 
 def list_verdicts_of_function(function_id):
