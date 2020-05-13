@@ -90,6 +90,4 @@ def get_property_from_hash(hash):
     :param: hash
     :return: String of serialised property.
     """
-    r = database.get_property_byhash(hash)
-    print(r)
     return database.get_property_byhash(hash)
