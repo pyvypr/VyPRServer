@@ -230,7 +230,10 @@ Vue.component("code-view", {
           v-show="line.show">
             <b> {{line.line_number}} </b> <span v-html="line.content"> </span>
             <span class="span-binding" :id="line.spanid"><button v-for="b in line.buttons"
-            class="binding-button" :binding-button="b.binding">{{b.binding}}</button></span>
+            class="binding-button" :binding-button="b.binding" :style="b.font"
+            @click="selectBinding(b.binding, b.subtree, b.lines)">
+            {{b.binding}}</button></span>
+            <p v-show="line.showempty" class="empty-line" :id="line.emptyid"> ... <br> </p>
           </div>
         </div>
       </div>
@@ -241,8 +244,34 @@ Vue.component("code-view", {
             specification_code: "", code_lines: [], start_line: 0}
   },
   methods:{
-    selectBinding : function(binding){
-      console.log(binding)
+    selectBinding : function(binding, tree, lines){
+      // binding stores the index of the binding, tree is the branch tree[binding]
+      // lines is a list of line numbers that need to be highlighted
+      // TODO find a way to highlight the subatoms in the specification
+
+      var whole_code = this.code_lines;
+      var start_line = this.start_line;
+
+      // reset the background colors of previously highlighted lines
+      for (var i=0; i<whole_code.length; i++){
+        var line = whole_code[i];
+        if (line.color){
+          line.background = "background-color: #ebf2ee";
+        }
+        for (var j=0; j<line.buttons.length; j++){
+          if (line.buttons[j].binding == binding){
+            line.buttons[j].font = "font-weight: bold";
+          }
+          else{
+            line.buttons[j].font = "font-weight: normal";
+          }
+        }
+      }
+
+      for (var i=0; i<lines.length; i++){
+        var line = whole_code[lines[i]-start_line];
+        line.background = "background-color: " + line.color;
+      }
     }
   },
   mounted(){
@@ -273,7 +302,8 @@ Vue.component("code-view", {
           var line_div = {line_number: current_line, id: "line-number-" + current_line,
                           background: "background-color: transparent", color: "", show: true,
                           added_empty_line: false, spanid: "span-bindings-line-" + current_line,
-                          content: line_text, buttons: []}
+                          content: line_text, buttons: [], emptyid: "empty-line-" + current_line,
+                          showempty: false}
 
 
           lines_list.push(line_div);
@@ -363,10 +393,8 @@ Vue.component("code-view", {
         }
         for (var i=0; i<lines_points.length; i++){
           var no = lines_points[i];
-          var tree_string=JSON.stringify(tree[binding]);
-          console.log(tree_string)
-
-          whole_code[no-start_line].buttons.push({binding: binding});
+          whole_code[no-start_line].buttons.push({binding: binding, subtree: tree[binding],
+            lines: line_numbers, font: "font-weight: normal"});
           }
         }
 
@@ -388,10 +416,10 @@ Vue.component("code-view", {
         var line_id = whole_code[i].id.split("-");
         var id_line_number = line_id[line_id.length-1];
         if (show_lines.indexOf(parseInt(id_line_number))==-1){
-          whole_code[i]["show"] = false;
+          whole_code[i].show = false;
         }
         else{
-          whole_code[i]["show"] = true;
+          whole_code[i].show = true;
         }
       }
 
@@ -400,10 +428,10 @@ Vue.component("code-view", {
 
       for (var i=0; i<show_lines.length; i++){
         if (show_lines[i] < (show_lines[i+1] - 1)){
-          if (!(whole_code[show_lines[i]-obj2.start_line]["added_empty_line"])){
-            whole_code[show_lines[i]-obj2.start_line]["content"] += '<p class="empty-line" id="empty-line-' + show_lines[i] + '"> ... <br> </p>';
-            whole_code[show_lines[i]-obj2.start_line]["added_empty_line"] = true;
-          }
+          whole_code[show_lines[i]-obj2.start_line].showempty = true;
+        }
+        else{
+          whole_code[show_lines[i]-obj2.start_line].showempty = false;
         }
       }
     })
