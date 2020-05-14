@@ -88,6 +88,16 @@ def list_verdicts_of_function_with_value(function_id, verdict_value):
 
 
 """
+Queries based on test_data table.
+"""
+
+
+@app_object.route("/client/test_data/")
+def list_test_data():
+    return database.list_test_data()
+
+
+"""
 Queries based on the transaction table.
 """
 
@@ -134,6 +144,11 @@ def list_observations_during_call(call_id):
 @app_object.route("/client/function_call/id/<call_id>/verdict/value/<verdict_value>/")
 def list_verdicts_with_value_of_call(call_id, verdict_value):
     return database.list_verdicts_with_value_of_call(call_id, verdict_value)
+
+
+@app_object.route("/client/function_call/between/<start_time>/<end_time>/")
+def list_function_calls_between_times(start_time, end_time):
+    return database.list_function_calls_between_times(start_time, end_time)
 
 
 """
