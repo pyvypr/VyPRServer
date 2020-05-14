@@ -19,12 +19,7 @@ def list_calls_function(id):
 
 def list_calls_transaction(transaction_id):
     # list all function_calls during the given transaction
-    query_string = """
-    select function_call.id, function_call.function, function_call.time_of_call,
-    function_call.end_time_of_call, function_call.trans, function_call.path_condition_id_sequence
-    from (trans inner join function_call on
-        trans.id=function_call.trans)
-    where trans.id=?"""
+    query_string = "select * from function_call where trans = ?"
     return query_db_all(query_string, [transaction_id])
 
 
