@@ -49,10 +49,10 @@ Vue.component("machine-function-property", {
       machine_keys.push(key)
     }
     this.selectTab(machine_keys[0]);
-		var remember_this = this;
-		this.$root.$on('function-select', function(dict){
-			remember_this.showFunctions = false;
-		})
+    var remember_this = this;
+    this.$root.$on('function-select', function(dict){
+      remember_this.showFunctions = false;
+    })
   }
 }
 )
@@ -139,7 +139,6 @@ Vue.component("subtreelevel", {
   methods : {
     selectFunction: function(id, code){
       console.log(id)
-      $("#function-list").slideUp();
       this.$root.$emit('function-select', {selected_function_id: id, specification_code: code})
     }
   }
@@ -175,13 +174,13 @@ Vue.component("function-calls", {
       console.log(dict);
 
       obj.message = "Loading function calls.  This can take some time if there are many.";
-			obj.buttons = [];
-			obj.checkedCalls = [];
+      obj.buttons = [];
+      obj.checkedCalls = [];
       console.log(obj.message)
 
       axios.get('/list_function_calls/'+dict["selected_function_id"]).then(function(response){
         var data = response.data["data"];
-        obj.message="";
+        obj.message = "";
         var buttons_list = [];
         for(var i=0; i<data.length; i++) {
           var button = {callid : data[i][0], callstart: data[i][2], callduration: data[i][6]}
@@ -196,24 +195,23 @@ Vue.component("function-calls", {
 
     })
   },
-	watch: {
-		checkedCalls: function(value){
-			console.log(value)
-			var function_call_ids = [];
-			var that = this;
-			for (var i=0; i<value.length; i++){
-				function_call_ids.push(""+value[i]);
-			}
-			axios.post("/get_function_calls_data/", {"ids" : function_call_ids}).then(function(response) {
-			    // here we will process the information from the function calls and
-			    // put it on the page with with the source code and property information
-
-					tree = response.data;
-					console.log(JSON.stringify(tree))
-					that.$root.$emit('calls-selected',tree);
-			});
-		}
-	}
+  watch: {
+    checkedCalls: function(value){
+      console.log(value)
+      var function_call_ids = [];
+      var that = this;
+      for (var i=0; i<value.length; i++){
+        function_call_ids.push(""+value[i]);
+      }
+      if (function_call_ids.length){
+        axios.post("/get_function_calls_data/", {"ids" : function_call_ids}).then(function(response) {
+          tree = response.data;
+          console.log(JSON.stringify(tree))
+          that.$root.$emit('calls-selected',tree);
+        });
+      }
+    }
+  }
 })
 
 
@@ -229,7 +227,11 @@ Vue.component("code-view", {
         <div v-if="code_lines" class='code_listing'>
           <div v-for="(line,index) in code_lines" :key="index" class="code_listing_line"
           :id="line.id" :style="line.background" :save-background-color="line.color"
-          v-show="line.show" v-html="line.content"></div>
+          v-show="line.show">
+            <b> {{line.line_number}} </b> <span v-html="line.content"> </span>
+            <span class="span-binding" :id="line.spanid"><button v-for="b in line.buttons"
+            class="binding-button" :binding-button="b.binding">{{b.binding}}</button></span>
+          </div>
         </div>
       </div>
     </div>`
@@ -237,6 +239,11 @@ Vue.component("code-view", {
   data(){
     return {message: "Select a function and then one or more calls, first.",
             specification_code: "", code_lines: [], start_line: 0}
+  },
+  methods:{
+    selectBinding : function(binding){
+      console.log(binding)
+    }
   },
   mounted(){
     var obj2 = this;
@@ -247,7 +254,7 @@ Vue.component("code-view", {
         var code_data = response.data;
         var code_lines = code_data["code"];
         var current_line = code_data["start_line"];
-				obj2.start_line = current_line;
+        obj2.start_line = current_line;
 
         // we also want to display binding reference at the end of each line
         // first, go through bindings and collect all line numbers they refer to
@@ -265,10 +272,8 @@ Vue.component("code-view", {
           var line_text = code_lines[i].replace(/\t/g, "&nbsp;&nbsp;&nbsp;").replace(/^[ \t]+/mg, html_space_replace);
           var line_div = {line_number: current_line, id: "line-number-" + current_line,
                           background: "background-color: transparent", color: "", show: true,
-													added_empty_line: false,
-                          content: '<b>' + current_line + '</b> ' + line_text +
-                            '<span class="span-binding" id="span-bindings-line-' + current_line + '"> </span>'
-												 }
+                          added_empty_line: false, spanid: "span-bindings-line-" + current_line,
+                          content: line_text, buttons: []}
 
 
           lines_list.push(line_div);
@@ -314,95 +319,94 @@ Vue.component("code-view", {
         } //end i-loop
       })
     })
-		this.$root.$on('calls-selected', function(tree){
-			console.log(tree)
+    this.$root.$on('calls-selected', function(tree){
+      console.log(tree)
 
-			var show_lines = []; //stores all lines that are of interest plus a few around them - we will hide the rest
-			var start_line;
-			var whole_code = obj2.code_lines;
+      var show_lines = []; //stores all lines that are of interest plus a few around them - we will hide the rest
+      var start_line = obj2.start_line;
+      var whole_code = obj2.code_lines;
 
-			for (binding in tree){
-				var line_numbers = []; //stores all points of interest
-				var lines_points = []; //stores only those stored by bindings
-				for (atom in tree[binding]){
-					for (subatom in tree[binding][atom]){
-						list = tree[binding][atom][subatom];
-						for (var i=0; i<list.length; i++){
-							if (line_numbers.indexOf(list[i]["code_line"])==-1){
-								line_numbers.push(list[i]["code_line"]);
-							}
-							if (atom=="-1" && lines_points.indexOf(list[i]["code_line"])==-1){
-								lines_points.push(list[i]["code_line"]);
-							}
+      //clean up the binding buttons from previous selection
+      for (var i=0; i<whole_code.length; i++){
+        whole_code[i].buttons = [];
+      }
 
-						}
-					}
-				}
-				show_lines = show_lines.concat(line_numbers);
-				console.log(line_numbers)
-				console.log(lines_points)
-				for (var i=0; i<line_numbers.length; i++){
-					var no = line_numbers[i];
-					whole_code[i].background = "background-color: #ebf2ee"
-					color = whole_code[i].color;
-					if (!(color)){
-						whole_code[i].color = "#def1fc";
-					}
-				}
-				for (var i=0; i<lines_points.length; i++){
-					var no = lines_points[i];
-					var tree_string=JSON.stringify(tree[binding]);
-					console.log(tree_string)
-					$("#span-bindings-line-"+no).append('<button class="binding-button" binding-button=' +
-						binding + '>' + binding + '</button>');
-					var bind_buttons = $('[binding-button='+binding+']');
-					for (var j=0; j<bind_buttons.length; j++){
-						//bind_buttons[j].onclick=function(){highlight_lines(line_numbers,tree_string)}
-						$(bind_buttons[j]).attr('tree',tree_string);
-						$(bind_buttons[j]).attr('onClick','highlight_lines(['+line_numbers+'],this)');
-					}
-				}
+      // iterate through the bindings to highlight the lines and separate those paired with
+      // a quantifier from those that are of interest because a subatom generates observations there
+      for (binding in tree){
+        var line_numbers = []; //stores all points of interest
+        var lines_points = []; //stores only those stored by bindings
+        for (atom in tree[binding]){
+          for (subatom in tree[binding][atom]){
+            list = tree[binding][atom][subatom];
+            for (var i=0; i<list.length; i++){
+              if (line_numbers.indexOf(list[i]["code_line"])==-1){
+                line_numbers.push(list[i]["code_line"]);
+              }
+              if (atom=="-1" && lines_points.indexOf(list[i]["code_line"])==-1){
+                lines_points.push(list[i]["code_line"]);
+              }
 
+            }
+          }
+        }
+        show_lines = show_lines.concat(line_numbers);
+        console.log(line_numbers)
+        console.log(lines_points)
+        for (var i=0; i<line_numbers.length; i++){
+          var no = line_numbers[i] - obj2.start_line;
+          whole_code[no].background = "background-color: #ebf2ee"
+          color = whole_code[no].color;
+          if (!(color)){
+            whole_code[no].color = "#def1fc";
+          }
+        }
+        for (var i=0; i<lines_points.length; i++){
+          var no = lines_points[i];
+          var tree_string=JSON.stringify(tree[binding]);
+          console.log(tree_string)
 
-			}
+          whole_code[no-start_line].buttons.push({binding: binding});
+          }
+        }
 
-			show_lines = show_lines.sort();
+      show_lines = show_lines.sort();
 
-			//in addition to the lines stored in leaves, we want to display the first line
-			// and in this case, three lines around each instrumentation point
-			var more_lines = [obj2.start_line];
-			for (var i=0; i<show_lines.length; i++){
-				var current_line_number = show_lines[i];
-				for (var j=1; j<3; j++){
-					more_lines.push(current_line_number+j);
-					more_lines.push(current_line_number-j)
-				}
-			}
-			show_lines = show_lines.concat(more_lines);
+      //in addition to the lines stored in leaves, we want to display the first line
+      // and in this case, three lines around each instrumentation point
+      var more_lines = [obj2.start_line];
+      for (var i=0; i<show_lines.length; i++){
+        var current_line_number = show_lines[i];
+        for (var j=1; j<3; j++){
+          more_lines.push(current_line_number+j);
+          more_lines.push(current_line_number-j)
+        }
+      }
+      show_lines = show_lines.concat(more_lines);
 
-			for (var i=0; i<whole_code.length; i++){
-				var line_id = whole_code[i].id.split("-");
-				var id_line_number = line_id[line_id.length-1];
-				if (show_lines.indexOf(parseInt(id_line_number))==-1){
-					whole_code[i]["show"] = false;
-				}
-				else{
-					whole_code[i]["show"] = true;
-				}
-			}
+      for (var i=0; i<whole_code.length; i++){
+        var line_id = whole_code[i].id.split("-");
+        var id_line_number = line_id[line_id.length-1];
+        if (show_lines.indexOf(parseInt(id_line_number))==-1){
+          whole_code[i]["show"] = false;
+        }
+        else{
+          whole_code[i]["show"] = true;
+        }
+      }
 
-			// insert a spacing where there is a jump in line numbers
-			show_lines = show_lines.sort(function(a, b){return a - b});
+      // insert a spacing where there is a jump in line numbers
+      show_lines = show_lines.sort(function(a, b){return a - b});
 
-			for (var i=0; i<show_lines.length; i++){
-				if (show_lines[i] < (show_lines[i+1] - 1)){
-					if (!(whole_code[show_lines[i]-obj2.start_line]["added_empty_line"])){
-						whole_code[show_lines[i]-obj2.start_line]["content"] += '<p class="empty-line" id="empty-line-' + show_lines[i] + '"> ... <br> </p>';
-						whole_code[show_lines[i]-obj2.start_line]["added_empty_line"] = true;
-					}
-				}
-			}
-		})
+      for (var i=0; i<show_lines.length; i++){
+        if (show_lines[i] < (show_lines[i+1] - 1)){
+          if (!(whole_code[show_lines[i]-obj2.start_line]["added_empty_line"])){
+            whole_code[show_lines[i]-obj2.start_line]["content"] += '<p class="empty-line" id="empty-line-' + show_lines[i] + '"> ... <br> </p>';
+            whole_code[show_lines[i]-obj2.start_line]["added_empty_line"] = true;
+          }
+        }
+      }
+    })
   }
 }
 )
