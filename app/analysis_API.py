@@ -18,10 +18,6 @@ def shutdown():
     func()
 
 
-
-
-
-
 """
 Queries based on paths.
 """
@@ -41,6 +37,7 @@ def get_parametric_path():
 @app_object.route("/client/get_path_condition_sequence/<observation_id>/", methods=["GET"])
 def get_path_condition_sequence(observation_id):
     return json.dumps(database.compute_condition_sequence_and_path_length(observation_id))
+
 
 """
 Queries based on the function table.
