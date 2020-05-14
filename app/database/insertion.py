@@ -378,3 +378,31 @@ def insert_branching_condition(dictionary):
         print("ERROR OCCURED DURING INSERTION:")
         traceback.print_exc()
         return "failure"
+
+
+def insert_test_call_data(test_data):
+    """
+    Given a dictionary of data derived from execution of a test case, insert it and return the new ID.
+    :param test_data:
+    :return: json list
+    """
+
+    connection = get_connection()
+    cursor = connection.cursor()
+    try:
+
+        print (test_data)
+
+        # condition is new - insert it
+        cursor.execute("insert into test_data (test_name, test_result, start_time, end_time) values (? , ? , ?, ?)",
+                       [test_data["test_name"], test_data["test_result"], test_data['start_time'],
+                        test_data['end_time']]
+                       )
+
+        connection.commit()
+        connection.close()
+        return {"row_id": cursor.lastrowid}
+    except:
+        print("ERROR OCCURED DURING INSERTION:")
+        traceback.print_exc()
+        return "failure"
