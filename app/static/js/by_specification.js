@@ -205,7 +205,7 @@ var apply_function_list_click = function() {
 
 						//if (line_numbers.indexOf(current_line)!=-1)
 						content += '<span class="span-binding" id="span-bindings-line-' + current_line + '"> </span>';
-						content += '<p class="empty-line" id="empty-line-' + current_line + '"> ... <br> </p>';
+						content += '<p class="empty-line" id="empty-line-' + current_line + '" style="display:none"> ... <br> </p>';
 
 						line_div.innerHTML = content;
 						current_line++;
