@@ -13,10 +13,7 @@ def list_functions():
 
 def list_calls_function(id):
     # based on the name of the function, list all function calls of the function with that name
-    query_string = """select function_call.id, function_call.function, function_call.time_of_call,
-    function_call.end_time_of_call, function_call.trans, function_call.path_condition_id_sequence
-    from (function inner join function_call on function.id=function_call.function)
-    where function.id like ? """
+    query_string = "select * from function_call where function = ?"
     return query_db_all(query_string, [id])
 
 def list_properties_function(id):
@@ -28,12 +25,7 @@ def list_properties_function(id):
 
 def list_calls_transaction(transaction_id):
     # list all function_calls during the given transaction
-    query_string = """
-    select function_call.id, function_call.function, function_call.time_of_call,
-    function_call.end_time_of_call, function_call.trans, function_call.path_condition_id_sequence
-    from (trans inner join function_call on
-        trans.id=function_call.trans)
-    where trans.id=?"""
+    query_string = "select * from function_call where trans = ?"
     return query_db_all(query_string, [transaction_id])
 
 
@@ -55,14 +47,24 @@ def list_calls_verdict(function_id, verdict_value):
     return query_db_all(query_string, [function_id, verdict_value])
 
 
+def list_function_calls_between_times(start_time, end_time):
+    query_string = "select * from function_call where time_of_call > ? and end_time_of_call < ?"
+    return query_db_all(query_string, [start_time, end_time])
+
+
 def get_f_byname(function_name):
-    query_string = "select * from function where fully_qualified_name like ?"
+    query_string = "select * from function where fully_qualified_name = ?"
     return query_db_all(query_string, [function_name])
 
 
 def get_f_byid(function_id):
-    query_string = "select * from function where id like ?"
+    query_string = "select * from function where id = ?"
     return query_db_one(query_string, [function_id])
+
+
+def list_test_data():
+    query_string = "select * from test_data"
+    return query_db_all(query_string, [])
 
 
 def get_transaction_byid(transaction_id):
@@ -172,7 +174,7 @@ def get_path_conditions_by_function_call_id(call_id):
     cursor = connection.cursor()
     path_condition_ids =\
         json.loads(
-            cursor.execute("select path_condition_id_sequence from function_call where id = ?", [call_if]).fetchone()[0]
+            cursor.execute("select path_condition_id_sequence from function_call where id = ?", [call_id]).fetchone()[0]
         )
     # extract the path condition ids, then get the serialised path conditions
     serialised_conditions = list(map(

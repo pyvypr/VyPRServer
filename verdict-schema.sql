@@ -32,6 +32,13 @@ CREATE TABLE function_call (
     foreign key(function) references function(id),
     foreign key(trans) references trans(id)
 );
+CREATE TABLE test_data (
+    id integer primary key autoincrement,
+    test_name text,
+    test_result text,
+    start_time timestamp,
+    end_time timestamp
+);
 CREATE TABLE verdict (
     id integer not null primary key autoincrement,
     binding int not null,

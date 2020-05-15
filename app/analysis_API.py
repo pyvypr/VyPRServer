@@ -18,10 +18,6 @@ def shutdown():
     func()
 
 
-
-
-
-
 """
 Queries based on paths.
 """
@@ -41,6 +37,7 @@ def get_parametric_path():
 @app_object.route("/client/get_path_condition_sequence/<observation_id>/", methods=["GET"])
 def get_path_condition_sequence(observation_id):
     return json.dumps(database.compute_condition_sequence_and_path_length(observation_id))
+
 
 """
 Queries based on the function table.
@@ -90,6 +87,16 @@ def list_verdicts_of_function(function_id):
 @app_object.route("/client/function/id/<function_id>/verdict/value/<verdict_value>/")
 def list_verdicts_of_function_with_value(function_id, verdict_value):
     return database.list_verdicts_of_function_with_value(function_id, verdict_value)
+
+
+"""
+Queries based on test_data table.
+"""
+
+
+@app_object.route("/client/test_data/")
+def list_test_data():
+    return database.list_test_data()
 
 
 """
@@ -147,6 +154,11 @@ def list_verdicts_of_call_property(call_id, property_hash):
 @app_object.route("/client/function_call/id/<call_id>/verdict/value/<verdict_value>/hash/<property_hash>/")
 def list_verdicts_with_value_of_call_property(call_id, verdict_value, property_hash):
     return database.list_verdicts_with_value_of_call_by_property(call_id, verdict_value, property_hash)
+
+@app_object.route("/client/function_call/between/<start_time>/<end_time>/")
+def list_function_calls_between_times(start_time, end_time):
+    return database.list_function_calls_between_times(start_time, end_time)
+
 
 """
 Queries based on the verdict table.

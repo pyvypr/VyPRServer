@@ -83,6 +83,7 @@ def store_branching_condition():
 
     return str(new_id)
 
+
 @app_object.route("/get_property_from_hash/<hash>/", methods=["get"])
 def get_property_from_hash(hash):
     """
@@ -90,6 +91,15 @@ def get_property_from_hash(hash):
     :param: hash
     :return: String of serialised property.
     """
-    r = database.get_property_byhash(hash)
-    print(r)
     return database.get_property_byhash(hash)
+
+
+@app_object.route("/insert_test_data/", methods=["post"])
+def insert_test_data():
+    """
+    Insert test result data in the case that VyPR is being used in a test suite.
+    :return: String of insertion result.
+    """
+    test_data = json.loads(request.data)
+    insertion_result = database.insert_test_call_data(test_data)
+    return json.dumps(insertion_result)
