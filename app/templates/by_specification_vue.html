@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block js_import %}
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/by_specification_vue.js') }}"></script>
+{% endblock %}
+
+{% block css_import %}
+<link href="{{ url_for('static', filename='css/specification.css') }}" rel="stylesheet" />
+{% endblock %}
+
+{% block body %}
+
+<div id="app">
+
+<div class="container-fluid">
+
+	<div class="row">
+
+	<div class="panel panel-default">
+	  <div class="panel-heading">
+	    <h3 class="panel-title">Criteria</h3>
+	  </div>
+	  <div class="panel-body">
+	    <p>Start by selecting a function and property.  This will show you a list of calls of the function,
+		and its source code on the right of your screen.  Select one or more calls to see information collected
+		during them displayed with the source code.</p>
+	  </div>
+	</div>
+
+  <div class="col-md-4 selection">
+
+	  <div class="fluid-container">
+      <machine-function-property v-bind:tree="{{functions}}"></machine-function-property>
+	  	<function-calls></function-calls>
+    </div>
+
+	</div>
+
+	<div class="col-md-8 selection">
+
+		<div class="fluid-container">
+      <code-view></code-view>
+    </div>
+
+	</div>
+  </div>
+
+</div>
+</div>
+
+{% endblock %}
