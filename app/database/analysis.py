@@ -184,6 +184,7 @@ def get_path_conditions_by_function_call_id(call_id):
         ).fetchone()["serialised_condition"],
         path_condition_ids
     ))
+    serialised_conditions = serialised_conditions[1:]
     connection.close()
     return json.dumps(serialised_conditions)
 
