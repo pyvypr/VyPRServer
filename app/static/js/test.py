@@ -54,9 +54,9 @@ class LoadingTest(unittest.TestCase):
         self.Equal(content.get_attribute("style"), "")
 
         #check that there is a specification displayed within the selected content
-        assert check_if_exists(content, "button") == True
+        assert check_if_exists(content, "button")
         specification = content.find_element_by_tag_name("button")
-        assert check_if_exists(specification, "p") == True
+        assert check_if_exists(specification, "p") 
 
     def tearDown(self):
         self.driver.close()
@@ -182,7 +182,7 @@ class CallsSelectTest(unittest.TestCase):
         assert "display: none" in lines[higlighted_line_index-4].get_attribute("style")
         assert "display: none" not in lines[higlighted_line_index].get_attribute("style")
         assert "transparent" not in lines[higlighted_line_index].get_attribute("style")
-        assert check_if_exists(lines[binding_line_index], "button")==True
+        assert check_if_exists(lines[binding_line_index], "button")
         assert check_if_exists(lines[not_binding_line_index], "button")==False
 
 

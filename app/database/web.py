@@ -16,107 +16,7 @@ import ast
 import os
 #from sets import Set
 
-
-"""
-list of changed repr methods follows - for Atoms and LogicalOr, And and Not
-for each type of atom, it should display it similar to how it was given in the specification
-if we also need __repr__ functions without HTML, they are listed at the end of the code
-- in that case, we can rename these
-"""
-
-StateValueInInterval.__repr__ = \
-    lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>._in(%s)
-        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
-
-StateValueInOpenInterval.__repr__ = \
-    lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>._in(%s)
-        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
-
-StateValueEqualTo.__repr__ = \
-    lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>.equals(%s)
-        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._value)
-
-StateValueTypeEqualTo.__repr__ = \
-    lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>.type().equals(%s)
-        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._value)
-
-StateValueEqualToMixed.__repr__ = \
-    lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>.equals(
-        <span class="subatom" subatom-index="1">%s(%s)</span>)
-        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
-
-StateValueLengthLessThanStateValueLengthMixed.__repr__ = \
-    lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>.length() <
-        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
-        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
-
-StateValueLengthInInterval.__repr__ = \
-    lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>.length()._in(%s)
-        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
-
-TransitionDurationInInterval.__repr__=\
-    lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s</span>.duration()._in(%s)
-        </span>""" % (atoms_list.index(Atom), Atom._transition, Atom._interval)
-
-TransitionDurationLessThanTransitionDurationMixed.__repr__=\
-    lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s</span>.duration() <
-        <span class="subatom" subatom-index="1">%s</span>.duration()
-        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs)
-
-TransitionDurationLessThanStateValueMixed.__repr__ = \
-    lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s</span>.duration() <
-        <span class="subatom" subatom-index="1">%s(%s) </span>
-        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
-
-TransitionDurationLessThanStateValueLengthMixed.__repr__ = \
-    lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s</span>.duration() <
-        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
-        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
-
-TimeBetweenInInterval.__repr__ = \
-    lambda Atom: """<span class="atom" atom-index="%i">timeBetween(
-        <span class="subatom" subatom-index="0">%s</span>,
-        <span class="subatom" subatom-index="1">%s</span>)._in(%s)
-        </span> """ % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._interval)
-
-TimeBetweenInOpenInterval.__repr__ = \
-    lambda Atom: """<span class="atom" atom-index="%i">timeBetween(
-        <span class="subatom" subatom-index="0">%s</span>,
-        <span class="subatom" subatom-index="1">%s</span>)._in(%s)
-        </span> """ % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, str(Atom._interval))
-
-LogicalAnd.__repr__= \
-    lambda object: ('land(%s' % (object.operands[0])) + (', %s'%str for str in object.operands[1:]) + ')'
-
-LogicalOr.__repr__= \
-    lambda object: ('lor(%s' % (object.operands[0])) + (', %s'%str for str in object.operands[1:]) + ')'
-
-LogicalNot.__repr__ = \
-    lambda object: 'lnot(%s)' % object.operand
-
-
-"""
-we need to display states also similar to how they are defined in the specification
-new function because other __repr__ is also needed
-TODO: other possible states ??
-"""
-
-StaticState.my_repr_function = \
-    lambda object: "%s = changes(%s)" % (object._bind_variable_name, object._name_changed)
-
-StaticTransition.my_repr_function = \
-    lambda object: "%s = calls(%s)" % (object._bind_variable_name, object._operates_on)
+HTML_ON = False
 
 
 def list_verdicts(function_name):
@@ -302,31 +202,51 @@ def web_list_functions():
         atoms_list = []
         property_to_atoms_list(prop)
 
-        atom_str = str(prop)
+        if HTML_ON:
+            atom_str = prop.HTMLrepr()
+            spec = ''
+            vars = ''
 
-
-        spec = ''
-        vars = ''
-
-        # vars will save a list of variables as "x, y, z" - used later in lambda
-        # spec begins with Forall(...) - each variable generates one of these
-        for var in bind_var.items():
-            atom_str = atom_str.replace(str(var[1]), var[0], 1)
-            if spec:
-                vars += ", "
-            spec += '<p class="list-group-item-text code" id="bind-variable-name-' + var[0] +\
+            # vars will save a list of variables as "x, y, z" - used later in lambda
+            # spec begins with Forall(...) - each variable generates one of these
+            for var in bind_var.items():
+                print(var[1].my_repr_function())
+                atom_str = atom_str.replace(str(var[1]), var[0], 1)
+                if spec:
+                    vars += ", "
+                spec += '<p class="list-group-item-text code" id="bind-variable-name-' + var[0] +\
                     '">Forall(%s).\ </p>' % var[1].my_repr_function()
-            vars += var[0]
+                vars += var[0]
 
-        for var in bind_var.items():
-            atom_str = atom_str.replace(str(var[1]),var[0])
+            for var in bind_var.items():
+                atom_str = atom_str.replace(str(var[1]),var[0])
 
-        # finally, add the condition stored in atom_str to the specification
-        spec +="""<p class="list-group-item-text code">Check( </p>
-            <p class="list-group-item-text code">&nbsp;&nbsp;lambda %s : ( </p>
-            <p class="list-group-item-text code">&nbsp;&nbsp;&nbsp;&nbsp; %s </p>
-            <p class="list-group-item-text code">&nbsp;&nbsp;) </p>
-            <p class="list-group-item-text code">)</p>""" % (vars, atom_str)
+            # finally, add the condition stored in atom_str to the specification
+            spec +="""<p class="list-group-item-text code">Check( </p>
+                <p class="list-group-item-text code">&nbsp;&nbsp;lambda %s : ( </p>
+                <p class="list-group-item-text code">&nbsp;&nbsp;&nbsp;&nbsp; %s </p>
+                <p class="list-group-item-text code">&nbsp;&nbsp;) </p>
+                <p class="list-group-item-text code">)</p>""" % (vars, atom_str)
+
+        else:
+            atom_str = prop.HTMLrepr()
+            vars = ''
+            foralls = []
+
+            # vars will save a list of variables as "x, y, z" - used later in lambda
+            # spec begins with Forall(...) - each variable generates one of these
+            for var in bind_var.items():
+                atom_str = atom_str.replace(str(var[1]), var[0], 1)
+                if vars:
+                    vars += ", "
+                vars += var[0]
+                foralls.append({"var_id": var[0], "var_forall": var[1].my_repr_function()})
+
+            for var in bind_var.items():
+                atom_str = atom_str.replace(str(var[1]),var[0])
+
+            # finally, add the condition stored in atom_str to the specification
+            spec = {"vars": vars, "foralls": foralls, "atom_str": atom_str}
 
         # and store pairs (hash,specification) as leaves
         if current_hierarchy_step.get(path[-1]):
@@ -335,7 +255,7 @@ def web_list_functions():
             current_hierarchy_step[path[-1]] = [[function[0], hash, spec]]
 
     # pprint(dictionary_tree_structure)
-    dictionary_tree_structure["client"] = {"app": [[function[0], hash, spec]]}
+    #dictionary_tree_structure["client"] = {"app": [[function[0], hash, spec]]}
     connection.close()
 
     return dictionary_tree_structure
@@ -892,8 +812,11 @@ def edges_from_condition_sequence(scfg, path_subchain, instrumentation_point_pat
 
 
 """
-Atoms __repr__ functions without HTML additions - in case we need them ever
-
+list of changed repr methods follows - for Atoms and LogicalOr, And and Not
+for each type of atom, it should display it similar to how it was given in the specification
+if we want to build the HTML on the server side, set HTML_ON to true and the HTMLrepr functions will be
+used, if not, __repr__ methods is used for representation
+"""
 
 StateValueInInterval.__repr__ = \
     lambda Atom: "%s(%s)._in(%s)" % (Atom._state, Atom._name, Atom._interval)
@@ -942,4 +865,99 @@ LogicalOr.__repr__= \
 
 LogicalNot.__repr__ = \
     lambda object: 'lnot(%s)' % object.operand
+
+"""HTML repr functions"""
+
+StateValueInInterval.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span>._in(%s)
+        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
+
+StateValueInOpenInterval.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span>._in(%s)
+        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
+
+StateValueEqualTo.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span>.equals(%s)
+        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._value)
+
+StateValueTypeEqualTo.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span>.type().equals(%s)
+        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._value)
+
+StateValueEqualToMixed.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span>.equals(
+        <span class="subatom" subatom-index="1">%s(%s)</span>)
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
+StateValueLengthLessThanStateValueLengthMixed.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span>.length() <
+        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
+StateValueLengthInInterval.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span>.length()._in(%s)
+        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
+
+TransitionDurationInInterval.HTMLrepr=\
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s</span>.duration()._in(%s)
+        </span>""" % (atoms_list.index(Atom), Atom._transition, Atom._interval)
+
+TransitionDurationLessThanTransitionDurationMixed.HTMLrepr=\
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s</span>.duration() <
+        <span class="subatom" subatom-index="1">%s</span>.duration()
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs)
+
+TransitionDurationLessThanStateValueMixed.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s</span>.duration() <
+        <span class="subatom" subatom-index="1">%s(%s) </span>
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
+
+TransitionDurationLessThanStateValueLengthMixed.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s</span>.duration() <
+        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
+
+TimeBetweenInInterval.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">timeBetween(
+        <span class="subatom" subatom-index="0">%s</span>,
+        <span class="subatom" subatom-index="1">%s</span>)._in(%s)
+        </span> """ % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._interval)
+
+TimeBetweenInOpenInterval.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">timeBetween(
+        <span class="subatom" subatom-index="0">%s</span>,
+        <span class="subatom" subatom-index="1">%s</span>)._in(%s)
+        </span> """ % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, str(Atom._interval))
+
+LogicalAnd.HTMLrepr= \
+    lambda object: ('land(%s' % (object.operands[0].HTMLrepr())) + (', %s'%str.HTMLrepr() for str in object.operands[1:]) + ')'
+
+LogicalOr.HTMLrepr= \
+    lambda object: ('lor(%s' % (object.operands[0].HTMLrepr())) + (', %s'%str.HTMLrepr() for str in object.operands[1:]) + ')'
+
+LogicalNot.HTMLrepr = \
+    lambda object: 'lnot(%s)' % object.operand.HTMLrepr()
+
+
 """
+we need to display states also similar to how they are defined in the specification
+new function because other __repr__ is also needed
+TODO: other possible states ??
+"""
+
+StaticState.my_repr_function = \
+    lambda object: "%s = changes(%s)" % (object._bind_variable_name, object._name_changed)
+
+StaticTransition.my_repr_function = \
+    lambda object: "%s = calls(%s)" % (object._bind_variable_name, object._operates_on)

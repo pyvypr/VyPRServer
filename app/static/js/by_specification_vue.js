@@ -60,9 +60,12 @@ Vue.component("machine-function-property", {
 Vue.component("subtree",{
   props: ['id', 'content'],
   template:  `
-    <div class="tabcontent" :id="id">
+    <div class="tabcontent" :id=this.tabid>
       <subtreelevel :htmlcontent="content" :path="id"> </subtreelevel>
-    </div>`
+    </div>`,
+  data() {
+    return { tabid: "tab-" + this.id }
+  }
 })
 
 Vue.component("subtreelevel", {
@@ -88,8 +91,9 @@ Vue.component("subtreelevel", {
           :keyname="level.keyname"></subtreelevel>
           <div v-if="!this.subtreelist">
             <button v-for="(b, index) in this.buttons" type="button" class="list-group-item"
-              :function-id="b.functionid" :style="b.padding" v-html="b.str"
-              @click="selectFunction(b.functionid, b.str)"></button>
+              :function-id="b.functionid" :style="b.padding" @click="selectFunction(b.functionid, b.str)">
+              <specification :spec=b.str></specification>
+            </button>
           </div>
         </div>
       </div>
@@ -107,7 +111,7 @@ Vue.component("subtreelevel", {
       var buttons = [];
       for(var i=0; i<subtree.length; i++) {
         var str = subtree[i][2];
-        str = decodeHTML(str);
+        //str = decodeHTML(str);
         buttons.push({functionid: subtree[i][0], padding : "padding-left:" + padding, str : str});
       }
       return {buttons: buttons, subtreeslist:[]}
@@ -223,7 +227,9 @@ Vue.component("code-view", {
       </div>
       <div class="panel-body" id="verdict-list">
         <div v-if="message" class="please-select">{{message}}</div>
-        <div v-if="specification_code" id='specification_listing' v-html=this.specification_code></div>
+        <div v-if="specification_code" id='specification_listing'>
+          <specification :spec="this.specification_code"/>
+        </div>
         <div v-if="code_lines" class='code_listing'>
           <div v-for="(line,index) in code_lines" :key="index" class="code_listing_line"
           :id="line.id" :style="line.background" :save-background-color="line.color"
@@ -318,7 +324,7 @@ Vue.component("code-view", {
         // quantifier lines have ids stating the bind variable name
         // other lines in the specification don't have ids
         var quantification_ids = [];
-        var spec = $("#specification_listing").children();
+        var spec = $($("#specification_listing").children()[0]).children();
         for (i=0; i<spec.length; i++){
           if (spec[i].id!=""){
             quantification_ids.push(spec[i].id);
@@ -438,6 +444,32 @@ Vue.component("code-view", {
   }
 }
 )
+
+Vue.component("specification", {
+  props: ['spec'],
+  template: `
+    <div :specdata="spec.foralls[0]">
+    <p v-for="(v, index) in this.bindvars" class="list-group-item-text code" :id="v.id" v-html="v.forall"> </p>
+    <p class="list-group-item-text code">Check( </p>
+    <p class="list-group-item-text code" v-html="this.vars"></p>
+    <p class="list-group-item-text code" v-html="this.str"></p>
+    <p class="list-group-item-text code">&nbsp;&nbsp;) </p>
+    <p class="list-group-item-text code">)</p>
+    </div>`,
+  data(){
+    var spec_dict = this.spec
+    var list = spec_dict["foralls"]
+    var bindvars = []
+    for (i=0; i<list.length; i++){
+      bindvars.push({id: list[i]["var_id"], forall: "Forall("+list[i]["var_forall"]+").\ "})
+    }
+    return {
+      vars : "&nbsp;&nbsp;lambda  : ( " + spec_dict["vars"],
+      str : "&nbsp;&nbsp;&nbsp;&nbsp; " + spec_dict["atom_str"],
+      bindvars: bindvars
+    }
+  }
+})
 
 var app = new Vue({
     el : "#app"
