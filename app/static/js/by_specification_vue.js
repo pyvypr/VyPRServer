@@ -16,6 +16,8 @@ var html_space_replace = function(){
   return str;
 }
 
+var subatom_click = function(dict){app.$emit("subatom-selected", dict)}
+
 Vue.component("machine-function-property", {
   props: ['tree'],
   template : `
@@ -92,7 +94,7 @@ Vue.component("subtreelevel", {
           <div v-if="!this.subtreelist">
             <button v-for="(b, index) in this.buttons" type="button" class="list-group-item"
               :function-id="b.functionid" :style="b.padding" @click="selectFunction(b.functionid, b.str)">
-              <specification :spec=b.str></specification>
+              <specification :spec=b.str :change="0"></specification>
             </button>
           </div>
         </div>
@@ -228,10 +230,10 @@ Vue.component("code-view", {
       <div class="panel-body" id="verdict-list">
         <div v-if="message" class="please-select">{{message}}</div>
         <div v-if="specification_code" id='specification_listing'>
-          <specification :spec="this.specification_code"/>
+          <specification :spec="this.specification_code" :change="1" />
         </div>
         <div v-if="code_lines" class='code_listing'>
-          <div v-for="(line,index) in code_lines" :key="index" class="code_listing_line"
+          <div v-for="(line,index) in code_lines" :key="index" :class="line.class"
           :id="line.id" :style="line.background" :save-background-color="line.color"
           v-show="line.show">
             <b> {{line.line_number}} </b> <span v-html="line.content"> </span>
@@ -240,6 +242,7 @@ Vue.component("code-view", {
             @click="selectBinding(b.binding, b.subtree, b.lines)">
             {{b.binding}}</button></span>
             <p v-show="line.showempty" class="empty-line" :id="line.emptyid"> ... <br> </p>
+            <dropdown v-if="line.addmenu" :tree="this.tree" :dict="line.dict" :binding="this.binding"> </dropdown>
           </div>
         </div>
       </div>
@@ -247,13 +250,12 @@ Vue.component("code-view", {
   ,
   data(){
     return {message: "Select a function and then one or more calls, first.",
-            specification_code: "", code_lines: [], start_line: 0}
+            specification_code: "", code_lines: [], start_line: 0, tree: {}, binding: undefined}
   },
   methods:{
     selectBinding : function(binding, tree, lines){
       // binding stores the index of the binding, tree is the branch tree[binding]
       // lines is a list of line numbers that need to be highlighted
-      // TODO find a way to highlight the subatoms in the specification
 
       var whole_code = this.code_lines;
       var start_line = this.start_line;
@@ -261,6 +263,7 @@ Vue.component("code-view", {
       // reset the background colors of previously highlighted lines
       for (var i=0; i<whole_code.length; i++){
         var line = whole_code[i];
+        line.addmenu = false;
         if (line.color){
           line.background = "background-color: #ebf2ee";
         }
@@ -278,6 +281,9 @@ Vue.component("code-view", {
         var line = whole_code[lines[i]-start_line];
         line.background = "background-color: " + line.color;
       }
+      this.binding = binding;
+      this.tree = tree;
+      this.$root.$emit("binding-selected", tree);
     }
   },
   mounted(){
@@ -309,7 +315,7 @@ Vue.component("code-view", {
                           background: "background-color: transparent", color: "", show: true,
                           added_empty_line: false, spanid: "span-bindings-line-" + current_line,
                           content: line_text, buttons: [], emptyid: "empty-line-" + current_line,
-                          showempty: false}
+                          showempty: false, addmenu: false, class: "code_listing_line", dict: {}}
 
 
           lines_list.push(line_div);
@@ -321,19 +327,9 @@ Vue.component("code-view", {
 
         // we want to highlight the quantification in the specification code
         // with the same color as the line of code it refers to
-        // quantifier lines have ids stating the bind variable name
-        // other lines in the specification don't have ids
-        var quantification_ids = [];
-        var spec = $($("#specification_listing").children()[0]).children();
-        for (i=0; i<spec.length; i++){
-          if (spec[i].id!=""){
-            quantification_ids.push(spec[i].id);
-          }
-        }
+        var quantification_ids = obj2.specification_code["vars"].split(", ");
 
-        // finally, for each binding, add that binding label
-        // to the span elements of lines they refer to
-        // then for each binding line go through the specification to find the quantification
+        // for each binding line go through the specification to find the quantification
         // that refers to that line and highlight it the same color as the line in the code
         for (var i=0; i<bindings_list.length; i++){
           var binding = bindings_list[i];
@@ -345,26 +341,22 @@ Vue.component("code-view", {
             lines_list[no-code_data["start_line"]].background = "background-color: "+color;
             lines_list[no-code_data["start_line"]].color = color;
             //$("#span-bindings-line-"+no).append(" "+binding["id"]);
-            for (k=0; k<spec.length; k++){
-              var obj = spec[k];
-              if (obj.id==quantification_ids[j]){
-                $(obj).attr('style',"background-color : " + color);
-              } //endif
-            } //end k-loop
           } //end j-loop
         } //end i-loop
       })
     })
     this.$root.$on('calls-selected', function(tree){
       console.log(tree)
+      obj2.tree = tree;
 
       var show_lines = []; //stores all lines that are of interest plus a few around them - we will hide the rest
       var start_line = obj2.start_line;
       var whole_code = obj2.code_lines;
 
-      //clean up the binding buttons from previous selection
+      //clean up the binding buttons and dropdown menusfrom previous selection
       for (var i=0; i<whole_code.length; i++){
         whole_code[i].buttons = [];
+        whole_code[i].addmenu = false;
       }
 
       // iterate through the bindings to highlight the lines and separate those paired with
@@ -441,34 +433,172 @@ Vue.component("code-view", {
         }
       }
     })
+    this.$root.$on("subatom-selected", function(dict){
+      var atom_index = dict["atom"];
+      var sub_index = dict["subatom"];
+      var inst_points_list = obj2.tree[atom_index][sub_index];
+      var whole_code = obj2.code_lines;
+
+    	var lines_list = [];
+    	for (var i=0; i<inst_points_list.length; i++){
+    		var no = inst_points_list[i]["code_line"];
+    		//$("#line-number-"+no).attr('save-background-color',color);
+    		lines_list.push(no);
+    	}
+
+      for (var i=0; i<whole_code.length; i++){
+        if (whole_code[i].color) {
+          whole_code[i].background = "background-color: #ebf2ee";
+          whole_code[i].addmenu = false;
+        }
+      }
+
+      for (var i=0; i<lines_list.length; i++){
+        var line = whole_code[lines_list[i]-obj2.start_line]
+        line.background = "background-color: " + line.color;
+        line.addmenu = true;
+        line.class = "code_listing_line code_listing_line-clickable";
+        line.dict = dict;
+      }
+    })
   }
 }
 )
 
 Vue.component("specification", {
-  props: ['spec'],
+  props: ['spec', 'change'],
   template: `
-    <div :specdata="spec.foralls[0]">
-    <p v-for="(v, index) in this.bindvars" class="list-group-item-text code" :id="v.id" v-html="v.forall"> </p>
-    <p class="list-group-item-text code">Check( </p>
-    <p class="list-group-item-text code" v-html="this.vars"></p>
-    <p class="list-group-item-text code" v-html="this.str"></p>
-    <p class="list-group-item-text code">&nbsp;&nbsp;) </p>
-    <p class="list-group-item-text code">)</p>
+    <div>
+      <p v-for="(v, index) in this.bindvars" class="list-group-item-text code" :id="v.id" v-html="v.forall"
+          :style="v.background"> </p>
+      <p class="list-group-item-text code">Check( </p>
+      <p class="list-group-item-text code" v-html="this.vars"></p>
+      <p class="list-group-item-text code" v-html="this.str"></p>
+      <p class="list-group-item-text code">&nbsp;&nbsp;) </p>
+      <p class="list-group-item-text code">)</p>
     </div>`,
   data(){
-    var spec_dict = this.spec
-    var list = spec_dict["foralls"]
-    var bindvars = []
+    var spec_dict = this.spec;
+    var list = spec_dict["foralls"];
+    var bindvars = [];
     for (i=0; i<list.length; i++){
-      bindvars.push({id: list[i]["var_id"], forall: "Forall("+list[i]["var_forall"]+").\ "})
+      var bg;
+      if (this.change==1){
+        bg = "background-color: " +
+          code_highlight_palette[spec_dict["vars"].split(", ").indexOf(list[i]["var_id"])] + ";";
+      }
+      else{
+        bg = "background-color: transparent;";
+      }
+      bindvars.push({id: list[i]["var_id"],
+                     forall: "Forall("+list[i]["var_forall"]+").\ ",
+                     background: bg})
     }
     return {
       vars : "&nbsp;&nbsp;lambda  : ( " + spec_dict["vars"],
       str : "&nbsp;&nbsp;&nbsp;&nbsp; " + spec_dict["atom_str"],
       bindvars: bindvars
     }
+  },
+  watch: {
+    spec(newValue) {
+      var spec_dict = newValue;
+      var list = spec_dict["foralls"];
+      var bindvars = [];
+      for (i=0; i<list.length; i++){
+        var bg;
+        if (this.change==1){ bg = "background-color: " +
+            code_highlight_palette[spec_dict["vars"].split(", ").indexOf(list[i]["var_id"])] + ";";}
+        else { bg = "background-color: transparent;";}
+        bindvars.push({id: list[i]["var_id"],
+                       forall: "Forall("+list[i]["var_forall"]+").\ ",
+                       background: bg})
+      }
+      this.vars = "&nbsp;&nbsp;lambda  : ( " + spec_dict["vars"];
+      this.str = "&nbsp;&nbsp;&nbsp;&nbsp; " + spec_dict["atom_str"];
+      this.bindvars = bindvars;
+    }
+  },
+  mounted(){
+    var that = this;
+    this.$root.$on('calls-selected', function(tree){
+      // clean up subatom links from previous binding selection
+      remove_subatoms = $(".subatom-clickable");
+      if (typeof(remove_subatoms) != 'string'){
+      for (var i=0; i<remove_subatoms.length; i++){
+        $(remove_subatoms[i]).attr("onclick", "");
+        $(remove_subatoms[i]).attr('class', "subatom");
+      }}
+      $($(".subatom-clickable-active")[0]).attr("onclick","");
+      $($(".subatom-clickable-active")[0]).attr("class", "subatom");
+    })
+
+    this.$root.$on('binding-selected', function(tree){
+      // clean up subatom links from previous binding selection
+      remove_subatoms = $(".subatom-clickable");
+      if (typeof(remove_subatoms) != 'string'){
+      for (var i=0; i<remove_subatoms.length; i++){
+        $(remove_subatoms[i]).attr("onclick", "");
+        $(remove_subatoms[i]).attr('class', "subatom");
+      }}
+      $($(".subatom-clickable-active")[0]).attr("onclick","");
+      $($(".subatom-clickable-active")[0]).attr("class", "subatom");
+
+      for (atom in tree){
+        var subtree = tree[atom];
+        var subs = $($("#specification_listing").find('span.atom[atom-index="' + atom + '"]')[0]).children();
+        for (var i=0; i<subs.length; i++){
+          $(subs[i]).attr('class', "subatom-clickable");
+          $(subs[i]).attr('subtree', JSON.stringify(subtree));
+          var dict = {atom: atom, subatom: $(subs[i]).attr("subatom-index")};
+          $(subs[i]).attr('onclick', 'subatom_click('+JSON.stringify(dict)+')');
+        }
+      }
+    })
+
+    this.$root.$on("subatom-selected", function(dict){
+      $($(".subatom-clickable-active")[0]).attr("class", "subatom-clickable");
+      var subatom = $($("#specification_listing").find('span.atom[atom-index="' + dict["atom"] + '"]')[0]).find('span[subatom-index="'+dict["subatom"]+'"]')[0];
+      $(subatom).attr("class", "subatom-clickable-active");
+    })
   }
+})
+
+Vue.component("dropdown", {
+  props: ["tree", "dict", "binding"],
+  template: `
+    <div class="dropdown-content">
+      <p v-for="option in this.options" class="dropdown-menu-option"> {{option.text}} </p>
+    </div>
+  `,
+  data(){
+    var options = [];
+    var atom_index = this.dict["atom"];
+    var inst_point_id = this.tree[this.binding][atom_index]["0"][0]["id"];
+    console.log(inst_point_id)
+    axios.get('/get_atom_type/'+atom_index+"/"+inst_point_id+"/").then(function(response){
+      var atom_type = response.data;
+      console.log(atom_type);
+      if (atom_type == "simple"){
+  			option = {text: 'Plot observed values from this point'};
+        options.push(option);
+        option = {text: 'Highlight the paths by average verdict severity'}
+        options.push(option);
+  		}
+  		else if (atom_type == "timeBetween") {
+  			option = {text: 'Fix this point and select the other one'};
+        options.push(option);
+  		}
+  		else if (atom_type == "mixed") {
+  			option = {text: 'Fix this point and select the other one'};
+        options.push(option);
+  		}
+
+
+    })
+    return{options: options}
+  }
+
 })
 
 var app = new Vue({
