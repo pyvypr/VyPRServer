@@ -51,12 +51,12 @@ class LoadingTest(unittest.TestCase):
                 content = c
             else:
                 assert c.get_attribute("style") == "display: none;"
-        self.Equal(content.get_attribute("style"), "")
+        self.assertEqual(content.get_attribute("style"), "")
 
         #check that there is a specification displayed within the selected content
         assert check_if_exists(content, "button")
         specification = content.find_element_by_tag_name("button")
-        assert check_if_exists(specification, "p") 
+        assert check_if_exists(specification, "p")
 
     def tearDown(self):
         self.driver.close()
