@@ -67,16 +67,22 @@
 .empty-line{
 	background-color: #f5f5f5;
 	margin: 0 0 0;
-	
+
 }
 
 .dropdown-content{
 	display: none;
 	position: absolute;
-	background-color: #f7f4e9;
+	background-color: #ede4c2;
   max-width: 300px;
   box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
   padding: 12px 16px;
+}
+
+.dropdown-menu-option{
+	padding: 5px;
+	background-color: #f7f4e9;
+	border: 1px solid #f0da8d;
 }
 
 .code_listing_line-clickable:hover .dropdown-content{
