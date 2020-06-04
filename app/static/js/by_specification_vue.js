@@ -26,6 +26,7 @@ Vue.component("machine-function-property", {
         <h3 class="panel-title" id="function-title" @click="showFunctions=!showFunctions">Machine / Function / Property</h3>
       </div>
       <div class="panel-body">
+        <transition name="slide-fade">
         <div v-show="showFunctions" class="list-group" id="function-list">
           <div id="function-list-data"></div>
           <div class="tab">
@@ -33,6 +34,7 @@ Vue.component("machine-function-property", {
           </div>
           <subtree v-for="(value,key) in tree" v-show="(key === showTab)" :key="key" :id="key" :content="value"> </subtree>
         </div>
+        </transition>
       </div>
     </div>`,
   data() {
@@ -56,8 +58,7 @@ Vue.component("machine-function-property", {
       remember_this.showFunctions = false;
     })
   }
-}
-)
+})
 
 Vue.component("subtree",{
   props: ['id', 'content'],
@@ -220,7 +221,6 @@ Vue.component("function-calls", {
   }
 })
 
-
 Vue.component("code-view", {
   template : `
     <div class="panel panel-success">
@@ -242,7 +242,8 @@ Vue.component("code-view", {
             @click="selectBinding(b.binding, b.subtree, b.lines)">
             {{b.binding}}</button></span>
             <p v-show="line.showempty" class="empty-line" :id="line.emptyid"> ... <br> </p>
-            <dropdown v-if="line.addmenu" :tree="this.tree" :dict="line.dict" :binding="this.binding"> </dropdown>
+            <dropdown v-if="line.addmenu" :tree="this.tree" :dict="line.dict"
+              :binding="this.binding" :line=line.line_number> </dropdown>
           </div>
         </div>
       </div>
@@ -462,8 +463,7 @@ Vue.component("code-view", {
       }
     })
   }
-}
-)
+})
 
 Vue.component("specification", {
   props: ['spec', 'change'],
@@ -565,40 +565,59 @@ Vue.component("specification", {
 })
 
 Vue.component("dropdown", {
-  props: ["tree", "dict", "binding"],
+  props: ["tree", "dict", "binding", "line"],
   template: `
     <div class="dropdown-content">
-      <p v-for="option in this.options" class="dropdown-menu-option"> {{option.text}} </p>
+      <p v-for="option in this.options" class="dropdown-menu-option" @click="selectOption(option.data)">
+        {{option.text}} </p>
     </div>
   `,
   data(){
     var options = [];
     var atom_index = this.dict["atom"];
-    var inst_point_id = this.tree[this.binding][atom_index]["0"][0]["id"];
+    var sub_index = this.dict["subatom"];
+    var inst points = this.tree[this.binding][atom_index][sub_index];
+    var inst_point_id = inst_points[0]["id"];
     console.log(inst_point_id)
+    var that = this;
+
+    var inst_points_list = [];
+    for (var i=0; i<inst_points.length; i++){
+      if inst_points[i]["code_line"] == this.line{
+        inst_points_list.push(inst_points[i])
+      }
+    }
+    //for a simple atom we now need all observations made at these points,
+    //filtered by: calls, binding, atom, subatom
+    //then we can calculate verdict severity for each of the observations
+
     axios.get('/get_atom_type/'+atom_index+"/"+inst_point_id+"/").then(function(response){
       var atom_type = response.data;
       console.log(atom_type);
       if (atom_type == "simple"){
-  			option = {text: 'Plot observed values from this point'};
+  			option = {text: 'Plot observed values from this point',
+                  data: {}};
         options.push(option);
-        option = {text: 'Highlight the paths by average verdict severity'}
+        option = {text: 'Highlight the paths by average verdict severity',
+                  data: {}}
         options.push(option);
   		}
   		else if (atom_type == "timeBetween") {
-  			option = {text: 'Fix this point and select the other one'};
+  			option = {text: 'Fix this point and select the other one', data:{}};
         options.push(option);
   		}
   		else if (atom_type == "mixed") {
-  			option = {text: 'Fix this point and select the other one'};
+  			option = {text: 'Fix this point and select the other one', data:{}};
         options.push(option);
   		}
-
-
     })
     return{options: options}
+  },
+  methods: {
+    selectOption: function(data){
+      console.log("WORKS")
+    }
   }
-
 })
 
 var app = new Vue({
