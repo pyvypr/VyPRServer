@@ -114,6 +114,7 @@ class FunctionSelectTest(unittest.TestCase):
 
         #click on the first specification, check that calls are loaded and source code displayed
         ActionChains(driver).click(buttons[0]).perform()
+        WebDriverWait(driver, 10).until(lambda d: d.find_element_by_id("function-list").get_attribute("style") == "display: none;")
         assert driver.find_element_by_id("function-list").get_attribute("style") == "display: none;"
 
         calls_list = driver.find_element_by_id("function-call-list")
