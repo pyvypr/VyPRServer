@@ -1,4 +1,5 @@
 var code_highlight_palette = ["#cae2dc", "#eee3cd", "#cad7f2", "#ded4e7", "#e3e3e3", "d6eff0"];
+var selected_calls = [];
 
 var decodeHTML = function (html) {
   var txt = document.createElement('textarea');
@@ -194,12 +195,9 @@ Vue.component("function-calls", {
           buttons_list.push(button)
         }
         obj.buttons = buttons_list;
-        console.log("data updated");
+
         obj.$root.$emit('calls-loaded', dict);
-
       })
-
-
     })
   },
   watch: {
@@ -215,6 +213,7 @@ Vue.component("function-calls", {
           tree = response.data;
           console.log(JSON.stringify(tree))
           that.$root.$emit('calls-selected',tree);
+          selected_calls = function_call_ids;
         });
       }
     }
@@ -242,8 +241,8 @@ Vue.component("code-view", {
             @click="selectBinding(b.binding, b.subtree, b.lines)">
             {{b.binding}}</button></span>
             <p v-show="line.showempty" class="empty-line" :id="line.emptyid"> ... <br> </p>
-            <dropdown v-if="line.addmenu" :tree="this.tree" :dict="line.dict"
-              :binding="this.binding" :line=line.line_number> </dropdown>
+            <dropdown v-if="line.addmenu" :tree="this.tree" :dict="line.dict" :binding="this.binding"
+            :line=line.line_number> </dropdown>
           </div>
         </div>
       </div>
@@ -570,36 +569,40 @@ Vue.component("dropdown", {
     <div class="dropdown-content">
       <p v-for="option in this.options" class="dropdown-menu-option" @click="selectOption(option.data)">
         {{option.text}} </p>
+      <div id="test1" class="plot"></div>
     </div>
   `,
   data(){
     var options = [];
     var atom_index = this.dict["atom"];
     var sub_index = this.dict["subatom"];
-    var inst points = this.tree[this.binding][atom_index][sub_index];
+    var inst_points = this.tree[this.binding][atom_index][sub_index];
     var inst_point_id = inst_points[0]["id"];
-    console.log(inst_point_id)
+    var calls = selected_calls;
     var that = this;
+    console.log(calls)
 
     var inst_points_list = [];
     for (var i=0; i<inst_points.length; i++){
-      if inst_points[i]["code_line"] == this.line{
-        inst_points_list.push(inst_points[i])
+      if (inst_points[i]["code_line"] == this.line){
+        inst_points_list.push(inst_points[i]["id"])
       }
     }
-    //for a simple atom we now need all observations made at these points,
-    //filtered by: calls, binding, atom, subatom
-    //then we can calculate verdict severity for each of the observations
 
     axios.get('/get_atom_type/'+atom_index+"/"+inst_point_id+"/").then(function(response){
       var atom_type = response.data;
       console.log(atom_type);
       if (atom_type == "simple"){
+        //for a simple atom we now need all observations made at these points,
+        //filtered by: calls, binding, atom, subatom
+        //then we can calculate verdict severity for each of the observations
   			option = {text: 'Plot observed values from this point',
-                  data: {}};
+                  data: {action: "simple-plot", calls: calls, binding: that.binding,
+                         atom: atom_index, subatom: sub_index, points: inst_points_list}};
         options.push(option);
         option = {text: 'Highlight the paths by average verdict severity',
-                  data: {}}
+                  data: {action: "simple-path", calls: that.calls, binding: that.binding,
+                         atom: atom_index, subatom: sub_index, points: inst_points_list}}
         options.push(option);
   		}
   		else if (atom_type == "timeBetween") {
@@ -615,7 +618,56 @@ Vue.component("dropdown", {
   },
   methods: {
     selectOption: function(data){
-      console.log("WORKS")
+      if (data["action"] == "simple-plot"){
+        axios.post('/get_plot_data_simple/', data).then(function(response){
+          console.log(JSON.stringify(response.data))
+
+          var margin = {top: 10, right: 30, bottom: 30, left: 60},
+              width = 460 - margin.left - margin.right,
+              height = 400 - margin.top - margin.bottom;
+
+          // append the svg object to the body of the page
+          var svg = d3.select("#test1").append("svg").attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom).append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+          //Read the data
+          var data = response.data;
+          // Add X axis
+          var x = d3.scaleLinear()
+          .domain([0, 4000])
+          .range([ 0, width ]);
+          svg.append("g")
+          .attr("transform", "translate(0," + height + ")")
+          .call(d3.axisBottom(x));
+
+          // Add Y axis
+          var y = d3.scaleLinear()
+          .domain([0, 500000])
+          .range([ height, 0]);
+          svg.append("g")
+          .call(d3.axisLeft(y));
+
+          // Add dots
+          svg.append('g')
+          .selectAll("dot")
+          .data(data)
+          .enter()
+          .append("circle")
+          .attr("cx", function (d) { return x(d.GrLivArea); } )
+          .attr("cy", function (d) { return y(d.SalePrice); } )
+          .attr("r", 1.5)
+          .style("fill", "#69b3a2")
+
+          /*var svg = d3.select('#test1 svg').datum({x: response.data["x"], y: response.data["y"] });
+          inner = svg.select("g");
+          var render = new dagreD3.render();
+          render(inner, g);*/
+
+
+        })
+        $("#test1").classList.toggle("show");
+      }
     }
   }
 })

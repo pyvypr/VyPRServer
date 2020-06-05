@@ -88,6 +88,11 @@
 	background-color: #f7f4e9;
 	border: 1px solid #f0da8d;
 	cursor: pointer;
+	
+  visibility: visible;
+  -webkit-animation: fadeIn 1s;
+  animation: fadeIn 1s;
+}
 }
 
 .code_listing_line-clickable:hover .dropdown-content{
@@ -102,10 +107,32 @@
 .slide-fade-enter-active, .slide-fade-leave-active {
   transition: all 0.5s ease;
 }
-.slide-fade-enter, .slide-fade-leave-to {
+.slide-fade-enter {
 	transform: translateY(0%);
 	opacity: 0.5;
 }
+
+.slide-fade-leave-to {
+	transform: translateY(0%);
+	opacity: 0;
+}
+
+/* The actual popup */
+.plot {
+  visibility: hidden;
+  width: 160px;
+  background-color: #555;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 8px 0;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -80px;
+}
+
 
 /*-webkit-transition: height 2s ease-in;
 -moz-transition: height 2s ease-in;

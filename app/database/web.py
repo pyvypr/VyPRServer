@@ -567,7 +567,53 @@ def get_atom_type(atom_index, inst_point_id):
 
     connection.close()
 
+def get_plot_data_simple(dict):
+    connection = get_connection()
+    cursor = connection.cursor()
+    print(dict)
+    calls_list = dict["calls"]
+    binding_index = dict["binding"]
+    atom_index = dict["atom"]
+    sub_index = dict["subatom"]
+    points_list = dict["points"]
 
+    query_string = """select observation.observed_value, observation.observation_time,
+        observation.observation_end_time, verdict.verdict
+        from ((observation inner join verdict on observation.verdict==verdict.id)
+        inner join binding on verdict.binding==binding.id) where observation.instrumentation_point in %s
+        and observation.atom_index = %s and observation.sub_index = %s and verdict.function_call in %s
+        and binding.binding_space_index = %s order by observation.observation_time;""" % (
+            list_to_sql_string(points_list), atom_index, sub_index,
+            list_to_sql_string(calls_list), binding_index)
+    result = cursor.execute(query_string).fetchall()
+
+    prop_hash = cursor.execute("""select distinct function_property_pair.property_hash from
+    (((function_property_pair inner join function_call on function_property_pair.function==function_call.function)
+    inner join verdict on function_call.id==verdict.function_call) inner join observation
+       on observation.verdict==verdict.id) where observation.instrumentation_point=?""",
+       [points_list[0]]).fetchone()[0]
+
+    atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
+        and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
+    formula = pickle.loads(base64.b64decode(atom_structure))
+    interval=formula._interval
+    lower=interval[0]
+    upper=interval[1]
+
+    x_array = []
+    y_array = []
+
+    for element in result:
+        x_array.append(element[1])
+        y = float(element[0])
+        #d is the distance from observed value to the nearest interval bound
+        d=min(abs(y-lower),abs(y-upper))
+        #sign=-1 if verdict value=0 and sign=1 if verdict is true
+        sign=-1+2*(element[3])
+        y_array.append(sign*d)
+
+    connection.close()
+    return {"x": x_array, "y": y_array}
 
 
 """
