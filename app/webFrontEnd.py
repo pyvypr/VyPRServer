@@ -87,3 +87,9 @@ def get_function_calls_data():
 def get_atom_type(atom_index, inst_point_id):
     atom_type = database.get_atom_type(atom_index, inst_point_id)
     return json.dumps(atom_type)
+
+@app_object.route("/get_plot_data_simple/", methods=["GET", "POST"])
+def get_plot_data_simple():
+    dict = json.loads(request.data)
+    return_data = database.get_plot_data_simple(dict)
+    return json.dumps(return_data)
