@@ -71,11 +71,10 @@
 }
 
 .dropdown-content{
-	visibility: hidden; /* hides sub-menu */
+	visibility: hidden;
   opacity: 0;
   position: absolute;
   left: 0;
-  /*transform: translateY(-2em);*/
   z-index: -1;
   transition: ease-in-out 0.5s;
 	background-color: #f1f7df;
@@ -88,11 +87,6 @@
 	background-color: #f7f4e9;
 	border: 1px solid #f0da8d;
 	cursor: pointer;
-	
-  visibility: visible;
-  -webkit-animation: fadeIn 1s;
-  animation: fadeIn 1s;
-}
 }
 
 .code_listing_line-clickable:hover .dropdown-content{
@@ -119,8 +113,9 @@
 
 /* The actual popup */
 .plot {
-  visibility: hidden;
-  width: 160px;
+  /*visibility: hidden;*/
+	display: none;
+  width: auto;
   background-color: #555;
   color: #fff;
   text-align: center;
@@ -133,6 +128,9 @@
   margin-left: -80px;
 }
 
+/*.plot .show {
+	visibility: visible !important;
+}*/
 
 /*-webkit-transition: height 2s ease-in;
 -moz-transition: height 2s ease-in;

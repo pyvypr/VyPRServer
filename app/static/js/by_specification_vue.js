@@ -569,7 +569,7 @@ Vue.component("dropdown", {
     <div class="dropdown-content">
       <p v-for="option in this.options" class="dropdown-menu-option" @click="selectOption(option.data)">
         {{option.text}} </p>
-      <div id="test1" class="plot"></div>
+      <svg id="test1" class="plot"></svg>
     </div>
   `,
   data(){
@@ -620,53 +620,40 @@ Vue.component("dropdown", {
     selectOption: function(data){
       if (data["action"] == "simple-plot"){
         axios.post('/get_plot_data_simple/', data).then(function(response){
-          console.log(JSON.stringify(response.data))
-
-          var margin = {top: 10, right: 30, bottom: 30, left: 60},
-              width = 460 - margin.left - margin.right,
-              height = 400 - margin.top - margin.bottom;
-
-          // append the svg object to the body of the page
-          var svg = d3.select("#test1").append("svg").attr("width", width + margin.left + margin.right)
-                .attr("height", height + margin.top + margin.bottom).append("g")
-                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-          //Read the data
           var data = response.data;
-          // Add X axis
-          var x = d3.scaleLinear()
-          .domain([0, 4000])
-          .range([ 0, width ]);
-          svg.append("g")
-          .attr("transform", "translate(0," + height + ")")
-          .call(d3.axisBottom(x));
 
-          // Add Y axis
-          var y = d3.scaleLinear()
-          .domain([0, 500000])
-          .range([ height, 0]);
-          svg.append("g")
-          .call(d3.axisLeft(y));
+          nv.addGraph(function() {
+            var chart = nv.models.scatterChart()
+                .showDistX(true)    //showDist, when true, will display those little distribution lines on the axis.
+                .showDistY(true)
+                .color(d3.scale.category10().range());
 
-          // Add dots
-          svg.append('g')
-          .selectAll("dot")
-          .data(data)
-          .enter()
-          .append("circle")
-          .attr("cx", function (d) { return x(d.GrLivArea); } )
-          .attr("cy", function (d) { return y(d.SalePrice); } )
-          .attr("r", 1.5)
-          .style("fill", "#69b3a2")
+            //Configure how the tooltip looks.
+            chart.tooltip.contentGenerator(function(key) {
+              return '<h3>' + key + '</h3>';
+            });
 
-          /*var svg = d3.select('#test1 svg').datum({x: response.data["x"], y: response.data["y"] });
-          inner = svg.select("g");
-          var render = new dagreD3.render();
-          render(inner, g);*/
+            //Axis settings
+            chart.xAxis.tickFormat(d3.format('.02f'));
+            chart.yAxis.tickFormat(d3.format('.02f'));
+
+            //We want to show shapes other than circles.
+            //chart.scatter.onlyCircles(false);
+
+            var myData = [{key: 'group 1', values: []}];
+            for (var i=0; i<data["x"].length; i++){
+              myData[0].values.push({x: data["x"][i], y: data["y"][i]});
+            }
+            d3.select('#test1 svg').datum(myData).call(chart);
+
+            nv.utils.windowResize(chart.update);
+
+            return chart;
+          });
 
 
         })
-        $("#test1").classList.toggle("show");
+        document.getElementById("test1").classList.toggle("show");
       }
     }
   }
