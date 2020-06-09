@@ -439,12 +439,12 @@ Vue.component("code-view", {
       var inst_points_list = obj2.tree[atom_index][sub_index];
       var whole_code = obj2.code_lines;
 
-    	var lines_list = [];
-    	for (var i=0; i<inst_points_list.length; i++){
-    		var no = inst_points_list[i]["code_line"];
-    		//$("#line-number-"+no).attr('save-background-color',color);
-    		lines_list.push(no);
-    	}
+      var lines_list = [];
+      for (var i=0; i<inst_points_list.length; i++){
+        var no = inst_points_list[i]["code_line"];
+        //$("#line-number-"+no).attr('save-background-color',color);
+        lines_list.push(no);
+      }
 
       for (var i=0; i<whole_code.length; i++){
         if (whole_code[i].color) {
@@ -569,7 +569,7 @@ Vue.component("dropdown", {
     <div class="dropdown-content">
       <p v-for="option in this.options" class="dropdown-menu-option" @click="selectOption(option.data)">
         {{option.text}} </p>
-      <svg id="test1" class="plot"></svg>
+      <div id="test1" class="plot"><svg></svg></div>
     </div>
   `,
   data(){
@@ -596,23 +596,31 @@ Vue.component("dropdown", {
         //for a simple atom we now need all observations made at these points,
         //filtered by: calls, binding, atom, subatom
         //then we can calculate verdict severity for each of the observations
-  			option = {text: 'Plot observed values from this point',
-                  data: {action: "simple-plot", calls: calls, binding: that.binding,
-                         atom: atom_index, subatom: sub_index, points: inst_points_list}};
+        var option = {text: 'Plot observed values from this point',
+                      data: {action: "simple-plot",
+                             calls: calls,
+                             binding: that.binding,
+                             atom: atom_index,
+                             subatom: sub_index,
+                             points: inst_points_list}};
         options.push(option);
-        option = {text: 'Highlight the paths by average verdict severity',
-                  data: {action: "simple-path", calls: that.calls, binding: that.binding,
-                         atom: atom_index, subatom: sub_index, points: inst_points_list}}
+        var option2 = {text: 'Highlight the paths by average verdict severity',
+                      data: {action: "simple-path",
+                             calls: calls,
+                             binding: that.binding,
+                             atom: atom_index,
+                             subatom: sub_index,
+                             points: inst_points_list}};
+        options.push(option2);
+      }
+      else if (atom_type == "timeBetween") {
+        option = {text: 'Fix this point and select the other one', data:{}};
         options.push(option);
-  		}
-  		else if (atom_type == "timeBetween") {
-  			option = {text: 'Fix this point and select the other one', data:{}};
+      }
+      else if (atom_type == "mixed") {
+        option = {text: 'Fix this point and select the other one', data:{}};
         options.push(option);
-  		}
-  		else if (atom_type == "mixed") {
-  			option = {text: 'Fix this point and select the other one', data:{}};
-        options.push(option);
-  		}
+      }
     })
     return{options: options}
   },
@@ -621,35 +629,59 @@ Vue.component("dropdown", {
       if (data["action"] == "simple-plot"){
         axios.post('/get_plot_data_simple/', data).then(function(response){
           var data = response.data;
+          console.log(JSON.stringify(data))
 
           nv.addGraph(function() {
-            var chart = nv.models.scatterChart()
-                .showDistX(true)    //showDist, when true, will display those little distribution lines on the axis.
-                .showDistY(true)
-                .color(d3.scale.category10().range());
-
-            //Configure how the tooltip looks.
-            chart.tooltip.contentGenerator(function(key) {
-              return '<h3>' + key + '</h3>';
-            });
-
-            //Axis settings
-            chart.xAxis.tickFormat(d3.format('.02f'));
-            chart.yAxis.tickFormat(d3.format('.02f'));
-
-            //We want to show shapes other than circles.
-            //chart.scatter.onlyCircles(false);
+            var chart = nv.models.multiBarChart()
+              .x(function(d) { return d.label })
+              .y(function(d) { return d.value })
+              .reduceXTicks(true)    //Too many bars and not enough room? Try staggering labels.
+              .showControls(false)
+              .showXAxis(true);
 
             var myData = [{key: 'group 1', values: []}];
             for (var i=0; i<data["x"].length; i++){
-              myData[0].values.push({x: data["x"][i], y: data["y"][i]});
+              var severity = data["y"][i];
+              var color = "#cc0000";
+              if (severity >= 0) {color = "#00802b"}
+              myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
+                                     value: severity,
+                                     color: color});
+            }
+
+            chart.xAxis.tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)); });
+            chart.yAxis.tickFormat(d3.format('.02f')).showMaxMin(false);
+
+            d3.select('#test1 svg')
+              .datum(myData)
+              .call(chart);
+
+            nv.utils.windowResize(chart.update);
+
+            return chart;
+          });
+
+          /*nv.addGraph(function() {
+            var chart = nv.models.scatterChart()
+              .color([d3.rgb("green")])
+
+            chart.xAxis.tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)); });
+            chart.yAxis.tickFormat(d3.format('.02f'));
+
+            var myData = [{key: 'group 1', values: []}];
+            for (var i=0; i<data["x"].length; i++){
+              console.log(new Date(Date.parse(data["x"][i])))
+              myData[0].values.push({x: new Date(Date.parse(data["x"][i])),
+                                     y: data["y"][i],
+                                     size: 7,
+                                     shape: "circle"});
             }
             d3.select('#test1 svg').datum(myData).call(chart);
 
             nv.utils.windowResize(chart.update);
 
             return chart;
-          });
+          }); */
 
 
         })
@@ -658,6 +690,11 @@ Vue.component("dropdown", {
     }
   }
 })
+
+/*Vue.component("plot", {
+  template: `<div id="test1" class="plot"><svg></svg></div>`,
+
+})*/
 
 var app = new Vue({
     el : "#app"

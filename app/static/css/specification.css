@@ -115,12 +115,13 @@
 .plot {
   /*visibility: hidden;*/
 	display: none;
-  width: auto;
+  width: 500px;
+	height: 316px;
   background-color: #555;
   color: #fff;
   text-align: center;
   border-radius: 6px;
-  padding: 8px 0;
+  padding: 8px 8px;
   position: absolute;
   z-index: 1;
   bottom: 125%;
@@ -128,10 +129,38 @@
   margin-left: -80px;
 }
 
-/*.plot .show {
-	visibility: visible !important;
-}*/
 
-/*-webkit-transition: height 2s ease-in;
--moz-transition: height 2s ease-in;
--o-transition: height 2s ease-in;*/
+/* Popup arrow */
+.plot::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #555 transparent transparent transparent;
+}
+
+.plot .show{
+	display: block;
+}
+
+.plot svg{
+	background-color: #cccccc;
+	height:300px;
+	width:450px;
+}
+
+.nv-point-paths {
+  display: none !important;
+}
+
+.nv-legendWrap{
+	display: none;
+}
+
+.nv-groups{
+	padding:5px;
+	border-left: solid 2px black !important;
+}
