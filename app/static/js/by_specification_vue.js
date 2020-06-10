@@ -293,7 +293,7 @@ Vue.component("code-view", {
             <span class="span-binding" :id="line.spanid"><button v-for="b in line.buttons"
             class="binding-button" :binding-button="b.binding" :style="b.font"
             @click="selectBinding(b.binding, b.subtree, b.lines)">
-            {{b.binding}}</button></span>
+            binding {{b.binding}}</button></span>
             <p v-show="line.showempty" class="empty-line" :id="line.emptyid"> ... <br> </p>
             <dropdown v-if="line.addmenu" :tree="this.tree" :dict="line.dict" :binding="this.binding"
             :line=line.line_number> </dropdown>
