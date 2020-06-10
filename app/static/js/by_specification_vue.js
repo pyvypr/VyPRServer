@@ -718,8 +718,8 @@ Vue.component("plot", {
   </div>`,
   mounted(){
     var that = this;
-    this.$root.$on("plot-data-ready", function(data){
-      var data_array = data["array"];
+    this.$root.$on("plot-data-ready", function(data_array){
+      //var data_array = data["array"];
       nv.addGraph(function() {
         var chart = nv.models.multiBarChart()
           .x(function(d) { return d.label })
