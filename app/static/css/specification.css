@@ -1,17 +1,17 @@
 .tab {
-	overflow: hidden;
-	background-color: #d6e9c6;
+  overflow: hidden;
+  background-color: #d6e9c6;
 }
 
 .tablinks {
-	background-color: inherit;
-	float: left;
-	border: none;
-	outline: none;
-	cursor: pointer;
-	padding: 10px;
-	transition: 0.3s;
-	font-size: 14px;
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 10px;
+  transition: 0.3s;
+  font-size: 14px;
 }
 
 .tablinks:hover {
@@ -24,74 +24,74 @@
 }
 
 .span-binding{
-	float: right;
-	overflow: hidden;
-	vertical-align: top;
+  float: right;
+  overflow: hidden;
+  vertical-align: top;
 }
 
 .binding-button{
-	background-color: #696a6b;
-	color: white;
-	float: left;
-	border-radius: 30%;
-	border: 1px solid #696a6b;
-	outline: none;
-	cursor: pointer;
-	transition: 0.3s;
+  background-color: #696a6b;
+  color: white;
+  float: left;
+  border-radius: 30%;
+  border: 1px solid #696a6b;
+  outline: none;
+  cursor: pointer;
+  transition: 0.3s;
 }
 
 .binding-button:hover{
-	text-decoration: underline;
+  text-decoration: underline;
 }
 
 .subatom-clickable{
-	color: #205cbd;
-	border-radius: 16%;
-	border: 2px solid #def1fc;
-	background-color: #def1fc;
+  color: #205cbd;
+  border-radius: 16%;
+  border: 2px solid #def1fc;
+  background-color: #def1fc;
 }
 
 .subatom-clickable-active{
-	font-weight: bold;
-	color: #205cbd;
-	border-radius: 16%;
-	border: 2px solid #def1fc;
-	background-color: #def1fc;
+  font-weight: bold;
+  color: #205cbd;
+  border-radius: 16%;
+  border: 2px solid #def1fc;
+  background-color: #def1fc;
 }
 
 .subatom-clickable:hover{
-	text-decoration: underline;
-	cursor: pointer;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .empty-line{
-	background-color: #f5f5f5;
-	margin: 0 0 0;
+  background-color: #f5f5f5;
+  margin: 0 0 0;
 
 }
 
 .dropdown-content{
-	visibility: hidden;
+  visibility: hidden;
   opacity: 0;
   position: absolute;
   left: 0;
   z-index: -1;
   transition: ease-in-out 0.5s;
-	background-color: #f1f7df;
+  background-color: #f1f7df;
   max-width: 300px;
   box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
 }
 
 .dropdown-menu-option{
-	padding: 5px;
-	background-color: #f7f4e9;
-	border: 1px solid #f0da8d;
-	cursor: pointer;
+  padding: 5px;
+  background-color: #f7f4e9;
+  border: 1px solid #f0da8d;
+  cursor: pointer;
 }
 
 .code_listing_line-clickable:hover .dropdown-content{
-	padding: 12px 16px;
-	visibility: visible;
+  padding: 12px 16px;
+  visibility: visible;
   opacity: 1;
   z-index: 1;
   transform: translateY(0%);
@@ -102,21 +102,21 @@
   transition: all 0.5s ease;
 }
 .slide-fade-enter {
-	transform: translateY(0%);
-	opacity: 0.5;
+  transform: translateY(0%);
+  opacity: 0.5;
 }
 
 .slide-fade-leave-to {
-	transform: translateY(0%);
-	opacity: 0;
+  transform: translateY(0%);
+  opacity: 0;
 }
 
 /* The actual popup */
 .plot {
   /*visibility: hidden;*/
-	display: none;
-  width: 500px;
-	height: 316px;
+  display: none;
+  width: 50%;
+  height: 80%;
   background-color: #555;
   color: #fff;
   text-align: center;
@@ -124,13 +124,11 @@
   padding: 8px 8px;
   position: absolute;
   z-index: 1;
-  bottom: 125%;
-  left: 50%;
-  margin-left: -80px;
+  left: 25%;
+  top: 10%;
 }
 
-
-/* Popup arrow */
+/* Popup arrow
 .plot::after {
   content: "";
   position: absolute;
@@ -140,16 +138,16 @@
   border-width: 5px;
   border-style: solid;
   border-color: #555 transparent transparent transparent;
-}
+}*/
 
 .plot .show{
-	display: block;
+  display: block;
 }
 
 .plot svg{
-	background-color: #cccccc;
-	height:300px;
-	width:450px;
+  background-color: #cccccc;
+  height:98%;
+  width:96%;
 }
 
 .nv-point-paths {
@@ -157,10 +155,10 @@
 }
 
 .nv-legendWrap{
-	display: none;
+  display: none;
 }
 
 .nv-groups{
-	padding:5px;
-	border-left: solid 2px black !important;
+  padding:5px;
+  border-left: solid 2px black !important;
 }
