@@ -158,7 +158,12 @@
   display: none;
 }
 
-.nv-groups{
-  padding:5px;
-  border-left: solid 2px black !important;
+.tick line{
+	stroke: #ededed !important;
+	opacity: 0.5;
+}
+
+.tick .zero line{
+	stroke: white;
+	opacity: 1;
 }

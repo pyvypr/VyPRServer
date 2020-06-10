@@ -660,9 +660,9 @@ Vue.component("dropdown", {
                                    color: color});
           }
 
-          that.$root.$emit("plot-data-ready", myData);
+          that.$root.$emit("plot-data-ready", {array: myData});
         })
-        document.getElementById("test1").classList.toggle("show");
+        document.getElementById("simple-plot").classList.toggle("show");
       }
       // TODO
       else if (data["action"] == "simple-path") {}
@@ -673,9 +673,11 @@ Vue.component("dropdown", {
 })
 
 Vue.component("plot", {
-  template: `<div id="test1" class="plot" @click="hidePlot()"><svg></svg></div>`,
+  template: `<div id="simple-plot" class="plot" @click="hidePlot()"><svg></svg></div>`,
   mounted(){
-    this.$root.$on("plot-data-ready", function(data_array){
+    var that = this;
+    this.$root.$on("plot-data-ready", function(data){
+      var data_array = data["array"];
       nv.addGraph(function() {
         var chart = nv.models.multiBarChart()
           .x(function(d) { return d.label })
@@ -685,9 +687,9 @@ Vue.component("plot", {
 
         // omitting date from time format - moslty the difference is in seconds
         chart.xAxis.tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)); });
-        chart.yAxis.tickFormat(d3.format('.02f')).showMaxMin(false);
+        chart.yAxis.tickFormat(d3.format('.02f')).showMaxMin(true);
 
-        d3.select('#test1 svg')
+        d3.select('#simple-plot svg')
           .datum(data_array)
           .call(chart);
 
@@ -723,7 +725,7 @@ Vue.component("plot", {
   },
   methods:{
     hidePlot: function(){
-      document.getElementById("test1").classList.toggle("show");
+      document.getElementById("simple-plot").classList.toggle("show");
     }
   }
 
