@@ -1,17 +1,17 @@
 .tab {
-	overflow: hidden;
-	background-color: #d6e9c6;
+  overflow: hidden;
+  background-color: #d6e9c6;
 }
 
 .tablinks {
-	background-color: inherit;
-	float: left;
-	border: none;
-	outline: none;
-	cursor: pointer;
-	padding: 10px;
-	transition: 0.3s;
-	font-size: 14px;
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 10px;
+  transition: 0.3s;
+  font-size: 14px;
 }
 
 .tablinks:hover {
@@ -24,74 +24,82 @@
 }
 
 .span-binding{
-	float: right;
-	overflow: hidden;
-	vertical-align: top;
+  float: right;
+  overflow: hidden;
+  vertical-align: top;
 }
 
 .binding-button{
-	background-color: #696a6b;
-	color: white;
-	float: left;
-	border-radius: 30%;
-	border: 1px solid #696a6b;
-	outline: none;
-	cursor: pointer;
-	transition: 0.3s;
+  background-color: #696a6b;
+  color: white;
+  float: left;
+  border: 1px solid #696a6b;
+  outline: none;
+  cursor: pointer;
+  transition: 0.3s;
+  height: 20px;
+  line-height: 2px;
+  font-family: arial;
 }
 
 .binding-button:hover{
-	text-decoration: underline;
+  text-decoration: underline;
 }
 
 .subatom-clickable{
-	color: #205cbd;
-	border-radius: 16%;
-	border: 2px solid #def1fc;
-	background-color: #def1fc;
+  border: 2px solid #def1fc;
+  background-color: #def1fc;
 }
 
 .subatom-clickable-active{
-	font-weight: bold;
-	color: #205cbd;
-	border-radius: 16%;
-	border: 2px solid #def1fc;
-	background-color: #def1fc;
+  font-weight: bold;
+  border: 2px solid #def1fc;
+  background-color: #def1fc;
 }
 
 .subatom-clickable:hover{
-	text-decoration: underline;
-	cursor: pointer;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .empty-line{
-	background-color: #f5f5f5;
-	margin: 0 0 0;
+  background-color: #f5f5f5;
+  margin: 0 0 0;
 
 }
 
 .dropdown-content{
-	visibility: hidden;
+  visibility: hidden;
   opacity: 0;
   position: absolute;
   left: 0;
   z-index: -1;
-  transition: ease-in-out 0.5s;
-	background-color: #f1f7df;
+  /*transition: ease-in-out 0.5s;*/
+  background-color: grey;
+  font-family: arial;
   max-width: 300px;
   box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  padding: 0!important;
 }
 
 .dropdown-menu-option{
-	padding: 5px;
-	background-color: #f7f4e9;
-	border: 1px solid #f0da8d;
-	cursor: pointer;
+  padding: 5px;
+  background-color: #dff0d8;
+  cursor: pointer;
+  margin: 0!important;
+}
+
+.dropdown-menu-option:hover {
+  background: #d6e9c6;
+}
+
+.code_listing_line-clickable {
+  cursor: pointer;
 }
 
 .code_listing_line-clickable:hover .dropdown-content{
-	padding: 12px 16px;
-	visibility: visible;
+  padding: 12px 16px;
+  visibility: visible;
   opacity: 1;
   z-index: 1;
   transform: translateY(0%);
@@ -102,36 +110,71 @@
   transition: all 0.5s ease;
 }
 .slide-fade-enter {
-	transform: translateY(0%);
-	opacity: 0.5;
+  transform: translateY(0%);
+  opacity: 0.5;
 }
 
 .slide-fade-leave-to {
-	transform: translateY(0%);
-	opacity: 0;
+  transform: translateY(0%);
+  opacity: 0;
 }
 
 /* The actual popup */
 .plot {
   /*visibility: hidden;*/
-	display: none;
-  width: auto;
-  background-color: #555;
+  display: none;
+  width: 100%;
+  background-color: white;
   color: #fff;
-  text-align: center;
-  border-radius: 6px;
-  padding: 8px 0;
+  text-align: center;;
   position: absolute;
   z-index: 1;
-  bottom: 125%;
-  left: 50%;
-  margin-left: -80px;
 }
 
-/*.plot .show {
-	visibility: visible !important;
+/* Popup arrow
+.plot::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #555 transparent transparent transparent;
 }*/
 
-/*-webkit-transition: height 2s ease-in;
--moz-transition: height 2s ease-in;
--o-transition: height 2s ease-in;*/
+.plot .show{
+  display: block;
+}
+
+.plot .controls {
+  display: block;
+  height: 40px;
+  padding: 5px;
+}
+
+.plot .controls a.close-plot {
+  color: black;
+  background: red;
+  padding: 5px;
+  text-decoration: none;
+}
+
+.plot svg{
+  background-color: white;
+  height:90%;
+  width:80%;
+}
+
+.nv-point-paths {
+  display: none !important;
+}
+
+.nv-legendWrap{
+  display: none;
+}
+
+.nv-groups{
+  padding:5px;
+  border-left: solid 2px black !important;
+}
