@@ -17,41 +17,41 @@
 
 <div id="app">
 
-<div class="container-fluid">
+    <div class="container-fluid">
 
-	<div class="row">
+        <div class="row">
 
-	<div class="panel panel-default">
-	  <div class="panel-heading">
-	    <h3 class="panel-title">Criteria</h3>
-	  </div>
-	  <div class="panel-body">
-	    <p>Start by selecting a function and property.  This will show you a list of calls of the function,
-		and its source code on the right of your screen.  Select one or more calls to see information collected
-		during them displayed with the source code.</p>
-	  </div>
-	</div>
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Criteria</h3>
+                </div>
+                <div class="panel-body">
+                    <p>Start by selecting a function and property.  This will show you a list of calls of the function,
+                        and its source code on the right of your screen.  Select one or more calls to see information collected
+                        during them displayed with the source code.</p>
+                </div>
+            </div>
 
-  <div class="col-md-4 selection">
+            <div class="col-md-4 selection">
 
-	  <div class="fluid-container">
-      <machine-function-property v-bind:tree="{{functions}}"></machine-function-property>
-	  	<function-calls></function-calls>
+                <div class="fluid-container">
+                    <machine-function-property v-bind:tree="{{functions}}"></machine-function-property>
+                    <function-calls></function-calls>
+                </div>
+
+            </div>
+
+            <div class="col-md-8 selection">
+
+                <div class="fluid-container" id="right-col">
+                    <plot></plot>
+                    <code-view></code-view>
+                </div>
+
+            </div>
+        </div>
+
     </div>
-
-	</div>
-
-	<div class="col-md-8 selection">
-
-		<div class="fluid-container">
-      <code-view></code-view>
-    </div>
-
-	</div>
-  </div>
-
-</div>
-<plot></plot>
 </div>
 
 {% endblock %}

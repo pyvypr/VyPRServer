@@ -115,17 +115,12 @@
 .plot {
   /*visibility: hidden;*/
   display: none;
-  width: 50%;
-  height: 80%;
-  background-color: #555;
+  width: 100%;
+  background-color: white;
   color: #fff;
-  text-align: center;
-  border-radius: 6px;
-  padding: 8px 8px;
+  text-align: center;;
   position: absolute;
   z-index: 1;
-  left: 25%;
-  top: 10%;
 }
 
 /* Popup arrow
@@ -144,10 +139,23 @@
   display: block;
 }
 
+.plot .controls {
+  display: block;
+  height: 40px;
+  padding: 5px;
+}
+
+.plot .controls a.close-plot {
+  color: black;
+  background: red;
+  padding: 5px;
+  text-decoration: none;
+}
+
 .plot svg{
-  background-color: #cccccc;
-  height:98%;
-  width:96%;
+  background-color: white;
+  height:90%;
+  width:80%;
 }
 
 .nv-point-paths {

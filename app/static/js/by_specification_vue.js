@@ -24,16 +24,23 @@ Vue.component("machine-function-property", {
   template : `
     <div class="panel panel-success">
       <div class="panel-heading">
-        <h3 class="panel-title" id="function-title" @click="showFunctions=!showFunctions">Machine / Function / Property</h3>
+        <h3 class="panel-title" id="function-title" @click="showFunctions=!showFunctions">
+            Machine / Function / Property
+        </h3>
       </div>
       <div class="panel-body">
         <transition name="slide-fade">
         <div v-show="showFunctions" class="list-group" id="function-list">
           <div id="function-list-data"></div>
           <div class="tab">
-            <button v-for="(value,key) in tree" :class="(key===showTab)? 'tablinks active':'tablinks' " @click="selectTab(key)">{{key}}</button>
+            <button v-for="(value,key) in tree" :class="(key===showTab)? 'tablinks active':'tablinks' "
+                @click="selectTab(key)">
+                {{key}}
+            </button>
           </div>
-          <subtree v-for="(value,key) in tree" v-show="(key === showTab)" :key="key" :id="key" :content="value"> </subtree>
+          <subtree v-for="(value,key) in tree" v-show="(key === showTab)"
+            :key="key" :id="key" :content="value">
+          </subtree>
         </div>
         </transition>
       </div>
@@ -568,7 +575,11 @@ Vue.component("specification", {
 
     this.$root.$on("subatom-selected", function(dict){
       $($(".subatom-clickable-active")[0]).attr("class", "subatom-clickable");
-      var subatom = $($("#specification_listing").find('span.atom[atom-index="' + dict["atom"] + '"]')[0]).find('span[subatom-index="'+dict["subatom"]+'"]')[0];
+      var subatom = $(
+        $("#specification_listing").find('span.atom[atom-index="' + dict["atom"] + '"]'
+      )[0]).find(
+        'span[subatom-index="'+dict["subatom"]+'"]'
+      )[0];
       $(subatom).attr("class", "subatom-clickable-active");
     })
   }
@@ -662,7 +673,8 @@ Vue.component("dropdown", {
 
           that.$root.$emit("plot-data-ready", myData);
         })
-        document.getElementById("test1").classList.toggle("show");
+        // show the plot
+        $("#plot-wrapper").toggleClass("show");
       }
       // TODO
       else if (data["action"] == "simple-path") {}
@@ -673,7 +685,10 @@ Vue.component("dropdown", {
 })
 
 Vue.component("plot", {
-  template: `<div id="test1" class="plot" @click="hidePlot()"><svg></svg></div>`,
+  template: `<div id="plot-wrapper" class="plot">
+  <div class="controls"><a href="#" @click="hidePlot($event)" class="close-plot">close</a></div>
+  <svg id="plot-svg"></svg>
+  </div>`,
   mounted(){
     this.$root.$on("plot-data-ready", function(data_array){
       nv.addGraph(function() {
@@ -687,11 +702,14 @@ Vue.component("plot", {
         chart.xAxis.tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)); });
         chart.yAxis.tickFormat(d3.format('.02f')).showMaxMin(false);
 
-        d3.select('#test1 svg')
+        d3.select('#plot-svg')
           .datum(data_array)
           .call(chart);
 
         nv.utils.windowResize(chart.update);
+
+        // set height of plot wrapper
+        $("#plot-wrapper").height($("#right-col").outerHeight());
 
         return chart;
         /* //for scatter plot
@@ -710,7 +728,7 @@ Vue.component("plot", {
                                    size: 7,
                                    shape: "circle"});
           }
-          d3.select('#test1 svg').datum(myData).call(chart);
+          d3.select('#plot-svg').datum(myData).call(chart);
 
           nv.utils.windowResize(chart.update);
 
@@ -722,8 +740,13 @@ Vue.component("plot", {
     })
   },
   methods:{
-    hidePlot: function(){
-      document.getElementById("test1").classList.toggle("show");
+    hidePlot: function(e){
+      // prevent navigation that would normally take place when a link is clicked
+      e.preventDefault();
+      // empty plot
+      $("#plot-svg").empty();
+      // toggle visibility
+      $("#plot-wrapper").toggleClass("show");
     }
   }
 
