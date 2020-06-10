@@ -717,7 +717,9 @@ Vue.component("plot", {
   <svg id="plot-svg"></svg>
   </div>`,
   mounted(){
-    this.$root.$on("plot-data-ready", function(data_array){
+    var that = this;
+    this.$root.$on("plot-data-ready", function(data){
+      var data_array = data["array"];
       nv.addGraph(function() {
         var chart = nv.models.multiBarChart()
           .x(function(d) { return d.label })
@@ -727,7 +729,7 @@ Vue.component("plot", {
 
         // omitting date from time format - moslty the difference is in seconds
         chart.xAxis.tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)); });
-        chart.yAxis.tickFormat(d3.format('.02f')).showMaxMin(false);
+        chart.yAxis.tickFormat(d3.format('.02f')).showMaxMin(true);
 
         d3.select('#plot-svg')
           .datum(data_array)
