@@ -150,7 +150,6 @@
 .plot .controls {
   display: block;
   height: 40px;
-  padding: 5px;
 }
 
 .plot .controls a.close-plot {
@@ -158,6 +157,14 @@
   background: red;
   padding: 5px;
   text-decoration: none;
+  width: 100%;
+  font-size: 10px;
+  display: block;
+  opacity: 0.6;
+}
+
+.plot .controls a.close-plot:hover {
+  opacity: 1.0;
 }
 
 .plot svg{
