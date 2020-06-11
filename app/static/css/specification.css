@@ -52,9 +52,9 @@
 }
 
 .subatom-clickable-active{
-  font-weight: bold;
-  border: 2px solid #def1fc;
-  background-color: #def1fc;
+  border: 2px solid grey;
+  background-color: grey;
+  color: white;
 }
 
 .subatom-clickable:hover{
