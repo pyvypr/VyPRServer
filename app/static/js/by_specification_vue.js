@@ -206,9 +206,12 @@ Vue.component("function-calls", {
       <div class="panel-body">
         <div class="list-group" id="function-call-list">
           <div v-if="message" class="please-select"><p>{{message}}</p></div>
+          <button v-if="!this.message" class="list-group-item"> &#128340; &nbsp;&nbsp;&nbsp;
+            <b>From</b> <input id="filter-from" placeholder="25/02/2020 12:54:18" v-model="filter_from"/>
+            <b>To</b> <input id="filter-to" placeholder="25/02/2020 21:03:17" v-model="filter_to"/>
+          </button>
           <button v-if="!this.message" class="list-group-item">
-            <input type='checkbox' id="select-all" @click="select_all_calls()"/>
-            <b> Select all </b>
+            <input type='checkbox' id="select-all" @click="select_all_calls()"/><b> Select all </b>
           </button>
           <button v-for="(b, index) in this.buttons" :key="index" class="list-group-item">
             <input type='checkbox' :function-call-id="b.callid" :value="b.callid" v-model="checkedCalls"/>
@@ -218,7 +221,8 @@ Vue.component("function-calls", {
       </div>
     </div>`,
   data() {
-    return { message : "Select a function first.", buttons : [], checkedCalls: [] }
+    return { message : "Select a function first.", buttons : [], checkedCalls: [],
+             filter_from: "25/02/2020 12:54:18", filter_to: "25/02/2020 21:03:17"}
   },
   methods: {
     select_all_calls: function(){
@@ -226,6 +230,8 @@ Vue.component("function-calls", {
       $("input:checkbox").prop("checked", is_checked);
       if (is_checked) {
         for (var i=0; i<this.buttons.length; i++){
+          /*if (Date.parse(this.buttons[i].callstart) >= Date.parse(this.filter_from) &&
+              Date.parse(this.buttons[i].callstart) <= Date.parse(this.filter_to)){*/
           this.checkedCalls.push(this.buttons[i].callid);
         }
       }
