@@ -1,21 +1,10 @@
 {% extends "base.html" %}
 
-{% block js_import %}
-<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
-<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-<script src="https://d3js.org/d3.v3.min.js"></script>
-<script src="https://cdn.rawgit.com/novus/nvd3/v1.8.1/build/nv.d3.js"></script>
-<script type="text/javascript" src="{{ url_for('static', filename='js/by_specification_vue.js') }}"></script>
-{% endblock %}
-
-{% block css_import %}
-<link href="{{ url_for('static', filename='css/specification.css') }}" rel="stylesheet" />
-<link rel="stylesheet" type="text/css" href="https://raw.github.com/novus/nvd3/master/src/nv.d3.css"/>
-{% endblock %}
-
 {% block body %}
 
 <div id="app">
+
+    <loading-spinner></loading-spinner>
 
     <div class="container-fluid">
 
