@@ -799,6 +799,7 @@ Vue.component("plot", {
 
         // set height of plot wrapper
         $("#plot-wrapper").height($("#right-col").outerHeight());
+        chart.update();
 
         return chart;
         /* //for scatter plot
