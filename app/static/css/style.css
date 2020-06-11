@@ -146,4 +146,9 @@ table.function-list-table td {
 .list-group-item-text.code {
 	font-family: monaco;
 	padding: 2px;
+	font-family: 12px;
+}
+
+.list-group-item .list-group-item-text.code {
+    font-size: 10px!important;
 }
