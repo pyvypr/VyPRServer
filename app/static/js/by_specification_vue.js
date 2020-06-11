@@ -54,6 +54,7 @@ var generate_plot = function(root_obj) {
     });
 };
 
+
 Vue.component("machine-function-property", {
   props: ['tree'],
   template : `
@@ -205,6 +206,10 @@ Vue.component("function-calls", {
       <div class="panel-body">
         <div class="list-group" id="function-call-list">
           <div v-if="message" class="please-select"><p>{{message}}</p></div>
+          <button v-if="!this.message" class="list-group-item">
+            <input type='checkbox' id="select-all" @click="select_all_calls()"/>
+            <b> Select all </b>
+          </button>
           <button v-for="(b, index) in this.buttons" :key="index" class="list-group-item">
             <input type='checkbox' :function-call-id="b.callid" :value="b.callid" v-model="checkedCalls"/>
             <b>Start:</b> {{b.callstart}}, <b>lasting: </b> {{b.callduration}} seconds
@@ -214,6 +219,20 @@ Vue.component("function-calls", {
     </div>`,
   data() {
     return { message : "Select a function first.", buttons : [], checkedCalls: [] }
+  },
+  methods: {
+    select_all_calls: function(){
+      var is_checked = $("#select-all").prop("checked");
+      $("input:checkbox").prop("checked", is_checked);
+      if (is_checked) {
+        for (var i=0; i<this.buttons.length; i++){
+          this.checkedCalls.push(this.buttons[i].callid);
+        }
+      }
+      else {
+        this.checkedCalls = [];
+      }
+    }
   },
   mounted(){
     var obj = this;
