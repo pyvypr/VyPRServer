@@ -305,7 +305,7 @@ Vue.component("code-view", {
           <specification :spec="this.specification_code" :change="1" />
         </div>
         <plot></plot>
-        <div v-if="code_lines" class='code_listing'>
+        <div v-if="code_lines" class='code_listing' id="code-listing">
           <div v-for="(line,index) in code_lines" :key="index" :class="line.class"
           :id="line.id" :style="line.background" :save-background-color="line.color"
           v-show="line.show">
@@ -798,7 +798,10 @@ Vue.component("plot", {
         nv.utils.windowResize(chart.update);
 
         // set height of plot wrapper
-        $("#plot-wrapper").height($("#right-col").outerHeight());
+
+        $("#plot-wrapper").height($("#code-listing").outerHeight());
+
+        // set initial size
         chart.update();
 
         return chart;
