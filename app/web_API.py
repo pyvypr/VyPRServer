@@ -1,42 +1,10 @@
 """
-Functions used as end points for the web-based analysis tool.
+API functions for the web tool.
 """
-from app import app_object
+from . import app_object, database
 from flask import request, jsonify, render_template
-from . import database
-from .utils import deserialise_property_tree, deserialise_property
+from .utils import deserialise_property
 import json
-
-
-@app_object.route("/", methods=["get"])
-def index():
-    return render_template("index.html")
-
-
-@app_object.route("/specification/", methods=["get"])
-def specification():
-    functions = database.web_list_functions()
-    # process the property serialisation for each function to turn it into an understandable string
-    # representation of the property
-    return render_template("by_specification.html", functions=json.dumps(functions))
-
-@app_object.route("/specification_vue/", methods=["get"])
-def specification_vue():
-    functions = database.web_list_functions()
-    # process the property serialisation for each function to turn it into an understandable string
-    # representation of the property
-    return render_template("by_specification_vue.html", functions=json.dumps(functions))
-
-
-@app_object.route("/verdict/", methods=["get"])
-def verdict():
-    functions = deserialise_property_tree(database.web_list_functions())
-    return render_template("by_verdict.html", functions=json.dumps(functions))
-
-
-@app_object.route("/about/", methods=["get"])
-def about():
-    return render_template("about.html")
 
 
 @app_object.route("/list_transactions/<function_id>/")
@@ -69,10 +37,12 @@ def list_function_calls_from_verdict_and_path(verdict, path):
 
     return template_with_data
 
+
 @app_object.route("/get_source_code/<function_id>/")
 def get_source_code(function_id):
     code_dict = database.get_code(function_id)
     return json.dumps(code_dict)
+
 
 @app_object.route("/get_function_calls_data/",methods=["GET", "POST"])
 def get_function_calls_data():
@@ -83,10 +53,12 @@ def get_function_calls_data():
     data = database.get_calls_data(ids_list)
     return json.dumps(data)
 
+
 @app_object.route("/get_atom_type/<atom_index>/<inst_point_id>/")
 def get_atom_type(atom_index, inst_point_id):
     atom_type = database.get_atom_type(atom_index, inst_point_id)
     return json.dumps(atom_type)
+
 
 @app_object.route("/get_plot_data_simple/", methods=["GET", "POST"])
 def get_plot_data_simple():
