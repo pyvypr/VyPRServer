@@ -745,6 +745,15 @@ Vue.component("plot", {
   </div>`,
   mounted(){
     var that = this;
+    this.$root.$on("calls-loaded", function(dict){
+      if (!(plot_visible)) return
+      // empty plot
+      $("#plot-svg").empty();
+      // toggle visibility
+      $("#plot-wrapper").toggleClass("show");
+      // set the global flag
+      plot_visible = false;
+    })
     this.$root.$on("plot-data-ready", function(data_array){
       //var data_array = data["array"];
       nv.addGraph(function() {
