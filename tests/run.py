@@ -4,6 +4,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.expected_conditions import presence_of_element_located
 from selenium.webdriver import ActionChains
+from selenium.webdriver.firefox.options import Options
 
 import unittest
 
@@ -33,7 +34,9 @@ def check_if_exists(element, tag_name):
 class TestBaseFirefox(unittest.TestCase):
 
     def setUp(self):
-        self.driver = webdriver.Firefox()
+        options = Options()
+        options.headless = True
+        self.driver = webdriver.Firefox(options=options)
 
     def tearDown(self):
         self.driver.close()
