@@ -1003,7 +1003,7 @@ TODO: other possible states ??
 """
 
 StaticState.my_repr_function = \
-    lambda object: "%s = changes(%s)" % (object._bind_variable_name, object._name_changed)
+    lambda object: "%s = changes('%s')" % (object._bind_variable_name, object._name_changed)
 
 StaticTransition.my_repr_function = \
-    lambda object: "%s = calls(%s)" % (object._bind_variable_name, object._operates_on)
+    lambda object: "%s = calls('%s')" % (object._bind_variable_name, object._operates_on)
