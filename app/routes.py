@@ -2,7 +2,8 @@
 Module to define the routes in this test service.
 """
 
-# import view functions from separate components
+# import view functions from separate modules
 from .analysis_API import *
 from .insertion_API import *
-from .webFrontEnd import *
+from .web_API import *
+from .web_front_end import *
