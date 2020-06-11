@@ -285,6 +285,7 @@ Vue.component("code-view", {
         <div v-if="specification_code" id='specification_listing'>
           <specification :spec="this.specification_code" :change="1" />
         </div>
+        <plot></plot>
         <div v-if="code_lines" class='code_listing'>
           <div v-for="(line,index) in code_lines" :key="index" :class="line.class"
           :id="line.id" :style="line.background" :save-background-color="line.color"

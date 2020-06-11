@@ -29,14 +29,21 @@ def check_if_exists(element, tag_name):
     except:
         return False
 
-class LoadingTest(unittest.TestCase):
+
+class TestBaseFirefox(unittest.TestCase):
 
     def setUp(self):
         self.driver = webdriver.Firefox()
 
+    def tearDown(self):
+        self.driver.close()
+
+
+class LoadingTest(TestBaseFirefox):
+
     def test_main_page(self):
         driver = self.driver
-        driver.get("http://localhost:9002/specification_vue")
+        driver.get("http://localhost:9002/")
 
         #check that tab buttons are displayed
         el = driver.find_element(By.ID, "function-list")
@@ -58,17 +65,12 @@ class LoadingTest(unittest.TestCase):
         specification = content.find_element_by_tag_name("button")
         assert check_if_exists(specification, "p")
 
-    def tearDown(self):
-        self.driver.close()
 
-class TabTest(unittest.TestCase):
-
-    def setUp(self):
-        self.driver = webdriver.Firefox()
+class TabTest(TestBaseFirefox):
 
     def test_choosing_tab(self):
         driver = self.driver
-        driver.get("http://localhost:9002/specification_vue")
+        driver.get("http://localhost:9002/")
 
         #simulate clicking on a non-default tab
         tabs = WebDriverWait(driver, 10).until(lambda d: d.find_elements_by_class_name("tablinks"))
@@ -86,17 +88,12 @@ class TabTest(unittest.TestCase):
                 assert c.get_attribute("style") == "display: none;"
         self.assertEqual(content.get_attribute("style"), "")
 
-    def tearDown(self):
-        self.driver.close()
 
-class FunctionSelectTest(unittest.TestCase):
-
-    def setUp(self):
-        self.driver = webdriver.Firefox()
+class FunctionSelectTest(TestBaseFirefox):
 
     def test_choosing_function(self):
         driver = self.driver
-        driver.get("http://localhost:9002/specification_vue")
+        driver.get("http://localhost:9002/")
 
         #simulate clicking on a non-default tab
         tabs = WebDriverWait(driver, 10).until(lambda d: d.find_elements_by_class_name("tablinks"))
@@ -141,17 +138,12 @@ class FunctionSelectTest(unittest.TestCase):
 
         #TODO check colouring
 
-    def tearDown(self):
-        self.driver.close()
 
-class CallsSelectTest(unittest.TestCase):
-
-    def setUp(self):
-        self.driver = webdriver.Firefox()
+class CallsSelectTest(TestBaseFirefox):
 
     def test_selecting_calls(self):
         driver = self.driver
-        driver.get("http://localhost:9002/specification_vue")
+        driver.get("http://localhost:9002/")
 
         #simulate clicking on a non-default tab
         tabs = WebDriverWait(driver, 10).until(lambda d: d.find_elements_by_class_name("tablinks"))
@@ -185,10 +177,6 @@ class CallsSelectTest(unittest.TestCase):
         assert "transparent" not in lines[higlighted_line_index].get_attribute("style")
         assert check_if_exists(lines[binding_line_index], "button")
         assert check_if_exists(lines[not_binding_line_index], "button")==False
-
-
-    def tearDown(self):
-        self.driver.close()
 
 
 if __name__ == "__main__":
