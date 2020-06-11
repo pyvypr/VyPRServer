@@ -294,7 +294,7 @@ Vue.component("code-view", {
             class="binding-button" :binding-button="b.binding" :style="b.font"
             @click="selectBinding(b.binding, b.subtree, b.lines)">
             binding {{b.binding}}</button></span>
-            <p v-show="line.showempty" class="empty-line" :id="line.emptyid"> ... <br> </p>
+            <p v-show="line.showempty" class="empty-line" :id="line.emptyid"><b> ... </b><br> </p>
             <dropdown v-if="line.addmenu" :tree="this.tree" :dict="line.dict" :binding="this.binding"
             :line=line.line_number> </dropdown>
           </div>
@@ -318,6 +318,7 @@ Vue.component("code-view", {
       for (var i=0; i<whole_code.length; i++){
         var line = whole_code[i];
         line.addmenu = false;
+        line.class = "code_listing_line";
         if (line.color){
           line.background = "background-color: #ebf2ee";
         }
@@ -411,6 +412,7 @@ Vue.component("code-view", {
       for (var i=0; i<whole_code.length; i++){
         whole_code[i].buttons = [];
         whole_code[i].addmenu = false;
+        whole_code[i].class = "code_listing_line";
       }
 
       // iterate through the bindings to highlight the lines and separate those paired with
@@ -507,13 +509,17 @@ Vue.component("code-view", {
         lines_list.push(no);
       }
 
+      // clean up any previous dropdowns and reset highlights back to a light colour
+      // reset the class of the line back to non-clickable
       for (var i=0; i<whole_code.length; i++){
         if (whole_code[i].color) {
           whole_code[i].background = "background-color: #ebf2ee";
           whole_code[i].addmenu = false;
+          whole_code[i].class = "code_listing_line";
         }
       }
 
+      // now highlight and add dropdowns to the lines in lines_list
       for (var i=0; i<lines_list.length; i++){
         var line = whole_code[lines_list[i]-obj2.start_line]
         line.background = "background-color: " + line.color;
@@ -526,6 +532,8 @@ Vue.component("code-view", {
 })
 
 Vue.component("specification", {
+  /* this component is still jquery reliant as a part of its HTML (atom and subatom span elements)
+  is received from the server side instead of being generated within the template*/
   props: ['spec', 'change'],
   template: `
     <div>
@@ -555,12 +563,14 @@ Vue.component("specification", {
                      background: bg})
     }
     return {
-      vars : "&nbsp;&nbsp;lambda  : ( " + spec_dict["vars"],
+      vars : "&nbsp;&nbsp;lambda : " + spec_dict["vars"] + " (",
       str : "&nbsp;&nbsp;&nbsp;&nbsp; " + spec_dict["atom_str"],
       bindvars: bindvars
     }
   },
   watch: {
+    // when a new specification is selected, the specification listing in the code view component
+    // must also change - watch for this change and change the data to trigger the rerendering
     spec(newValue) {
       var spec_dict = newValue;
       var list = spec_dict["foralls"];
@@ -581,6 +591,18 @@ Vue.component("specification", {
   },
   mounted(){
     var that = this;
+    this.$root.$on('calls-loaded', function(tree){
+      // clean up subatom links from previous function selection
+      remove_subatoms = $(".subatom-clickable");
+      if (typeof(remove_subatoms) != 'string'){
+      for (var i=0; i<remove_subatoms.length; i++){
+        $(remove_subatoms[i]).attr("onclick", "");
+        $(remove_subatoms[i]).attr('class', "subatom");
+      }}
+      $($(".subatom-clickable-active")[0]).attr("onclick","");
+      $($(".subatom-clickable-active")[0]).attr("class", "subatom");
+    })
+
     this.$root.$on('calls-selected', function(tree){
       // clean up subatom links from previous binding selection
       remove_subatoms = $(".subatom-clickable");
@@ -604,6 +626,9 @@ Vue.component("specification", {
       $($(".subatom-clickable-active")[0]).attr("onclick","");
       $($(".subatom-clickable-active")[0]).attr("class", "subatom");
 
+      // highlight the atoms that generated observations for the selected calls and binding
+      // make subatoms clickable - global function subatom_click() will then emit event
+      // so that other components can react to the subatom selection
       for (atom in tree){
         var subtree = tree[atom];
         var subs = $($("#specification_listing").find('span.atom[atom-index="' + atom + '"]')[0]).children();
@@ -617,6 +642,7 @@ Vue.component("specification", {
     })
 
     this.$root.$on("subatom-selected", function(dict){
+      // when a subatom is selected, change its class to active - this affects its style
       $($(".subatom-clickable-active")[0]).attr("class", "subatom-clickable");
       var subatom = $(
         $("#specification_listing").find('span.atom[atom-index="' + dict["atom"] + '"]'
@@ -728,8 +754,13 @@ Vue.component("plot", {
           .showControls(false);
 
         // omitting date from time format - moslty the difference is in seconds
-        chart.xAxis.tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)); });
-        chart.yAxis.tickFormat(d3.format('.02f')).showMaxMin(true);
+        chart.xAxis
+          .axisLabel('Time of observation')
+          .tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)); });
+        chart.yAxis
+          .axisLabel('Verdict severity')
+          .tickFormat(d3.format('.02f'))
+          .showMaxMin(true);
 
         d3.select('#plot-svg')
           .datum(data_array)
