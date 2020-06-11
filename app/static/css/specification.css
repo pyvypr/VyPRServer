@@ -176,10 +176,9 @@
 
 .tick line{
 	stroke: #ededed !important;
-	opacity: 0.5;
 }
 
-.tick .zero line{
-	stroke: white;
+.zero line{
+	stroke: black !important;
 	opacity: 1;
 }
