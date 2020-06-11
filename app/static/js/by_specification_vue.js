@@ -623,7 +623,7 @@ Vue.component("specification", {
                      background: bg})
     }
     return {
-      vars : "&nbsp;&nbsp;lambda : " + spec_dict["vars"] + " (",
+      vars : "&nbsp;&nbsp;lambda " + spec_dict["vars"] + " : (",
       str : "&nbsp;&nbsp;&nbsp;&nbsp; " + spec_dict["atom_str"],
       bindvars: bindvars
     }
@@ -809,13 +809,13 @@ Vue.component("plot", {
       // empty plot
       $("#plot-svg").empty();
       // toggle visibility
-      $("#plot-wrapper").toggleClass("show");
+      $("#plot-wrapper").removeClass("show");
       // set the global flag
       plot_visible = false;
     })
     this.$root.$on("plot-data-ready", function(data_array){
       // display the plot
-      $("#plot-wrapper").toggleClass("show");
+      $("#plot-wrapper").addClass("show");
       // set height of plot wrapper
       $("#plot-wrapper").height($("#code-listing").outerHeight());
       $("#plot-svg").width($("#code-listing").outerWidth()-10);
