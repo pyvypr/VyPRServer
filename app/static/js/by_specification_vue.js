@@ -1,6 +1,4 @@
 var code_highlight_palette = ["#cae2dc", "#eee3cd", "#cad7f2", "#ded4e7", "#e3e3e3", "d6eff0"];
-// global list of selected function calls
-var selected_calls = [];
 // global plot data, used for when plot are updated with new data
 var plot_visible = false;
 var plot_data = null;
@@ -10,7 +8,8 @@ var Store = {
     },
     plot : {
         constraint_html : ""
-    }
+    },
+    selected_calls : []
 };
 
 var start_loading = function() {
@@ -111,6 +110,29 @@ var isBefore = function(time_str1, time_str2){
 }
 
 
+Vue.component("alert", {
+  template : `
+  <div class="alert alert-info alert-dismissible" role="alert" v-if="is_open">
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close" @click="close()">
+      <span aria-hidden="true">&times;</span>
+    </button>
+    {{ message }}
+  </div>
+  `,
+  props : ["message"],
+  data : function() {
+    return {
+      is_open : true
+    }
+  },
+  methods : {
+    close : function() {
+      this.is_open = false;
+    }
+  }
+});
+
+
 Vue.component("loading-spinner", {
   template : `
   <div class="loading-spinner" role="status" v-if="in_progress"></div>
@@ -138,6 +160,7 @@ Vue.component("machine-function-property", {
         </h3>
       </div>
       <div class="panel-body">
+        <alert message="Select a specification to see relevant calls." />
         <transition name="slide-fade">
         <div v-show="showFunctions" class="list-group" id="function-list">
           <div id="function-list-data"></div>
@@ -280,12 +303,13 @@ Vue.component("function-calls", {
       <div class="panel-body">
         <div class="list-group" id="function-call-list">
           <div v-if="message" class="please-select"><p>{{message}}</p></div>
-          <button v-if="!this.message" class="list-group-item">
+          <alert v-if="!message" message="Select a call to load its performance data." />
+          <div v-if="!message" class="list-group-item">
             <b>From</b> <input id="filter-from" placeholder="25/02/2020 12:54:18" v-model="filter_from"/>
             <b>To</b> <input id="filter-to" placeholder="25/02/2020 21:03:17" v-model="filter_to"/>
             <button @click="select_filtered()"> Filter calls </button>
-          </button>
-          <button v-if="!this.message" class="list-group-item">
+          </div>
+          <button v-if="!message" class="list-group-item">
             <input type='checkbox' id="select-all" @click="select_all_calls()"/><b> Select all </b>
           </button>
           <button v-for="(b, index) in this.buttons" :key="index" class="list-group-item">
@@ -296,8 +320,13 @@ Vue.component("function-calls", {
       </div>
     </div>`,
   data() {
-    return { message : "Select a function first.", buttons : [], checkedCalls: [],
-             filter_from: "25/02/2020 12:54:18", filter_to: "25/02/2020 21:03:17"}
+    return {
+      message : "Select a function first.",
+      buttons : [],
+      checkedCalls: [],
+      filter_from: "25/02/2020 12:54:18",
+      filter_to: "25/02/2020 21:03:17",
+      store : Store}
   },
   methods: {
     select_all_calls: function(){
@@ -362,7 +391,7 @@ Vue.component("function-calls", {
         function_call_ids.push(""+value[i]);
       }
 
-      selected_calls = function_call_ids;
+      Store.selected_calls = function_call_ids;
       if (!plot_visible) {
         // display code interface
         if (function_call_ids.length){
@@ -395,6 +424,7 @@ Vue.component("code-view", {
       </div>
       <div class="panel-body" id="verdict-list">
         <div v-if="message" class="please-select">{{message}}</div>
+        <alert v-if="calls_are_selected" message="Select a binding in the code listing below." />
         <div v-if="specification_code" id='specification_listing'>
           <specification :spec="this.specification_code" :change="1" />
         </div>
@@ -414,11 +444,21 @@ Vue.component("code-view", {
           </div>
         </div>
       </div>
-    </div>`
-  ,
+    </div>`,
   data(){
-    return {message: "Select a function and then one or more calls, first.",
-            specification_code: "", code_lines: [], start_line: 0, tree: {}, binding: undefined}
+    return {
+      message: "Select a function and then one or more calls, first.",
+      specification_code: "",
+      code_lines: [],
+      start_line: 0,
+      tree: {},
+      binding: undefined,
+      store : Store}
+  },
+  computed : {
+    calls_are_selected : function() {
+      return this.store.selected_calls.length > 0;
+    }
   },
   methods:{
     selectBinding : function(binding, tree, lines){
@@ -789,9 +829,7 @@ Vue.component("dropdown", {
     var sub_index = this.dict["subatom"];
     var inst_points = this.tree[this.binding][atom_index][sub_index];
     var inst_point_id = inst_points[0]["id"];
-    var calls = selected_calls;
     var that = this;
-    console.log(calls)
 
     var inst_points_list = [];
     for (var i=0; i<inst_points.length; i++){
@@ -811,7 +849,7 @@ Vue.component("dropdown", {
         //then we can calculate verdict severity for each of the observations
         var option = {text: 'Plot observed values from this point',
                       data: {action: "simple-plot",
-                             calls: calls,
+                             calls: Store.selected_calls,
                              binding: that.binding,
                              atom: atom_index,
                              subatom: sub_index,
@@ -819,7 +857,7 @@ Vue.component("dropdown", {
         options.push(option);
         var option2 = {text: 'Highlight paths by average verdict severity',
                       data: {action: "simple-path",
-                             calls: calls,
+                             calls: Store.selected_calls,
                              binding: that.binding,
                              atom: atom_index,
                              subatom: sub_index,
