@@ -897,13 +897,6 @@ Vue.component("plot", {
 
         nv.utils.windowResize(chart.update);
 
-<<<<<<< HEAD
-        // set height of plot wrapper
-
-        $("#plot-wrapper").height($("#code-listing").outerHeight());
-
-=======
->>>>>>> ce603a04dbf1e2db8e516d0c8a57604e1d8d4d59
         // set initial size
         chart.update();
 
