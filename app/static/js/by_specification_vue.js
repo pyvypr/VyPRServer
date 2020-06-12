@@ -4,6 +4,19 @@ var selected_calls = [];
 // global plot data, used for when plot are updated with new data
 var plot_visible = false;
 var plot_data = null;
+var Store = {
+    status : {
+        loading : false
+    }
+};
+
+var start_loading = function() {
+    Store.status.loading = true;
+}
+
+var stop_loading = function() {
+    Store.status.loading = false;
+}
 
 var decodeHTML = function (html) {
   var txt = document.createElement('textarea');
@@ -51,6 +64,7 @@ var generate_plot = function(root_obj) {
 
       // emit plot data ready event so the plot will be drawn
       that.$root.$emit("plot-data-ready", myData);
+      start_loading();
     });
 };
 
@@ -92,6 +106,23 @@ var isBefore = function(time_str1, time_str2){
   if (time1[2] <= time2[2]) {return true}
   if (time1[2] > time2[2]) {return false}
 }
+
+
+Vue.component("loading-spinner", {
+  template : `
+  <div class="loading-spinner" role="status" v-if="in_progress"></div>
+  `,
+  data : function() {
+    return {
+      store : Store
+    }
+  },
+  computed : {
+    in_progress : function() {
+      return this.store.status.loading;
+    }
+  }
+});
 
 
 Vue.component("machine-function-property", {
@@ -230,7 +261,8 @@ Vue.component("subtreelevel", {
   },
   methods : {
     selectFunction: function(id, code){
-      console.log(id)
+      console.log(id);
+      start_loading();
       this.$root.$emit('function-select', {selected_function_id: id, specification_code: code})
     }
   }
@@ -266,6 +298,7 @@ Vue.component("function-calls", {
   },
   methods: {
     select_all_calls: function(){
+      start_loading();
       var is_checked = $("#select-all").prop("checked");
       $("input:checkbox").prop("checked", is_checked);
       if (is_checked) {
@@ -276,6 +309,7 @@ Vue.component("function-calls", {
       else {
         this.checkedCalls = [];
       }
+<<<<<<< HEAD
     },
     select_filtered: function(){
       $("input:checkbox").prop("checked", false);
@@ -288,6 +322,9 @@ Vue.component("function-calls", {
         }
       }
 
+=======
+      stop_loading();
+>>>>>>> ce603a04dbf1e2db8e516d0c8a57604e1d8d4d59
     }
   },
   mounted(){
@@ -313,17 +350,20 @@ Vue.component("function-calls", {
         obj.buttons = buttons_list;
 
         obj.$root.$emit('calls-loaded', dict);
+        stop_loading();
       })
     })
   },
   watch: {
     checkedCalls: function(value){
+      start_loading();
       console.log(value)
       var function_call_ids = [];
       var that = this;
       for (var i=0; i<value.length; i++){
         function_call_ids.push(""+value[i]);
       }
+
       selected_calls = function_call_ids;
       if (!plot_visible) {
         // display code interface
@@ -420,6 +460,7 @@ Vue.component("code-view", {
   mounted(){
     var obj2 = this;
     this.$root.$on('calls-loaded', function(dict){
+      start_loading();
       obj2.message = "";
       obj2.specification_code = dict["specification_code"];
       axios.get('/get_source_code/'+dict["selected_function_id"]).then(function(response){
@@ -474,6 +515,7 @@ Vue.component("code-view", {
             //$("#span-bindings-line-"+no).append(" "+binding["id"]);
           } //end j-loop
         } //end i-loop
+        stop_loading();
       })
     })
     this.$root.$on('calls-selected', function(tree){
@@ -639,7 +681,7 @@ Vue.component("specification", {
                      background: bg})
     }
     return {
-      vars : "&nbsp;&nbsp;lambda : " + spec_dict["vars"] + " (",
+      vars : "&nbsp;&nbsp;lambda " + spec_dict["vars"] + " : (",
       str : "&nbsp;&nbsp;&nbsp;&nbsp; " + spec_dict["atom_str"],
       bindvars: bindvars
     }
@@ -797,18 +839,18 @@ Vue.component("dropdown", {
   },
   methods: {
     selectOption: function(data){
+      start_loading();
       if (data["action"] == "simple-plot"){
         // set the plot data globally
         plot_data = data;
         // plot the data we just set
         generate_plot(this);
-        // display the plot
-        $("#plot-wrapper").toggleClass("show");
       }
       // TODO
       else if (data["action"] == "simple-path") {}
       else if (data["action"] == "mixed-select") {}
       else if (data["action"] == "between-select") {}
+      stop_loading();
     }
   }
 })
@@ -825,11 +867,16 @@ Vue.component("plot", {
       // empty plot
       $("#plot-svg").empty();
       // toggle visibility
-      $("#plot-wrapper").toggleClass("show");
+      $("#plot-wrapper").removeClass("show");
       // set the global flag
       plot_visible = false;
     })
     this.$root.$on("plot-data-ready", function(data_array){
+      // display the plot
+      $("#plot-wrapper").addClass("show");
+      // set height of plot wrapper
+      $("#plot-wrapper").height($("#code-listing").outerHeight());
+      $("#plot-svg").width($("#code-listing").outerWidth()-10);
       //var data_array = data["array"];
       nv.addGraph(function() {
         var chart = nv.models.multiBarChart()
@@ -853,38 +900,19 @@ Vue.component("plot", {
 
         nv.utils.windowResize(chart.update);
 
+<<<<<<< HEAD
         // set height of plot wrapper
 
         $("#plot-wrapper").height($("#code-listing").outerHeight());
 
+=======
+>>>>>>> ce603a04dbf1e2db8e516d0c8a57604e1d8d4d59
         // set initial size
         chart.update();
 
+        stop_loading();
+
         return chart;
-        /* //for scatter plot
-        nv.addGraph(function() {
-          var chart = nv.models.scatterChart()
-            .color([d3.rgb("green")])
-
-          chart.xAxis.tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)); });
-          chart.yAxis.tickFormat(d3.format('.02f'));
-
-          var myData = [{key: 'group 1', values: []}];
-          for (var i=0; i<data["x"].length; i++){
-            console.log(new Date(Date.parse(data["x"][i])))
-            myData[0].values.push({x: new Date(Date.parse(data["x"][i])),
-                                   y: data["y"][i],
-                                   size: 7,
-                                   shape: "circle"});
-          }
-          d3.select('#plot-svg').datum(myData).call(chart);
-
-          nv.utils.windowResize(chart.update);
-
-          return chart;
-        }); */
-
-
       });
     })
   },

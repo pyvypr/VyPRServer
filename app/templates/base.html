@@ -4,10 +4,8 @@
 
 <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet" />
 <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet" />
-<script type="text/javascript" src="{{ url_for('static', filename='js/jquery-3.3.1.min.js') }}"></script>
-
-{% block css_import %}
-{% endblock %}
+<link href="{{ url_for('static', filename='css/specification.css') }}" rel="stylesheet" />
+<link rel="stylesheet" type="text/css" href="https://raw.github.com/novus/nvd3/master/src/nv.d3.css"/>
 
 <title>Verdict Data</title>
 </head>
@@ -21,7 +19,9 @@
       <a class="navbar-brand" href="/">
         <img alt="Brand" src="{{url_for('static', filename='logos/vypr-logo.jpeg') }}">
       </a>
-        <div class="tagline">Analysis Environment</div>
+        <div class="tagline">
+            Analysis Environment
+        </div>
     </div>
     </div><!-- /.navbar-collapse -->
   </div><!-- /.container-fluid -->
@@ -30,8 +30,12 @@
 {% block body %}
 {% endblock %}
 
-{% block js_import %}
-{% endblock %}
+<script type="text/javascript" src="{{ url_for('static', filename='js/jquery-3.3.1.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script src="https://cdn.rawgit.com/novus/nvd3/v1.8.1/build/nv.d3.js"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/by_specification_vue.js') }}"></script>
 
 </body>
 
