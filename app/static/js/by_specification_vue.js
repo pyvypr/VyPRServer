@@ -6,7 +6,10 @@ var plot_visible = false;
 var plot_data = null;
 var Store = {
     status : {
-        loading : false
+        loading : false,
+    },
+    plot : {
+        constraint_html : ""
     }
 };
 
@@ -744,7 +747,7 @@ Vue.component("specification", {
       // so that other components can react to the subatom selection
       for (atom in tree){
         var subtree = tree[atom];
-        var subs = $($("#specification_listing").find('span.atom[atom-index="' + atom + '"]')[0]).children();
+        var subs = $($("#specification_listing").find('span.atom[atom-index="' + atom + '"]')[0]).find("span.subatom");
         for (var i=0; i<subs.length; i++){
           $(subs[i]).attr('class', "subatom-clickable");
           $(subs[i]).attr('subtree', JSON.stringify(subtree));
@@ -763,6 +766,8 @@ Vue.component("specification", {
         'span[subatom-index="'+dict["subatom"]+'"]'
       )[0];
       $(subatom).attr("class", "subatom-clickable-active");
+      // update global state
+      Store.plot.constraint_html = decodeHTML($($(".subatom-clickable-active")[0]).parent().html());
     })
   }
 })
@@ -852,9 +857,20 @@ Vue.component("dropdown", {
 
 Vue.component("plot", {
   template: `<div id="plot-wrapper" class="plot">
-  <div class="controls"><a href="#" @click="hidePlot($event)" class="close-plot">close</a></div>
+  <div id="plot-controls"><a href="#" @click="hidePlot($event)" class="close-plot">close</a></div>
+  <div id="plot-description" v-html="this.description"></div>
   <svg id="plot-svg"></svg>
   </div>`,
+  data() {
+    return {
+      store : Store
+    }
+  },
+  computed : {
+    description : function() {
+      return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span> severity";
+    }
+  },
   mounted(){
     var that = this;
     this.$root.$on("calls-loaded", function(dict){
@@ -871,7 +887,9 @@ Vue.component("plot", {
       $("#plot-wrapper").addClass("show");
       // set height of plot wrapper
       $("#plot-wrapper").height($("#code-listing").outerHeight());
-      $("#plot-svg").width($("#code-listing").outerWidth()-10);
+      $("#plot-svg").width($("#code-listing").outerWidth());
+      $("#plot-svg").height($("#code-listing").outerHeight() - $("#plot-controls").outerHeight()
+                            - $("#plot-description").outerHeight());
       //var data_array = data["array"];
       nv.addGraph(function() {
         var chart = nv.models.multiBarChart()
