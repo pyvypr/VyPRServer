@@ -115,6 +115,20 @@ def list_calls_during_request(transaction_id, function_name):
 
     return function_calls
 
+def list_calls_in_interval(start, end, function_id):
+    """start and end are strings in dd/mm/yyyy hh:mm:ss format"""
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    start_timestamp = dateutil.parser.parse(start.replace("%20"," ")).strftime("%Y-%m-%dT%H:%M:%S")
+    end_timestamp = dateutil.parser.parse(end.replace("%20", " ")).strftime("%Y-%m-%dT%H:%M:%S")
+
+    function_calls = cursor.execute("""select id from function_call where time_of_call>=?
+        and end_time_of_call <= ? and function=?""", [start_timestamp, end_timestamp, function_id]).fetchall()
+
+    connection.close()
+    return function_calls
+
 
 def list_verdicts_from_function_call(function_call_id):
     """
@@ -399,7 +413,7 @@ def get_calls_data(ids_list):
      reconstruct the path taken to an instrumentation point
 
     """
-    print(ids_list)
+    #print(ids_list)
     connection = get_connection()
     cursor = connection.cursor()
 
@@ -407,7 +421,7 @@ def get_calls_data(ids_list):
 
     query_string = "select id, function, time_of_call, end_time_of_call, trans, path_condition_id_sequence from function_call where id in %s;" % ids
     calls = cursor.execute(query_string).fetchall()
-    print(calls)
+    #print(calls)
 
 
     #check if the monitored service path was given as an argument

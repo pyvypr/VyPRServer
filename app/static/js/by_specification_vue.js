@@ -68,45 +68,6 @@ var generate_plot = function(root_obj) {
     });
 };
 
-var isBefore = function(time_str1, time_str2){
-  // takes two strings in DD/MM/YYYY hh:mm:ss format and returns true if the first one was earlier
-  var date1 = time_str1.split(" ")[0].split("/");
-  var time1 = time_str1.split(" ")[1].split(":");
-  var date2 = time_str2.split(" ")[0].split("/");
-  var time2 = time_str2.split(" ")[1].split(":");
-
-  for(var i=0; i<3; i++){
-    time1[i] = parseInt(time1[i]);
-    time2[i] = parseInt(time2[i]);
-    date1[i] = parseInt(date1[i]);
-    date2[i] = parseInt(date2[i]);
-  }
-
-  // compare year
-  if (date1[2] < date2[2]) {return true}
-  if (date1[2] > date2[2]) {return false}
-
-  //compare month
-  if (date1[1] < date2[1]) {return true}
-  if (date1[1] > date2[1]) {return false}
-
-  //compare day
-  if (date1[0] < date2[0]) {return true}
-  if (date1[0] > date2[0]) {return false}
-
-  //compare hour
-  if (time1[0] < time2[0]) {return true}
-  if (time1[0] > time2[0]) {return false}
-
-  //compare minutes
-  if (time1[1] < time2[1]) {return true}
-  if (time1[1] > time2[1]) {return false}
-
-  //compare seconds
-  if (time1[2] <= time2[2]) {return true}
-  if (time1[2] > time2[2]) {return false}
-}
-
 
 Vue.component("loading-spinner", {
   template : `
@@ -293,7 +254,7 @@ Vue.component("function-calls", {
       </div>
     </div>`,
   data() {
-    return { message : "Select a function first.", buttons : [], checkedCalls: [],
+    return { message : "Select a function first.", buttons : [], checkedCalls: [], func_id: 0,
              filter_from: "25/02/2020 12:54:18", filter_to: "25/02/2020 21:03:17"}
   },
   methods: {
@@ -315,13 +276,22 @@ Vue.component("function-calls", {
     select_filtered: function(){
       $("input:checkbox").prop("checked", false);
       this.checkedCalls = [];
-      for (var i=0; i<this.buttons.length; i++){
-        if (isBefore(this.filter_from, this.buttons[i].callstart) &&
-            isBefore(this.buttons[i].callstart, this.filter_to)){
-          this.checkedCalls.push(this.buttons[i].callid);
-          $($("[function-call-id="+this.buttons[i].callid+"]")[0]).prop("checked", true);
+      var time = {function: this.func_id, from: this.filter_from, to: this.filter_to};
+      var that = this;
+      axios.post("/list_calls_between/", time).then(function(response){
+        var ids_list = response.data;
+        console.log(ids_list.length);
+        var calls_list = $("input:checkbox");
+        for (var i=0; i<that.buttons.length; i++){
+          if (that.buttons[i].callid == ids_list[0]){
+            for (var j=i; j<ids_list.length; j++){
+              that.checkedCalls.push(that.buttons[j].callid);
+              $(calls_list[j+1]).prop("checked", true);
+            }
+            break
+          }
         }
-      }
+      })
     }
   },
   mounted(){
@@ -335,8 +305,9 @@ Vue.component("function-calls", {
       obj.buttons = [];
       obj.checkedCalls = [];
       console.log(obj.message);
+      obj.func_id = dict["selected_function_id"];
 
-      axios.get('/list_function_calls/'+dict["selected_function_id"]).then(function(response){
+      axios.get('/list_function_calls/'+obj.func_id).then(function(response){
         var data = response.data["data"];
         obj.message = "";
         var buttons_list = [];
