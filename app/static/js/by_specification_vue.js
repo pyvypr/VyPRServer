@@ -730,7 +730,7 @@ Vue.component("specification", {
         bg = "background-color: transparent;";
       }
       bindvars.push({id: list[i]["var_id"],
-                     forall: "Forall("+list[i]["var_forall"]+").\ ",
+                     forall: "Forall("+list[i]["var_forall"]+").\\ ",
                      background: bg})
     }
     return {
@@ -752,7 +752,7 @@ Vue.component("specification", {
             code_highlight_palette[spec_dict["vars"].split(", ").indexOf(list[i]["var_id"])] + ";";}
         else { bg = "background-color: transparent;";}
         bindvars.push({id: list[i]["var_id"],
-                       forall: "Forall("+list[i]["var_forall"]+").\ ",
+                       forall: "Forall("+list[i]["var_forall"]+").\\ ",
                        background: bg})
       }
       this.vars = "&nbsp;&nbsp;lambda  : ( " + spec_dict["vars"];
