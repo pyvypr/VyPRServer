@@ -4,6 +4,15 @@ body {
 	font-family: arial;
 }
 
+div.alert {
+  margin: 10px;
+}
+
+.panel-heading {
+  border: none!important;
+  border-radius: 0 0 0 0!important;
+}
+
 @keyframes spinner-border {
   to { transform: rotate(360deg); }
 }
@@ -17,7 +26,7 @@ body {
     width: 2rem;
     height: 2rem;
     vertical-align: text-bottom;
-    border: .25em solid white;
+    border: .25em solid black;
     border-right-color: transparent;
     border-radius: 50%;
     -webkit-animation: spinner-border .75s linear infinite;
@@ -46,9 +55,9 @@ body {
 }
 
 .tagline {
-    color: white;
-    margin-left: 100px;
-    font-size: 16px;
+    color: black;
+    margin-left: 95px;
+    font-size: 14px;
     height: 70px;
     line-height: 70px;
 }
@@ -63,9 +72,14 @@ body {
 	margin-bottom: 0px!important;
 }
 
-.col-md-4.selection .panel-title:hover {
-	text-decoration: underline;
+.col-md-4.selection .panel-body .panel-title {
+    font-family: monaco;
+    font-style: normal;
 }
+
+/*.col-md-4.selection .panel-title:hover {
+	text-decoration: underline;
+}*/
 
 .selection .panel-body {
 	padding: 0px!important;

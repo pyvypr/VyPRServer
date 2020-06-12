@@ -147,11 +147,28 @@
   display: block;
 }
 
-.plot .controls {
+#plot-description {
+  color: black;
+  padding: 10px;
+}
+
+#plot-description .constraint {
+  font-weight: bold!important;
+  font-family: monaco!important;
+}
+
+#plot-description .subatom-clickable-active {
+  border: none;
+  background-color: white!important;
+  color: black!important;
+  font-family: monaco!important;
+}
+
+.plot #plot-controls {
   display: block;
 }
 
-.plot .controls a.close-plot {
+.plot #plot-controls a.close-plot {
   color: black;
   background: red;
   padding: 5px;
@@ -162,7 +179,7 @@
   opacity: 0.6;
 }
 
-.plot .controls a.close-plot:hover {
+.plot #plot-controls a.close-plot:hover {
   opacity: 1.0;
 }
 
