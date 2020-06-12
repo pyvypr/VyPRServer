@@ -116,7 +116,7 @@ class FunctionSelectTest(TestBaseFirefox):
 
         calls_list = driver.find_element_by_id("function-call-list")
         calls = WebDriverWait(calls_list, 10).until(lambda d: d.find_elements_by_class_name("list-group-item"))
-        assert len(calls)==first_f_calls
+        assert len(calls)==(first_f_calls+2)
 
         WebDriverWait(driver, 10).until(lambda d: d.find_element_by_id("specification_listing"))
         code = WebDriverWait(driver, 50).until(lambda d: d.find_element_by_class_name("code_listing"))
@@ -129,7 +129,7 @@ class FunctionSelectTest(TestBaseFirefox):
             self.assertEqual(driver.find_element_by_id("function-list").get_attribute("style"), "")
             ActionChains(driver).click(buttons[1]).perform()
             calls = WebDriverWait(calls_list, 10).until(lambda d: d.find_elements_by_class_name("list-group-item"))
-            assert len(calls)==other_f_calls
+            assert len(calls)==(other_f_calls+2)
 
             WebDriverWait(driver, 10).until(lambda d: d.find_element_by_id("specification_listing"))
             code = WebDriverWait(driver, 50).until(lambda d: d.find_element_by_class_name("code_listing"))
@@ -169,7 +169,7 @@ class CallsSelectTest(TestBaseFirefox):
 
         #select a call and check that the code reacts to this
         # some code lines are hidden, some are highlighted and should have binding buttons
-        ActionChains(driver).click(calls[0].find_element_by_tag_name("input")).perform()
+        ActionChains(driver).click(calls[2].find_element_by_tag_name("input")).perform()
         WebDriverWait(driver, 50).until(lambda d:"display: none" in lines[higlighted_line_index-4].get_attribute("style"))
         assert lines[0].get_attribute("style") == "background-color: transparent;"
         assert "display: none" in lines[higlighted_line_index-4].get_attribute("style")
