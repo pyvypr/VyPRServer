@@ -1,13 +1,17 @@
 var code_highlight_palette = ["#cae2dc", "#eee3cd", "#cad7f2", "#ded4e7", "#e3e3e3", "d6eff0"];
-// global list of selected function calls
-var selected_calls = [];
 // global plot data, used for when plot are updated with new data
 var plot_visible = false;
 var plot_data = null;
 var Store = {
     status : {
-        loading : false
-    }
+        loading : false,
+    },
+    plot : {
+        constraint_html : ""
+    },
+    selected_calls : [],
+    binding_selected : false,
+    subatom_selected : false
 };
 
 var start_loading = function() {
@@ -108,6 +112,29 @@ var isBefore = function(time_str1, time_str2){
 }
 
 
+Vue.component("alert", {
+  template : `
+  <div class="alert alert-info alert-dismissible" role="alert" v-if="is_open">
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close" @click="close()">
+      <span aria-hidden="true">&times;</span>
+    </button>
+    {{ message }}
+  </div>
+  `,
+  props : ["message"],
+  data : function() {
+    return {
+      is_open : true
+    }
+  },
+  methods : {
+    close : function() {
+      this.is_open = false;
+    }
+  }
+});
+
+
 Vue.component("loading-spinner", {
   template : `
   <div class="loading-spinner" role="status" v-if="in_progress"></div>
@@ -135,6 +162,7 @@ Vue.component("machine-function-property", {
         </h3>
       </div>
       <div class="panel-body">
+        <alert message="Select a specification to see relevant calls." />
         <transition name="slide-fade">
         <div v-show="showFunctions" class="list-group" id="function-list">
           <div id="function-list-data"></div>
@@ -277,12 +305,13 @@ Vue.component("function-calls", {
       <div class="panel-body">
         <div class="list-group" id="function-call-list">
           <div v-if="message" class="please-select"><p>{{message}}</p></div>
-          <button v-if="!this.message" class="list-group-item">
+          <alert v-if="!message" message="Select one or more calls to load performance data." />
+          <div v-if="!message" class="list-group-item">
             <b>From</b> <input id="filter-from" placeholder="25/02/2020 12:54:18" v-model="filter_from"/>
             <b>To</b> <input id="filter-to" placeholder="25/02/2020 21:03:17" v-model="filter_to"/>
             <button @click="select_filtered()"> Filter calls </button>
-          </button>
-          <button v-if="!this.message" class="list-group-item">
+          </div>
+          <button v-if="!message" class="list-group-item">
             <input type='checkbox' id="select-all" @click="select_all_calls()"/><b> Select all </b>
           </button>
           <button v-for="(b, index) in this.buttons" :key="index" class="list-group-item">
@@ -293,8 +322,13 @@ Vue.component("function-calls", {
       </div>
     </div>`,
   data() {
-    return { message : "Select a function first.", buttons : [], checkedCalls: [],
-             filter_from: "25/02/2020 12:54:18", filter_to: "25/02/2020 21:03:17"}
+    return {
+      message : "Select a function first.",
+      buttons : [],
+      checkedCalls: [],
+      filter_from: "25/02/2020 12:54:18",
+      filter_to: "25/02/2020 21:03:17",
+      store : Store}
   },
   methods: {
     select_all_calls: function(){
@@ -309,6 +343,10 @@ Vue.component("function-calls", {
       else {
         this.checkedCalls = [];
       }
+      // display only relevant alerts
+      Store.binding_selected = false;
+      Store.subatom_selected = false;
+
       stop_loading();
 
     },
@@ -359,7 +397,7 @@ Vue.component("function-calls", {
         function_call_ids.push(""+value[i]);
       }
 
-      selected_calls = function_call_ids;
+      Store.selected_calls = function_call_ids;
       if (!plot_visible) {
         // display code interface
         if (function_call_ids.length){
@@ -392,11 +430,15 @@ Vue.component("code-view", {
       </div>
       <div class="panel-body" id="verdict-list">
         <div v-if="message" class="please-select">{{message}}</div>
+        <alert v-if="binding_is_selected"
+            message="Select a part of the specification to narrow down critical statements in the code." />
         <div v-if="specification_code" id='specification_listing'>
           <specification :spec="this.specification_code" :change="1" />
         </div>
         <plot></plot>
         <div v-if="code_lines" class='code_listing' id="code-listing">
+          <alert v-if="calls_are_selected" message="Select a binding in the code listing below." />
+          <alert v-if="subatom_is_selected" message="Hover over a critical statement to see analysis options." />
           <div v-for="(line,index) in code_lines" :key="index" :class="line.class"
           :id="line.id" :style="line.background" :save-background-color="line.color"
           v-show="line.show">
@@ -411,11 +453,27 @@ Vue.component("code-view", {
           </div>
         </div>
       </div>
-    </div>`
-  ,
+    </div>`,
   data(){
-    return {message: "Select a function and then one or more calls, first.",
-            specification_code: "", code_lines: [], start_line: 0, tree: {}, binding: undefined}
+    return {
+      message: "Select a function and then one or more calls, first.",
+      specification_code: "",
+      code_lines: [],
+      start_line: 0,
+      tree: {},
+      binding: undefined,
+      store : Store}
+  },
+  computed : {
+    calls_are_selected : function() {
+      return this.store.selected_calls.length > 0;
+    },
+    binding_is_selected : function() {
+      return this.store.binding_selected;
+    },
+    subatom_is_selected : function() {
+      return this.store.subatom_selected;
+    }
   },
   methods:{
     selectBinding : function(binding, tree, lines){
@@ -729,6 +787,7 @@ Vue.component("specification", {
     })
 
     this.$root.$on('binding-selected', function(tree){
+      Store.binding_selected = true;
       // clean up subatom links from previous binding selection
       remove_subatoms = $(".subatom-clickable");
       if (typeof(remove_subatoms) != 'string'){
@@ -744,7 +803,7 @@ Vue.component("specification", {
       // so that other components can react to the subatom selection
       for (atom in tree){
         var subtree = tree[atom];
-        var subs = $($("#specification_listing").find('span.atom[atom-index="' + atom + '"]')[0]).children();
+        var subs = $($("#specification_listing").find('span.atom[atom-index="' + atom + '"]')[0]).find("span.subatom");
         for (var i=0; i<subs.length; i++){
           $(subs[i]).attr('class', "subatom-clickable");
           $(subs[i]).attr('subtree', JSON.stringify(subtree));
@@ -763,6 +822,9 @@ Vue.component("specification", {
         'span[subatom-index="'+dict["subatom"]+'"]'
       )[0];
       $(subatom).attr("class", "subatom-clickable-active");
+      // update global state
+      Store.plot.constraint_html = decodeHTML($($(".subatom-clickable-active")[0]).parent().html());
+      Store.subatom_selected = true;
     })
   }
 })
@@ -784,9 +846,7 @@ Vue.component("dropdown", {
     var sub_index = this.dict["subatom"];
     var inst_points = this.tree[this.binding][atom_index][sub_index];
     var inst_point_id = inst_points[0]["id"];
-    var calls = selected_calls;
     var that = this;
-    console.log(calls)
 
     var inst_points_list = [];
     for (var i=0; i<inst_points.length; i++){
@@ -806,7 +866,7 @@ Vue.component("dropdown", {
         //then we can calculate verdict severity for each of the observations
         var option = {text: 'Plot observed values from this point',
                       data: {action: "simple-plot",
-                             calls: calls,
+                             calls: Store.selected_calls,
                              binding: that.binding,
                              atom: atom_index,
                              subatom: sub_index,
@@ -814,7 +874,7 @@ Vue.component("dropdown", {
         options.push(option);
         var option2 = {text: 'Highlight paths by average verdict severity',
                       data: {action: "simple-path",
-                             calls: calls,
+                             calls: Store.selected_calls,
                              binding: that.binding,
                              atom: atom_index,
                              subatom: sub_index,
@@ -852,9 +912,20 @@ Vue.component("dropdown", {
 
 Vue.component("plot", {
   template: `<div id="plot-wrapper" class="plot">
-  <div class="controls"><a href="#" @click="hidePlot($event)" class="close-plot">close</a></div>
+  <div id="plot-controls"><a href="#" @click="hidePlot($event)" class="close-plot">close</a></div>
+  <div id="plot-description" v-html="this.description"></div>
   <svg id="plot-svg"></svg>
   </div>`,
+  data() {
+    return {
+      store : Store
+    }
+  },
+  computed : {
+    description : function() {
+      return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span> severity";
+    }
+  },
   mounted(){
     var that = this;
     this.$root.$on("calls-loaded", function(dict){
@@ -870,8 +941,10 @@ Vue.component("plot", {
       // display the plot
       $("#plot-wrapper").addClass("show");
       // set height of plot wrapper
-      $("#plot-wrapper").height($("#code-listing").outerHeight());
-      $("#plot-svg").width($("#code-listing").outerWidth()-10);
+      $("#plot-wrapper").height($("#code-listing").outerHeight() + 10);
+      $("#plot-svg").width($("#code-listing").outerWidth());
+      $("#plot-svg").height($("#code-listing").outerHeight() - $("#plot-controls").outerHeight()
+                            - $("#plot-description").outerHeight());
       //var data_array = data["array"];
       nv.addGraph(function() {
         var chart = nv.models.multiBarChart()
