@@ -309,7 +309,8 @@ Vue.component("function-calls", {
       else {
         this.checkedCalls = [];
       }
-<<<<<<< HEAD
+      stop_loading();
+
     },
     select_filtered: function(){
       $("input:checkbox").prop("checked", false);
@@ -321,10 +322,6 @@ Vue.component("function-calls", {
           $($("[function-call-id="+this.buttons[i].callid+"]")[0]).prop("checked", true);
         }
       }
-
-=======
-      stop_loading();
->>>>>>> ce603a04dbf1e2db8e516d0c8a57604e1d8d4d59
     }
   },
   mounted(){
