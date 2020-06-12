@@ -50,9 +50,9 @@ div.alert {
 }
 
 .tagline {
-    color: white;
-    margin-left: 100px;
-    font-size: 16px;
+    color: black;
+    margin-left: 95px;
+    font-size: 14px;
     height: 70px;
     line-height: 70px;
 }
