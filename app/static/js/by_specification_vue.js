@@ -54,6 +54,45 @@ var generate_plot = function(root_obj) {
     });
 };
 
+var isBefore = function(time_str1, time_str2){
+  // takes two strings in DD/MM/YYYY hh:mm:ss format and returns true if the first one was earlier
+  var date1 = time_str1.split(" ")[0].split("/");
+  var time1 = time_str1.split(" ")[1].split(":");
+  var date2 = time_str2.split(" ")[0].split("/");
+  var time2 = time_str2.split(" ")[1].split(":");
+
+  for(var i=0; i<3; i++){
+    time1[i] = parseInt(time1[i]);
+    time2[i] = parseInt(time2[i]);
+    date1[i] = parseInt(date1[i]);
+    date2[i] = parseInt(date2[i]);
+  }
+
+  // compare year
+  if (date1[2] < date2[2]) {return true}
+  if (date1[2] > date2[2]) {return false}
+
+  //compare month
+  if (date1[1] < date2[1]) {return true}
+  if (date1[1] > date2[1]) {return false}
+
+  //compare day
+  if (date1[0] < date2[0]) {return true}
+  if (date1[0] > date2[0]) {return false}
+
+  //compare hour
+  if (time1[0] < time2[0]) {return true}
+  if (time1[0] > time2[0]) {return false}
+
+  //compare minutes
+  if (time1[1] < time2[1]) {return true}
+  if (time1[1] > time2[1]) {return false}
+
+  //compare seconds
+  if (time1[2] <= time2[2]) {return true}
+  if (time1[2] > time2[2]) {return false}
+}
+
 
 Vue.component("machine-function-property", {
   props: ['tree'],
@@ -206,9 +245,10 @@ Vue.component("function-calls", {
       <div class="panel-body">
         <div class="list-group" id="function-call-list">
           <div v-if="message" class="please-select"><p>{{message}}</p></div>
-          <button v-if="!this.message" class="list-group-item"> &#128340; &nbsp;&nbsp;&nbsp;
+          <button v-if="!this.message" class="list-group-item">
             <b>From</b> <input id="filter-from" placeholder="25/02/2020 12:54:18" v-model="filter_from"/>
             <b>To</b> <input id="filter-to" placeholder="25/02/2020 21:03:17" v-model="filter_to"/>
+            <button @click="select_filtered()"> Filter calls </button>
           </button>
           <button v-if="!this.message" class="list-group-item">
             <input type='checkbox' id="select-all" @click="select_all_calls()"/><b> Select all </b>
@@ -229,15 +269,25 @@ Vue.component("function-calls", {
       var is_checked = $("#select-all").prop("checked");
       $("input:checkbox").prop("checked", is_checked);
       if (is_checked) {
-        for (var i=0; i<this.buttons.length; i++){
-          /*if (Date.parse(this.buttons[i].callstart) >= Date.parse(this.filter_from) &&
-              Date.parse(this.buttons[i].callstart) <= Date.parse(this.filter_to)){*/
+        for(var i=0; i<this.buttons.length; i++){
           this.checkedCalls.push(this.buttons[i].callid);
         }
       }
       else {
         this.checkedCalls = [];
       }
+    },
+    select_filtered: function(){
+      $("input:checkbox").prop("checked", false);
+      this.checkedCalls = [];
+      for (var i=0; i<this.buttons.length; i++){
+        if (isBefore(this.filter_from, this.buttons[i].callstart) &&
+            isBefore(this.buttons[i].callstart, this.filter_to)){
+          this.checkedCalls.push(this.buttons[i].callid);
+          $($("[function-call-id="+this.buttons[i].callid+"]")[0]).prop("checked", true);
+        }
+      }
+
     }
   },
   mounted(){
@@ -274,21 +324,21 @@ Vue.component("function-calls", {
       for (var i=0; i<value.length; i++){
         function_call_ids.push(""+value[i]);
       }
-      if (function_call_ids.length){
-        if (!plot_visible) {
-            // display code interface
-            axios.post("/get_function_calls_data/", {"ids" : function_call_ids}).then(function(response) {
-              tree = response.data;
-              console.log(JSON.stringify(tree))
-              that.$root.$emit('calls-selected',tree);
-              selected_calls = function_call_ids;
-            });
-        } else {
-            // add data to plot without displaying code interface
-            plot_data.calls = function_call_ids;
-            // trigger plotting
-            generate_plot(this);
+      selected_calls = function_call_ids;
+      if (!plot_visible) {
+        // display code interface
+        if (function_call_ids.length){
+          axios.post("/get_function_calls_data/", {"ids" : function_call_ids}).then(function(response) {
+            tree = response.data;
+            console.log(JSON.stringify(tree))
+            that.$root.$emit('calls-selected',tree);
+          });
         }
+      } else {
+        // add data to plot without displaying code interface
+        plot_data.calls = function_call_ids;
+        // trigger plotting
+        generate_plot(this);
       }
     }
   }
