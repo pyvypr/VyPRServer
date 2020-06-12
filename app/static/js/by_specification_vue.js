@@ -334,7 +334,7 @@ Vue.component("function-calls", {
       obj.message = "Loading function calls.  This can take some time if there are many.";
       obj.buttons = [];
       obj.checkedCalls = [];
-      console.log(obj.message)
+      console.log(obj.message);
 
       axios.get('/list_function_calls/'+dict["selected_function_id"]).then(function(response){
         var data = response.data["data"];
@@ -347,13 +347,11 @@ Vue.component("function-calls", {
         obj.buttons = buttons_list;
 
         obj.$root.$emit('calls-loaded', dict);
-        stop_loading();
       })
     })
   },
   watch: {
     checkedCalls: function(value){
-      start_loading();
       console.log(value)
       var function_call_ids = [];
       var that = this;
@@ -377,7 +375,6 @@ Vue.component("function-calls", {
         // trigger plotting
         generate_plot(this);
       }
-      stop_loading();
     }
   }
 })
