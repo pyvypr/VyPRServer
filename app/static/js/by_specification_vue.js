@@ -377,6 +377,7 @@ Vue.component("function-calls", {
         // trigger plotting
         generate_plot(this);
       }
+      stop_loading();
     }
   }
 })
