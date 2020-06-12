@@ -9,7 +9,9 @@ var Store = {
     plot : {
         constraint_html : ""
     },
-    selected_calls : []
+    selected_calls : [],
+    binding_selected : false,
+    subatom_selected : false
 };
 
 var start_loading = function() {
@@ -303,7 +305,7 @@ Vue.component("function-calls", {
       <div class="panel-body">
         <div class="list-group" id="function-call-list">
           <div v-if="message" class="please-select"><p>{{message}}</p></div>
-          <alert v-if="!message" message="Select a call to load its performance data." />
+          <alert v-if="!message" message="Select one or more calls to load performance data." />
           <div v-if="!message" class="list-group-item">
             <b>From</b> <input id="filter-from" placeholder="25/02/2020 12:54:18" v-model="filter_from"/>
             <b>To</b> <input id="filter-to" placeholder="25/02/2020 21:03:17" v-model="filter_to"/>
@@ -341,6 +343,10 @@ Vue.component("function-calls", {
       else {
         this.checkedCalls = [];
       }
+      // display only relevant alerts
+      Store.binding_selected = false;
+      Store.subatom_selected = false;
+
       stop_loading();
 
     },
@@ -424,12 +430,15 @@ Vue.component("code-view", {
       </div>
       <div class="panel-body" id="verdict-list">
         <div v-if="message" class="please-select">{{message}}</div>
-        <alert v-if="calls_are_selected" message="Select a binding in the code listing below." />
+        <alert v-if="binding_is_selected"
+            message="Select a part of the specification to narrow down critical statements in the code." />
         <div v-if="specification_code" id='specification_listing'>
           <specification :spec="this.specification_code" :change="1" />
         </div>
         <plot></plot>
         <div v-if="code_lines" class='code_listing' id="code-listing">
+          <alert v-if="calls_are_selected" message="Select a binding in the code listing below." />
+          <alert v-if="subatom_is_selected" message="Hover over a critical statement to see analysis options." />
           <div v-for="(line,index) in code_lines" :key="index" :class="line.class"
           :id="line.id" :style="line.background" :save-background-color="line.color"
           v-show="line.show">
@@ -458,6 +467,12 @@ Vue.component("code-view", {
   computed : {
     calls_are_selected : function() {
       return this.store.selected_calls.length > 0;
+    },
+    binding_is_selected : function() {
+      return this.store.binding_selected;
+    },
+    subatom_is_selected : function() {
+      return this.store.subatom_selected;
     }
   },
   methods:{
@@ -772,6 +787,7 @@ Vue.component("specification", {
     })
 
     this.$root.$on('binding-selected', function(tree){
+      Store.binding_selected = true;
       // clean up subatom links from previous binding selection
       remove_subatoms = $(".subatom-clickable");
       if (typeof(remove_subatoms) != 'string'){
@@ -808,6 +824,7 @@ Vue.component("specification", {
       $(subatom).attr("class", "subatom-clickable-active");
       // update global state
       Store.plot.constraint_html = decodeHTML($($(".subatom-clickable-active")[0]).parent().html());
+      Store.subatom_selected = true;
     })
   }
 })
@@ -924,7 +941,7 @@ Vue.component("plot", {
       // display the plot
       $("#plot-wrapper").addClass("show");
       // set height of plot wrapper
-      $("#plot-wrapper").height($("#code-listing").outerHeight());
+      $("#plot-wrapper").height($("#code-listing").outerHeight() + 10);
       $("#plot-svg").width($("#code-listing").outerWidth());
       $("#plot-svg").height($("#code-listing").outerHeight() - $("#plot-controls").outerHeight()
                             - $("#plot-description").outerHeight());
