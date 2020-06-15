@@ -165,6 +165,7 @@ Vue.component("machine-function-property", {
   }
 })
 
+
 Vue.component("subtree",{
   props: ['id', 'content'],
   template:  `
@@ -175,6 +176,7 @@ Vue.component("subtree",{
     return { tabid: "tab-" + this.id }
   }
 })
+
 
 Vue.component("subtreelevel", {
   /*recursive component, properties store the following information:
@@ -257,6 +259,7 @@ Vue.component("subtreelevel", {
   }
 })
 
+
 Vue.component("function-calls", {
   template : `
     <div class="panel panel-success">
@@ -323,7 +326,7 @@ Vue.component("function-calls", {
         var calls_list = $("input:checkbox");
         for (var i=0; i<that.buttons.length; i++){
           if (that.buttons[i].callid == ids_list[0]){
-            for (var j=i; j<ids_list.length; j++){
+            for (var j=i; j<i+ids_list.length; j++){
               that.checkedCalls.push(that.buttons[j].callid);
               $(calls_list[j+1]).prop("checked", true);
             }
@@ -388,6 +391,7 @@ Vue.component("function-calls", {
     }
   }
 })
+
 
 Vue.component("code-view", {
   /* This is the most complex component. It is empty at the beginning, but upon the selection
@@ -674,6 +678,7 @@ Vue.component("code-view", {
   }
 })
 
+
 Vue.component("specification", {
   /* this component is still jquery reliant as a part of its HTML (atom and subatom span elements)
   is received from the server side instead of being generated within the template*/
@@ -801,6 +806,7 @@ Vue.component("specification", {
   }
 })
 
+
 Vue.component("dropdown", {
   // is displayed when hovering above the corresponding line in the code
   // requires data about all the previously selected levels in order to get the filtered verdict
@@ -881,6 +887,7 @@ Vue.component("dropdown", {
     }
   }
 })
+
 
 Vue.component("plot", {
   template: `<div id="plot-wrapper" class="plot">
@@ -964,6 +971,7 @@ Vue.component("plot", {
 
 
 })
+
 
 var app = new Vue({
     el : "#app"
