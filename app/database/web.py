@@ -616,6 +616,7 @@ def get_plot_data_simple(dict):
 
     x_array = []
     y_array = []
+    severity_array = []
 
     for element in result:
         x_array.append(element[1])
@@ -624,10 +625,11 @@ def get_plot_data_simple(dict):
         d=min(abs(y-lower),abs(y-upper))
         #sign=-1 if verdict value=0 and sign=1 if verdict is true
         sign=-1+2*(element[3])
-        y_array.append(sign*d)
+        severity_array.append(sign*d)
+        y_array.append(y)
 
     connection.close()
-    return {"x": x_array, "y": y_array}
+    return {"x": x_array, "observation": y_array, "severity" : severity_array}
 
 
 """

@@ -183,6 +183,29 @@
   opacity: 1.0;
 }
 
+.plot #plot-filters {
+  color: black;
+}
+
+.plot a.filter {
+  opacity: 0.7;
+  color: white!important;
+  padding: 5px;
+  margin: 2px;
+}
+
+.plot a.filter.active {
+  opacity: 1.0;
+}
+
+.plot a.filter#violations {
+  background: red;
+}
+
+.plot a.filter#successes {
+  background: green;
+}
+
 .plot svg{
   background-color: white;
   height:90%;

@@ -7,7 +7,10 @@ var Store = {
         loading : false,
     },
     plot : {
-        constraint_html : ""
+        constraint_html : "",
+        type : null,
+        show_violations : true,
+        show_successes : true
     },
     selected_calls : [],
     binding_selected : false,
@@ -42,6 +45,8 @@ var subatom_click = function(dict){app.$emit("subatom-selected", dict)};
 
 var generate_plot = function(root_obj) {
     var that = root_obj;
+    // get the plot type
+    var type = Store.plot.type;
     // set global plot data
     // this is used when function calls are selected - if a plot is already being shown,
     // the new data will be merged into the plot
@@ -56,13 +61,23 @@ var generate_plot = function(root_obj) {
 
       var myData = [{key: 'group 1', values: []}];
       for (var i=0; i<data["x"].length; i++){
-        var severity = data["y"][i];
-        // negative verdict severity represents violation - colour these bars red
-        var color = "#cc0000";
-        // other columns in the plot are green since they show non-violating observations
-        if (severity >= 0) {color = "#00802b"}
+        var value = data[type][i];
+        // check whether we should plot this based on the filters
+        if(value >= 0) {
+          if(!Store.plot.show_successes) continue;
+        } else {
+          if(!Store.plot.show_violations) continue;
+        }
+        if(type == "severity") {
+            // negative verdict severity represents violation - colour these bars red
+            var color = "#cc0000";
+            // other columns in the plot are green since they show non-violating observations
+            if (value >= 0) {color = "#00802b"}
+        } else {
+            color = "blue";
+        }
         myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
-                               value: severity,
+                               value: value,
                                color: color});
       }
 
@@ -848,8 +863,16 @@ Vue.component("dropdown", {
         //for a simple atom we now need all observations made at these points,
         //filtered by: calls, binding, atom, subatom
         //then we can calculate verdict severity for each of the observations
-        var option = {text: 'Plot observed values from this point',
-                      data: {action: "simple-plot",
+        var option = {text: 'Plot severity of observations from this point',
+                      data: {action: "simple-severity-plot",
+                             calls: Store.selected_calls,
+                             binding: that.binding,
+                             atom: atom_index,
+                             subatom: sub_index,
+                             points: inst_points_list}};
+        options.push(option);
+         var option = {text: 'Plot observations from this point',
+                      data: {action: "simple-observation-plot",
                              calls: Store.selected_calls,
                              binding: that.binding,
                              atom: atom_index,
@@ -879,9 +902,19 @@ Vue.component("dropdown", {
   methods: {
     selectOption: function(data){
       start_loading();
-      if (data["action"] == "simple-plot"){
+      if (data["action"] == "simple-severity-plot"){
         // set the plot data globally
         plot_data = data;
+        // set the plot type
+        Store.plot.type = "severity";
+        // plot the data we just set
+        generate_plot(this);
+      }
+      if (data["action"] == "simple-observation-plot"){
+        // set the plot data globally
+        plot_data = data;
+        // set the plot type
+        Store.plot.type = "observation";
         // plot the data we just set
         generate_plot(this);
       }
@@ -899,6 +932,12 @@ Vue.component("plot", {
   template: `<div id="plot-wrapper" class="plot">
   <div id="plot-controls"><a href="#" @click="hidePlot($event)" class="close-plot">close</a></div>
   <div id="plot-description" v-html="this.description"></div>
+  <div id="plot-filters" v-if="is_severity_plot">Filters:
+    <a href="#" id="violations" class="filter" v-bind:class="{active : violationFilterActive}"
+      @click="toggleViolationFilter($event)">Violations</a>
+    <a href="#" id="successes" class="filter" v-bind:class="{active : successFilterActive}"
+      @click="toggleSuccessFilter($event)">Successes</a>
+  </div>
   <svg id="plot-svg"></svg>
   </div>`,
   data() {
@@ -908,7 +947,20 @@ Vue.component("plot", {
   },
   computed : {
     description : function() {
-      return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span> severity";
+      if(this.store.plot.type == "severity") {
+        return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span> severity";
+      } else {
+        return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span>";
+      }
+    },
+    violationFilterActive : function() {
+      return this.store.plot.show_violations;
+    },
+    successFilterActive : function() {
+      return this.store.plot.show_successes;
+    },
+    is_severity_plot : function() {
+      return this.store.plot.type == "severity";
     }
   },
   mounted(){
@@ -928,8 +980,14 @@ Vue.component("plot", {
       // set height of plot wrapper
       $("#plot-wrapper").height($("#code-listing").outerHeight() + 10);
       $("#plot-svg").width($("#code-listing").outerWidth());
-      $("#plot-svg").height($("#code-listing").outerHeight() - $("#plot-controls").outerHeight()
-                            - $("#plot-description").outerHeight());
+      if(that.store.plot.type == "severity") {
+          $("#plot-svg").height($("#code-listing").outerHeight() - $("#plot-controls").outerHeight()
+                                - $("#plot-description").outerHeight()
+                                - $("#plot-filters").outerHeight());
+      } else {
+          $("#plot-svg").height($("#code-listing").outerHeight() - $("#plot-controls").outerHeight()
+                                - $("#plot-description").outerHeight());
+      }
       //var data_array = data["array"];
       nv.addGraph(function() {
         var chart = nv.models.multiBarChart()
@@ -972,6 +1030,17 @@ Vue.component("plot", {
       $("#plot-wrapper").toggleClass("show");
       // set the global flag
       plot_visible = false;
+    },
+    toggleSuccessFilter : function(e) {
+      e.preventDefault();
+      this.store.plot.show_successes = !this.store.plot.show_successes;
+      generate_plot(this);
+
+    },
+    toggleViolationFilter : function(e) {
+      e.preventDefault();
+      this.store.plot.show_violations = !this.store.plot.show_violations;
+      generate_plot(this);
     }
   }
 
