@@ -17,6 +17,14 @@ if [ $# == 1 ]; then
   cd ..
   python run_service.py --path $1 --port 9002 &
   cd tests/
-fi
+  python run.py
 
-python run.py
+  PID=`ps aux | grep python | grep -v grep | awk '{print $2}'`
+
+  for pid in $PID
+  do
+    kill -9 $pid
+  done
+else
+  python run.py
+fi
