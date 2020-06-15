@@ -941,7 +941,11 @@ Vue.component("plot", {
   },
   computed : {
     description : function() {
-      return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span> severity";
+      if(this.store.plot.type == "severity") {
+        return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span> severity";
+      } else {
+        return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span>";
+      }
     },
     violationFilterActive : function() {
       return this.store.plot.show_violations;
