@@ -72,45 +72,6 @@ var generate_plot = function(root_obj) {
     });
 };
 
-var isBefore = function(time_str1, time_str2){
-  // takes two strings in DD/MM/YYYY hh:mm:ss format and returns true if the first one was earlier
-  var date1 = time_str1.split(" ")[0].split("/");
-  var time1 = time_str1.split(" ")[1].split(":");
-  var date2 = time_str2.split(" ")[0].split("/");
-  var time2 = time_str2.split(" ")[1].split(":");
-
-  for(var i=0; i<3; i++){
-    time1[i] = parseInt(time1[i]);
-    time2[i] = parseInt(time2[i]);
-    date1[i] = parseInt(date1[i]);
-    date2[i] = parseInt(date2[i]);
-  }
-
-  // compare year
-  if (date1[2] < date2[2]) {return true}
-  if (date1[2] > date2[2]) {return false}
-
-  //compare month
-  if (date1[1] < date2[1]) {return true}
-  if (date1[1] > date2[1]) {return false}
-
-  //compare day
-  if (date1[0] < date2[0]) {return true}
-  if (date1[0] > date2[0]) {return false}
-
-  //compare hour
-  if (time1[0] < time2[0]) {return true}
-  if (time1[0] > time2[0]) {return false}
-
-  //compare minutes
-  if (time1[1] < time2[1]) {return true}
-  if (time1[1] > time2[1]) {return false}
-
-  //compare seconds
-  if (time1[2] <= time2[2]) {return true}
-  if (time1[2] > time2[2]) {return false}
-}
-
 
 Vue.component("alert", {
   template : `
@@ -204,6 +165,7 @@ Vue.component("machine-function-property", {
   }
 })
 
+
 Vue.component("subtree",{
   props: ['id', 'content'],
   template:  `
@@ -214,6 +176,7 @@ Vue.component("subtree",{
     return { tabid: "tab-" + this.id }
   }
 })
+
 
 Vue.component("subtreelevel", {
   /*recursive component, properties store the following information:
@@ -296,6 +259,7 @@ Vue.component("subtreelevel", {
   }
 })
 
+
 Vue.component("function-calls", {
   template : `
     <div class="panel panel-success">
@@ -328,6 +292,7 @@ Vue.component("function-calls", {
       checkedCalls: [],
       filter_from: "25/02/2020 12:54:18",
       filter_to: "25/02/2020 21:03:17",
+      func_id: 0,
       store : Store}
   },
   methods: {
@@ -353,13 +318,22 @@ Vue.component("function-calls", {
     select_filtered: function(){
       $("input:checkbox").prop("checked", false);
       this.checkedCalls = [];
-      for (var i=0; i<this.buttons.length; i++){
-        if (isBefore(this.filter_from, this.buttons[i].callstart) &&
-            isBefore(this.buttons[i].callstart, this.filter_to)){
-          this.checkedCalls.push(this.buttons[i].callid);
-          $($("[function-call-id="+this.buttons[i].callid+"]")[0]).prop("checked", true);
+      var time = {function: this.func_id, from: this.filter_from, to: this.filter_to};
+      var that = this;
+      axios.post("/list_calls_between/", time).then(function(response){
+        var ids_list = response.data;
+        console.log(ids_list.length);
+        var calls_list = $("input:checkbox");
+        for (var i=0; i<that.buttons.length; i++){
+          if (that.buttons[i].callid == ids_list[0]){
+            for (var j=i; j<i+ids_list.length; j++){
+              that.checkedCalls.push(that.buttons[j].callid);
+              $(calls_list[j+1]).prop("checked", true);
+            }
+            break
+          }
         }
-      }
+      })
     }
   },
   mounted(){
@@ -373,8 +347,9 @@ Vue.component("function-calls", {
       obj.buttons = [];
       obj.checkedCalls = [];
       console.log(obj.message);
+      obj.func_id = dict["selected_function_id"];
 
-      axios.get('/list_function_calls/'+dict["selected_function_id"]).then(function(response){
+      axios.get('/list_function_calls/'+obj.func_id).then(function(response){
         var data = response.data["data"];
         obj.message = "";
         var buttons_list = [];
@@ -416,6 +391,7 @@ Vue.component("function-calls", {
     }
   }
 })
+
 
 Vue.component("code-view", {
   /* This is the most complex component. It is empty at the beginning, but upon the selection
@@ -702,6 +678,7 @@ Vue.component("code-view", {
   }
 })
 
+
 Vue.component("specification", {
   /* this component is still jquery reliant as a part of its HTML (atom and subatom span elements)
   is received from the server side instead of being generated within the template*/
@@ -829,6 +806,7 @@ Vue.component("specification", {
   }
 })
 
+
 Vue.component("dropdown", {
   // is displayed when hovering above the corresponding line in the code
   // requires data about all the previously selected levels in order to get the filtered verdict
@@ -909,6 +887,7 @@ Vue.component("dropdown", {
     }
   }
 })
+
 
 Vue.component("plot", {
   template: `<div id="plot-wrapper" class="plot">
@@ -992,6 +971,7 @@ Vue.component("plot", {
 
 
 })
+
 
 var app = new Vue({
     el : "#app"

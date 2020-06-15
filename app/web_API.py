@@ -65,3 +65,11 @@ def get_plot_data_simple():
     dict = json.loads(request.data)
     return_data = database.get_plot_data_simple(dict)
     return json.dumps(return_data)
+
+@app_object.route("/list_calls_between/", methods=["GET", "POST"])
+def list_calls_between():
+    start = json.loads(request.data)["from"]
+    end = json.loads(request.data)["to"]
+    id = json.loads(request.data)["function"]
+    list = database.list_calls_in_interval(start, end, id)
+    return json.dumps(list)
