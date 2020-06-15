@@ -7,7 +7,9 @@ var Store = {
         loading : false,
     },
     plot : {
-        constraint_html : ""
+        constraint_html : "",
+        show_violations : true,
+        show_successes : true
     },
     selected_calls : [],
     binding_selected : false,
@@ -57,6 +59,12 @@ var generate_plot = function(root_obj) {
       var myData = [{key: 'group 1', values: []}];
       for (var i=0; i<data["x"].length; i++){
         var severity = data["y"][i];
+        // check whether we should plot this based on the filters
+        if(severity >= 0) {
+          if(!Store.plot.show_successes) continue;
+        } else {
+          if(!Store.plot.show_violations) continue;
+        }
         // negative verdict severity represents violation - colour these bars red
         var color = "#cc0000";
         // other columns in the plot are green since they show non-violating observations
@@ -893,6 +901,12 @@ Vue.component("plot", {
   template: `<div id="plot-wrapper" class="plot">
   <div id="plot-controls"><a href="#" @click="hidePlot($event)" class="close-plot">close</a></div>
   <div id="plot-description" v-html="this.description"></div>
+  <div id="plot-filters">Filters:
+    <a href="#" id="violations" class="filter" v-bind:class="{active : violationFilterActive}"
+      @click="toggleViolationFilter($event)">Violations</a>
+    <a href="#" id="successes" class="filter" v-bind:class="{active : successFilterActive}"
+      @click="toggleSuccessFilter($event)">Successes</a>
+  </div>
   <svg id="plot-svg"></svg>
   </div>`,
   data() {
@@ -903,6 +917,12 @@ Vue.component("plot", {
   computed : {
     description : function() {
       return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span> severity";
+    },
+    violationFilterActive : function() {
+      return this.store.plot.show_violations;
+    },
+    successFilterActive : function() {
+      return this.store.plot.show_successes;
     }
   },
   mounted(){
@@ -923,7 +943,8 @@ Vue.component("plot", {
       $("#plot-wrapper").height($("#code-listing").outerHeight() + 10);
       $("#plot-svg").width($("#code-listing").outerWidth());
       $("#plot-svg").height($("#code-listing").outerHeight() - $("#plot-controls").outerHeight()
-                            - $("#plot-description").outerHeight());
+                            - $("#plot-description").outerHeight()
+                            - $("#plot-filters").outerHeight());
       //var data_array = data["array"];
       nv.addGraph(function() {
         var chart = nv.models.multiBarChart()
@@ -966,6 +987,17 @@ Vue.component("plot", {
       $("#plot-wrapper").toggleClass("show");
       // set the global flag
       plot_visible = false;
+    },
+    toggleSuccessFilter : function(e) {
+      e.preventDefault();
+      this.store.plot.show_successes = !this.store.plot.show_successes;
+      generate_plot(this);
+
+    },
+    toggleViolationFilter : function(e) {
+      e.preventDefault();
+      this.store.plot.show_violations = !this.store.plot.show_violations;
+      generate_plot(this);
     }
   }
 
