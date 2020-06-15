@@ -72,6 +72,7 @@ var generate_plot = function(root_obj) {
     });
 };
 
+Vue.use(VuejQueryMask);
 
 Vue.component("alert", {
   template : `
@@ -271,8 +272,10 @@ Vue.component("function-calls", {
           <div v-if="message" class="please-select"><p>{{message}}</p></div>
           <alert v-if="!message" message="Select one or more calls to load performance data." />
           <div v-if="!message" class="list-group-item">
-            <b>From</b> <input id="filter-from" placeholder="25/02/2020 12:54:18" v-model="filter_from"/>
-            <b>To</b> <input id="filter-to" placeholder="25/02/2020 21:03:17" v-model="filter_to"/>
+            <b>From</b> <vue-mask id="filter-from" v-model="filter_from" mask="00/00/0000 00:00:00"
+                         placeholder="DD/MM/YYYY hh:mm:ss" :raw="false"> </vue-mask>
+            <b>To</b> <vue-mask id="filter-to" v-model="filter_to" mask="00/00/0000 00:00:00"
+                       placeholder="DD/MM/YYYY hh:mm:ss" :raw="false"> </vue-mask>
             <button @click="select_filtered()"> Filter calls </button>
           </div>
           <button v-if="!message" class="list-group-item">
@@ -290,8 +293,8 @@ Vue.component("function-calls", {
       message : "Select a function first.",
       buttons : [],
       checkedCalls: [],
-      filter_from: "25/02/2020 12:54:18",
-      filter_to: "25/02/2020 21:03:17",
+      filter_from: "",
+      filter_to: "",
       func_id: 0,
       store : Store}
   },
@@ -353,11 +356,14 @@ Vue.component("function-calls", {
         var data = response.data["data"];
         obj.message = "";
         var buttons_list = [];
-        for(var i=0; i<data.length; i++) {
+        var i;
+        for(i=0; i<data.length; i++) {
           var button = {callid : data[i][0], callstart: data[i][2], callduration: data[i][6]}
           buttons_list.push(button)
         }
         obj.buttons = buttons_list;
+        obj.filter_from = buttons_list[0].callstart;
+        obj.filter_to = buttons_list[i-1].callstart;
 
         obj.$root.$emit('calls-loaded', dict);
       })
