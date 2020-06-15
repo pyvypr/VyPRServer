@@ -184,7 +184,12 @@ def web_list_functions():
         # the hierarchy also includes the machine name (server/client) separated by a hyphen
         machine_rest = full_name.split("-")
         machine = [machine_rest[0]]
-        path_rest = machine_rest[1].split(".")
+
+        #in case it does not
+        if len(machine_rest) == 1:
+            path_rest =machine_rest[0].split(".")
+        else:
+            path_rest = machine_rest[1].split(".")
 
         # finally, the name of the function is separated with a colon sometimes
         last = path_rest[-1].split(":")
