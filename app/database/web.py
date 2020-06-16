@@ -14,7 +14,6 @@ from VyPR.SCFG.construction import *
 import app
 import ast
 import os
-#from sets import Set
 
 HTML_ON = False
 
@@ -635,6 +634,63 @@ def get_plot_data_simple(dict):
 
     connection.close()
     return {"x": x_array, "observation": y_array, "severity" : severity_array}
+
+def get_plot_data_between(dict):
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    calls_list = dict["calls"]
+    binding_index = dict["binding"]
+    atom_index = dict["atom"]
+    points_list = dict["points"]
+
+    query_string = """select o1.observed_value, o2.observed_value,
+                             o1.observation_time, o2.observation_time,
+                             verdict.verdict
+                      from verdict inner join observation o1 on verdict.id==o1.verdict
+                      inner join observation o2 where o1.verdict=o2.verdict
+                      and o1.instrumentation_point<o2.instrumentation_point
+                      and o1.instrumentation_point in %s and o2.instrumentation_point in %s
+                      and o1.verdict in (select verdict.id from verdict inner join binding
+                                         on verdict.binding == binding.id where verdict.function_call in %s and
+                                         binding.binding_space_index=%s)
+                      and o1.atom_index = %s and o2.atom_index = %s;""" % (
+            list_to_sql_string(points_list), list_to_sql_string(points_list),
+            list_to_sql_string(calls_list), binding_index, atom_index, atom_index)
+    result = cursor.execute(query_string).fetchall()
+
+    prop_hash = cursor.execute("""select distinct function_property_pair.property_hash from
+    (((function_property_pair inner join function_call on function_property_pair.function==function_call.function)
+    inner join verdict on function_call.id==verdict.function_call) inner join observation
+       on observation.verdict==verdict.id) where observation.instrumentation_point=?""",
+       [points_list[0]]).fetchone()[0]
+
+    atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
+        and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
+    formula = pickle.loads(base64.b64decode(atom_structure))
+    interval=formula._interval
+    lower=interval[0]
+    upper=interval[1]
+
+    x_array = []
+    y_array = []
+    severity_array = []
+
+    for element in result:
+        x_array.append(element[2])
+        time1 = element[1][12:-2]
+        time2 = element[0][12:-2]
+        y = abs((dateutil.parser.parse(time1) - dateutil.parser.parse(time2)).total_seconds())
+        #y = float(json.loads(element[4])["time"])-float(json.loads(element[1])["time"])
+        #d is the distance from observed value to the nearest interval bound
+        d=min(abs(y-lower),abs(y-upper))
+        #sign=-1 if verdict value=0 and sign=1 if verdict is true
+        sign=-1+2*(element[4])
+        severity_array.append(sign*d)
+        y_array.append(y)
+
+    connection.close()
+    return {"x": x_array, "between-observation": y_array, "between-severity" : severity_array}
 
 
 """
