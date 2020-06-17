@@ -78,5 +78,4 @@ def list_calls_between():
 def get_plot_data_between():
     dict = json.loads(request.data)
     return_data = database.get_plot_data_between(dict)
-    print(return_data)
     return json.dumps(return_data)

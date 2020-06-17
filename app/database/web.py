@@ -678,14 +678,15 @@ def get_plot_data_between(dict):
 
     for element in result:
         x_array.append(element[2])
-        time1 = element[1][12:-2]
+        time1 = element[1][12:-2] 
         time2 = element[0][12:-2]
         y = abs((dateutil.parser.parse(time1) - dateutil.parser.parse(time2)).total_seconds())
-        #y = float(json.loads(element[4])["time"])-float(json.loads(element[1])["time"])
+
         #d is the distance from observed value to the nearest interval bound
         d=min(abs(y-lower),abs(y-upper))
         #sign=-1 if verdict value=0 and sign=1 if verdict is true
         sign=-1+2*(element[4])
+
         severity_array.append(sign*d)
         y_array.append(y)
 

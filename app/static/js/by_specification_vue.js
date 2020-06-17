@@ -91,7 +91,6 @@ var generate_plot = function(root_obj) {
     if (type == "between-severity" || type == "between-observation"){
       axios.post('/get_plot_data_between/', data).then(function(response){
         var data = response.data;
-        //console.log(JSON.stringify(data));
 
         var myData = [{key: 'group 1', values: []}];
         for (var i=0; i<data["x"].length; i++){
@@ -293,7 +292,7 @@ Vue.component("subtreelevel", {
         var new_path = (path != "") ? (path + "-" + key) : key;
         var panel_id = "external-" + new_path;
         var style_padding = "padding-left: " + padding;
-        console.log(JSON.stringify(subtree[key]))
+
         dicts_list.push({keyname: key,
           nextcontent : subtree[key], nextpath : new_path,
           stylepadding : style_padding, panelid : panel_id});
@@ -369,10 +368,14 @@ Vue.component("function-calls", {
 
     },
     select_filtered: function(){
+      start_loading();
+      console.log(Store.status.loading)
+
       $("input:checkbox").prop("checked", false);
       this.checkedCalls = [];
       var time = {function: this.func_id, from: this.filter_from, to: this.filter_to};
       var that = this;
+
       axios.post("/list_calls_between/", time).then(function(response){
         var ids_list = response.data;
         console.log(ids_list.length);
@@ -387,6 +390,7 @@ Vue.component("function-calls", {
           }
         }
       })
+      stop_loading();
     }
   },
   mounted(){
@@ -399,7 +403,6 @@ Vue.component("function-calls", {
       obj.message = "Loading function calls.  This can take some time if there are many.";
       obj.buttons = [];
       obj.checkedCalls = [];
-      console.log(obj.message);
       obj.func_id = dict["selected_function_id"];
 
       axios.get('/list_function_calls/'+obj.func_id).then(function(response){
@@ -616,7 +619,6 @@ Vue.component("code-view", {
       })
     })
     this.$root.$on('calls-selected', function(tree){
-      console.log(tree)
       obj2.tree = tree;
 
       var show_lines = []; //stores all lines that are of interest plus a few around them - we will hide the rest
@@ -650,8 +652,6 @@ Vue.component("code-view", {
           }
         }
         show_lines = show_lines.concat(line_numbers);
-        console.log(line_numbers)
-        console.log(lines_points)
         for (var i=0; i<line_numbers.length; i++){
           var no = line_numbers[i] - obj2.start_line;
           whole_code[no].background = "background-color: #ebf2ee"
@@ -1002,10 +1002,7 @@ Vue.component("dropdown", {
         // plot the data we just set
         generate_plot(this);
       }
-      // TODO
-      else if (data["action"] == "simple-path") {}
-      else if (data["action"] == "mixed-select") {}
-      else if (data["action"] == "between-select") {
+      if (data["action"] == "between-select") {
         plot_data = data;
         this.$emit("firstselected", data["other_lines"]);
       }
@@ -1019,6 +1016,10 @@ Vue.component("dropdown", {
         Store.plot.type = "between-severity";
         generate_plot(this);
       }
+      // TODO
+      if (data["action"] == "simple-path") {}
+      if (data["action"] == "mixed-select") {}
+
       stop_loading();
     }
   }
@@ -1044,7 +1045,7 @@ Vue.component("plot", {
   },
   computed : {
     description : function() {
-      if(this.store.plot.type == "severity") {
+      if(this.store.plot.type == "severity" || this.store.plot.type == "between-severity") {
         return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span> severity";
       } else {
         return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span>";
@@ -1057,7 +1058,7 @@ Vue.component("plot", {
       return this.store.plot.show_successes;
     },
     is_severity_plot : function() {
-      return this.store.plot.type == "severity";
+      return this.store.plot.type == "severity" || this.store.plot.type == "between-severity";
     }
   },
   mounted(){
