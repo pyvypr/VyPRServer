@@ -16,8 +16,8 @@ no_of_tabs = 1
 no_of_functions = 2
 first_code_length = 33
 other_code_length = 95
-first_f_calls = 4000
-other_f_calls = 3910
+first_f_calls = 4000 + 2
+other_f_calls = 3910 + 2
 higlighted_line_index = 251-241
 binding_line_index = 251-241
 not_binding_line_index = 260-241
@@ -30,6 +30,22 @@ def check_if_exists(element, tag_name):
     except:
         return False
 
+def simulate_tab_click(driver):
+    #simulate clicking on a non-default tab
+    tabs = WebDriverWait(driver, 10).until(lambda d: d.find_elements_by_class_name("tablinks"))
+    for tab in tabs:
+        if tab.text == other_tab:
+            element = tab
+    ActionChains(driver).click(element).perform()
+
+def simulate_specification_selection(driver, n):
+    # find the specification buttons
+    content_list = driver.find_elements_by_class_name("tabcontent")
+    for c in content_list:
+        if c.get_attribute("id") == ("tab-"+other_tab): content = c
+    buttons = content.find_elements_by_tag_name("button")
+    #click on the n-th specification
+    ActionChains(driver).click(buttons[n]).perform()
 
 class TestBaseFirefox(unittest.TestCase):
 
@@ -75,12 +91,7 @@ class TabTest(TestBaseFirefox):
         driver = self.driver
         driver.get("http://localhost:9002/")
 
-        #simulate clicking on a non-default tab
-        tabs = WebDriverWait(driver, 10).until(lambda d: d.find_elements_by_class_name("tablinks"))
-        for tab in tabs:
-            if tab.text == other_tab:
-                element = tab
-        ActionChains(driver).click(element).perform()
+        simulate_tab_click(driver)
 
         # check that the right tabcontent is displayed
         content_list = driver.find_elements_by_class_name("tabcontent")
@@ -89,7 +100,7 @@ class TabTest(TestBaseFirefox):
                 content = c
             else:
                 assert c.get_attribute("style") == "display: none;"
-        self.assertEqual(content.get_attribute("style"), "")
+        assert "display: none" not in content.get_attribute("style")
 
 
 class FunctionSelectTest(TestBaseFirefox):
@@ -98,12 +109,7 @@ class FunctionSelectTest(TestBaseFirefox):
         driver = self.driver
         driver.get("http://localhost:9002/")
 
-        #simulate clicking on a non-default tab
-        tabs = WebDriverWait(driver, 10).until(lambda d: d.find_elements_by_class_name("tablinks"))
-        for tab in tabs:
-            if tab.text == other_tab:
-                element = tab
-        ActionChains(driver).click(element).perform()
+        simulate_tab_click(driver)
 
         # find the specification buttons
         content_list = driver.find_elements_by_class_name("tabcontent")
@@ -119,7 +125,7 @@ class FunctionSelectTest(TestBaseFirefox):
 
         calls_list = driver.find_element_by_id("function-call-list")
         calls = WebDriverWait(calls_list, 10).until(lambda d: d.find_elements_by_class_name("list-group-item"))
-        assert len(calls)==(first_f_calls+2)
+        assert len(calls)==(first_f_calls)
 
         WebDriverWait(driver, 10).until(lambda d: d.find_element_by_id("specification_listing"))
         code = WebDriverWait(driver, 50).until(lambda d: d.find_element_by_class_name("code_listing"))
@@ -132,7 +138,7 @@ class FunctionSelectTest(TestBaseFirefox):
             self.assertEqual(driver.find_element_by_id("function-list").get_attribute("style"), "")
             ActionChains(driver).click(buttons[1]).perform()
             calls = WebDriverWait(calls_list, 10).until(lambda d: d.find_elements_by_class_name("list-group-item"))
-            assert len(calls)==(other_f_calls+2)
+            assert len(calls)==(other_f_calls)
 
             WebDriverWait(driver, 10).until(lambda d: d.find_element_by_id("specification_listing"))
             code = WebDriverWait(driver, 50).until(lambda d: d.find_element_by_class_name("code_listing"))
@@ -148,20 +154,9 @@ class CallsSelectTest(TestBaseFirefox):
         driver = self.driver
         driver.get("http://localhost:9002/")
 
-        #simulate clicking on a non-default tab
-        tabs = WebDriverWait(driver, 10).until(lambda d: d.find_elements_by_class_name("tablinks"))
-        for tab in tabs:
-            if tab.text == other_tab:
-                element = tab
-        ActionChains(driver).click(element).perform()
+        simulate_tab_click(driver)
 
-        # find the specification buttons
-        content_list = driver.find_elements_by_class_name("tabcontent")
-        for c in content_list:
-            if c.get_attribute("id") == ("tab-"+other_tab): content = c
-        buttons = content.find_elements_by_tag_name("button")
-        #click on the first specification
-        ActionChains(driver).click(buttons[0]).perform()
+        simulate_specification_selection(driver, 0)
 
         #wait for the calls and code to load
         calls_list = driver.find_element_by_id("function-call-list")
