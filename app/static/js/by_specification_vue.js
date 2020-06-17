@@ -369,7 +369,6 @@ Vue.component("function-calls", {
     },
     select_filtered: function(){
       start_loading();
-      console.log(Store.status.loading)
 
       $("input:checkbox").prop("checked", false);
       this.checkedCalls = [];
