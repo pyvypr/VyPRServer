@@ -15,7 +15,8 @@ var Store = {
     },
     selected_calls : [],
     binding_selected : false,
-    subatom_selected : false
+    subatom_selected : false,
+    first_point_selected : false
 };
 
 var start_loading = function() {
@@ -42,7 +43,9 @@ var html_space_replace = function(){
   return str;
 }
 
-var subatom_click = function(dict){app.$emit("subatom-selected", dict)};
+var subatom_click = function(dict){
+  Store.first_point_selected = false;
+  app.$emit("subatom-selected", dict)};
 
 var generate_plot = function(root_obj) {
     var that = root_obj;
@@ -550,7 +553,6 @@ Vue.component("code-view", {
         var line = this.code_lines[index];
 
         line.background = "background-color: " + line.color;
-        line.dict = "select-other";
         line.addmenu = true;
         line.class = "code_listing_line code_listing_line-clickable";
       }
@@ -730,16 +732,18 @@ Vue.component("code-view", {
           whole_code[i].background = "background-color: #ebf2ee";
           whole_code[i].addmenu = false;
           whole_code[i].class = "code_listing_line";
+          whole_code[i].dict = {};
         }
       }
 
+      Store.first_point_selected = false;
       // now highlight and add dropdowns to the lines in lines_list
       for (var i=0; i<lines_list.length; i++){
         var line = whole_code[lines_list[i]-obj2.start_line]
         line.background = "background-color: " + line.color;
+        line.dict = dict;
         line.addmenu = true;
         line.class = "code_listing_line code_listing_line-clickable";
-        line.dict = dict;
       }
     })
   }
@@ -886,17 +890,18 @@ Vue.component("dropdown", {
     </div>
   `,
   data(){
-    // dict will contain string "select-other" instead of atom and subatom indices if
-    // the menu is a child of a line selected as the second one in a pair (timeBetween atom)
-
-    if (this.dict == "select-other"){
+    // indicator variable tells if  the menu is a child of a line selected as
+    // the second one in a pair (timeBetween atom)
+    console.log(Store.first_point_selected)
+    if (Store.first_point_selected){
       var new_list = [];
       for (var i=0; i<plot_data["other_lines"].length; i++){
         if (plot_data["other_lines"][i]["line"] == this.line){
           new_list.push(plot_data["other_lines"][i]["id"]);
         }
       }
-      return {options: [{text: "Fix this point as the other one and plot observations",
+      return {store:Store,
+              options: [{text: "Fix this point as the other one and plot observations",
                          data: {action: "between-observation-plot",
                                 new_points: new_list}},
                         {text: "Fix this point as the other one and plot severity",
@@ -904,7 +909,8 @@ Vue.component("dropdown", {
                                 new_points: new_list}}]}
     }
 
-    // if dict is not a string, proceed as if the dropdown is generated to select the first point
+    // if first_point_selected is false, proceed as if the dropdown is generated
+    // to select the first point
 
     var options = [];
     var atom_index = this.dict["atom"];
@@ -980,7 +986,9 @@ Vue.component("dropdown", {
         options.push(option);
       }
     })
-    return{options: options}
+    console.log(Store)
+    var return_data = {store: Store, options: options};
+    return return_data
   },
   methods: {
     selectOption: function(data){
@@ -1003,6 +1011,7 @@ Vue.component("dropdown", {
       }
       if (data["action"] == "between-select") {
         plot_data = data;
+        Store.first_point_selected = true;
         this.$emit("firstselected", data["other_lines"]);
       }
       else if (data["action"] == "between-observation-plot") {
@@ -1021,6 +1030,15 @@ Vue.component("dropdown", {
 
       stop_loading();
     }
+  },
+  mounted(){
+    var that = this;
+    this.$root.$on("subatom-selected", function(dict){
+      console.log(JSON.stringify(that.options));
+      that.store.first_point_selected = false;
+      Store.first_point_selected = false;
+      console.log(that.store.first_point_selected)
+    })
   }
 })
 
