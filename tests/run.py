@@ -30,29 +30,41 @@ def check_if_exists(element, tag_name):
     except:
         return False
 
-def simulate_tab_click(driver):
-    #simulate clicking on a non-default tab
-    tabs = WebDriverWait(driver, 10).until(lambda d: d.find_elements_by_class_name("tablinks"))
-    for tab in tabs:
-        if tab.text == other_tab:
-            element = tab
-    ActionChains(driver).click(element).perform()
+class VyPRWebTool(webdriver.Firefox):
 
-def simulate_specification_selection(driver, n):
-    # find the specification buttons
-    content_list = driver.find_elements_by_class_name("tabcontent")
-    for c in content_list:
-        if c.get_attribute("id") == ("tab-"+other_tab): content = c
-    buttons = content.find_elements_by_tag_name("button")
-    #click on the n-th specification
-    ActionChains(driver).click(buttons[n]).perform()
+    def __init__(self, options):
+        webdriver.Firefox.__init__(self, options=options)
+
+    def simulate_tab_click(self):
+        #simulate clicking on a non-default tab
+        tabs = WebDriverWait(self, 10).until(lambda d: d.find_elements_by_class_name("tablinks"))
+        for tab in tabs:
+            if tab.text == other_tab:
+                element = tab
+        ActionChains(self).click(element).perform()
+
+    def simulate_specification_selection(self, n):
+        # find the specification buttons
+        content_list = self.find_elements_by_class_name("tabcontent")
+        for c in content_list:
+            if c.get_attribute("id") == ("tab-"+other_tab): content = c
+        buttons = content.find_elements_by_tag_name("button")
+        #click on the n-th specification
+        ActionChains(self).click(buttons[n]).perform()
+
+    def select_all_calls(self):
+        calls_list = self.find_element_by_id("function-call-list")
+        calls = WebDriverWait(calls_list, 10).until(lambda d: d.find_elements_by_class_name("list-group-item"))
+        #select a call and check that the code reacts to this
+        # some code lines are hidden, some are highlighted and should have binding buttons
+        ActionChains(self).click(calls[1].find_element_by_tag_name("input")).perform()
 
 class TestBaseFirefox(unittest.TestCase):
 
     def setUp(self):
         options = Options()
         options.headless = True
-        self.driver = webdriver.Firefox(options=options)
+        self.driver = VyPRWebTool(options=options)
 
     def tearDown(self):
         self.driver.close()
@@ -91,7 +103,7 @@ class TabTest(TestBaseFirefox):
         driver = self.driver
         driver.get("http://localhost:9002/")
 
-        simulate_tab_click(driver)
+        driver.simulate_tab_click()
 
         # check that the right tabcontent is displayed
         content_list = driver.find_elements_by_class_name("tabcontent")
@@ -109,7 +121,7 @@ class FunctionSelectTest(TestBaseFirefox):
         driver = self.driver
         driver.get("http://localhost:9002/")
 
-        simulate_tab_click(driver)
+        driver.simulate_tab_click()
 
         # find the specification buttons
         content_list = driver.find_elements_by_class_name("tabcontent")
@@ -154,9 +166,8 @@ class CallsSelectTest(TestBaseFirefox):
         driver = self.driver
         driver.get("http://localhost:9002/")
 
-        simulate_tab_click(driver)
-
-        simulate_specification_selection(driver, 0)
+        driver.simulate_tab_click()
+        driver.simulate_specification_selection(0)
 
         #wait for the calls and code to load
         calls_list = driver.find_element_by_id("function-call-list")
@@ -176,6 +187,22 @@ class CallsSelectTest(TestBaseFirefox):
         assert check_if_exists(lines[binding_line_index], "button")
         assert check_if_exists(lines[not_binding_line_index], "button")==False
 
+class BindingSelectTest(TestBaseFirefox):
+
+    def test_selecting_calls(self):
+        driver = self.driver
+        driver.get("http://localhost:9002/")
+
+        driver.simulate_tab_click()
+        driver.simulate_specification_selection(0)
+        driver.select_all_calls()
+
+        code = WebDriverWait(driver, 50).until(lambda d: d.find_element_by_class_name("code_listing"))
+        lines = WebDriverWait(code, 50).until(lambda d: d.find_elements_by_class_name("code_listing_line"))
+        binding = lines[binding_line_index].find_element_by_tag_name("button")
+        ActionChains(driver).click(binding).perform()
+
+        assert "bold" in binding.get_attribute("style")
 
 if __name__ == "__main__":
     unittest.main()
