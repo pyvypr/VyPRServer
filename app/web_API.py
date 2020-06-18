@@ -2,7 +2,7 @@
 API functions for the web tool.
 """
 from . import app_object, database
-from flask import request, jsonify, render_template
+from flask import request, jsonify, render_template, send_file
 from .utils import deserialise_property
 import json
 
@@ -103,3 +103,11 @@ def display_plot(plot_hash):
     which will render the plot in the same way as the inline case.
     """
     return render_template("plot.html", plot_hash=plot_hash)
+
+@app_object.route("/download_plot/<plot_hash>/", methods=["GET"])
+def download_plot(plot_hash):
+    """
+    Get the plot data, write it to a file and send it to the user.
+    """
+    filename = database.write_plot(plot_hash)
+    return send_file("../generated_plots/%s" % filename, mimetype='application/pdf', as_attachment=True)
