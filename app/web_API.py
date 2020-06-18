@@ -46,7 +46,7 @@ def get_source_code(function_id):
 
 @app_object.route("/get_function_calls_data/",methods=["GET", "POST"])
 def get_function_calls_data():
-    if (request.data):
+    if request.data:
         ids_list = json.loads(request.data)["ids"]
     else:
         ids_list = request.form.getlist('ids[]')
@@ -60,12 +60,6 @@ def get_atom_type(atom_index, inst_point_id):
     return json.dumps(atom_type)
 
 
-@app_object.route("/get_plot_data_simple/", methods=["GET", "POST"])
-def get_plot_data_simple():
-    dict = json.loads(request.data)
-    return_data = database.get_plot_data_simple(dict)
-    return json.dumps(return_data)
-
 @app_object.route("/list_calls_between/", methods=["GET", "POST"])
 def list_calls_between():
     start = json.loads(request.data)["from"]
@@ -74,8 +68,38 @@ def list_calls_between():
     list = database.list_calls_in_interval(start, end, id)
     return json.dumps(list)
 
+
+"""
+All plotting functions first check for the existence of a precomputed plot.
+If a plot is found, the data is returned along with the plot's identifying hash.
+If no plot is found, the data is generated, then returned along with the newly generated identifying hash. 
+"""
+
+
+@app_object.route("/get_plot_data_simple/", methods=["GET", "POST"])
+def get_plot_data_simple():
+    dict = json.loads(request.data)
+    return_data = database.get_plot_data_simple(dict)
+    return json.dumps(return_data)
+
+
 @app_object.route("/get_plot_data_between/", methods=["GET", "POST"])
 def get_plot_data_between():
-    dict = json.loads(request.data)
-    return_data = database.get_plot_data_between(dict)
+    result_dict = json.loads(request.data)
+    return_data = database.get_plot_data_between(result_dict)
     return json.dumps(return_data)
+
+
+@app_object.route("/get_plot_data_from_hash/<plot_hash>/", methods=["GET"])
+def get_plot_data_from_hash(plot_hash):
+    plot_data = database.get_plot_data_from_hash(plot_hash)
+    return json.dumps(plot_data)
+
+
+@app_object.route("/display_plot/<plot_hash>/", methods=["GET"])
+def display_plot(plot_hash):
+    """
+    Given a uniquely identifying plot hash, return the plotting page to the user,
+    which will render the plot in the same way as the inline case.
+    """
+    return render_template("plot.html", plot_hash=plot_hash)
