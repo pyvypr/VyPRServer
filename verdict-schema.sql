@@ -110,3 +110,9 @@ CREATE TABLE path_condition_structure (
     id integer not null primary key autoincrement,
     serialised_condition text not null
 );
+CREATE TABLE plot (
+    hash text not null primary key,
+    description text not null,
+    data text not null,
+    creation_time timestamp not null
+);

@@ -14,6 +14,8 @@ from VyPR.SCFG.construction import *
 import app
 import ast
 import os
+import hashlib
+import datetime
 
 HTML_ON = False
 
@@ -572,6 +574,8 @@ def get_atom_type(atom_index, inst_point_id):
     atom_deserialised = pickle.loads(base64.b64decode(atom_structure))
     print(type(atom_deserialised))
 
+    connection.close()
+
     if type(atom_deserialised) in [StateValueEqualToMixed, StateValueLengthLessThanStateValueLengthMixed,
         TransitionDurationLessThanTransitionDurationMixed, TransitionDurationLessThanStateValueMixed,
         TransitionDurationLessThanStateValueLengthMixed]:
@@ -583,115 +587,208 @@ def get_atom_type(atom_index, inst_point_id):
     else:
         return 'simple'
 
-    connection.close()
+
+def get_plot(cursor, plot_dict):
+    """
+    Check whether a plot already exists given its dictionary.
+    """
+    plot_dict_json = json.dumps(plot_dict)
+    results = cursor.execute("select * from plot where description = ?", [plot_dict_json]).fetchall()
+    print("existence results")
+    print(results)
+    return results
+
+
+def store_plot(cursor, plot_hash, plot_description, plot_data):
+    """
+    Store a new plot so it can be retreived later without recomputation.
+    """
+    cursor.execute(
+        "insert into plot values(?, ?, ?, ?)",
+        [
+            plot_hash, json.dumps(plot_description), json.dumps(plot_data), datetime.datetime.now()
+        ]
+    )
+
+
+def get_plot_data_from_hash(plot_hash):
+    """
+    Given a uniquely identifying plot hash, get its data
+    """
+    connection = get_connection()
+    cursor = connection.cursor()
+    plot_data = cursor.execute("select hash, description, data from plot where hash = ?", [plot_hash]).fetchone()
+    return {
+        "hash" : plot_data[0],
+        "description" : json.loads(plot_data[1]),
+        "data" : json.loads(plot_data[2])
+    }
+
 
 def get_plot_data_simple(dict):
     connection = get_connection()
     cursor = connection.cursor()
-    print(dict)
-    calls_list = dict["calls"]
-    binding_index = dict["binding"]
-    atom_index = dict["atom"]
-    sub_index = dict["subatom"]
-    points_list = dict["points"]
 
-    query_string = """select observation.observed_value, observation.observation_time,
-        observation.observation_end_time, verdict.verdict
-        from ((observation inner join verdict on observation.verdict==verdict.id)
-        inner join binding on verdict.binding==binding.id) where observation.instrumentation_point in %s
-        and observation.atom_index = %s and observation.sub_index = %s and verdict.function_call in %s
-        and binding.binding_space_index = %s order by observation.observation_time;""" % (
-            list_to_sql_string(points_list), atom_index, sub_index,
-            list_to_sql_string(calls_list), binding_index)
-    result = cursor.execute(query_string).fetchall()
+    # first, check if the plot already exists
+    plot_results = get_plot(cursor, dict)
+    if len(plot_results) > 0:
+        print("existing plot found with hash %s" % plot_results[0][0])
+        print(dict)
+        # the plot exists, so use the precomputed data
+        final_dictionary = {
+            "plot_hash" : plot_results[0][0],
+            "plot_data" : json.loads(plot_results[0][2])
+        }
+        return final_dictionary
+    else:
+        print("no existing plot found")
+        print(dict)
+        calls_list = dict["calls"]
+        binding_index = dict["binding"]
+        atom_index = dict["atom"]
+        sub_index = dict["subatom"]
+        points_list = dict["points"]
 
-    prop_hash = cursor.execute("""select distinct function_property_pair.property_hash from
-    (((function_property_pair inner join function_call on function_property_pair.function==function_call.function)
-    inner join verdict on function_call.id==verdict.function_call) inner join observation
-       on observation.verdict==verdict.id) where observation.instrumentation_point=?""",
-       [points_list[0]]).fetchone()[0]
+        query_string = """select observation.observed_value, observation.observation_time,
+            observation.observation_end_time, verdict.verdict
+            from ((observation inner join verdict on observation.verdict==verdict.id)
+            inner join binding on verdict.binding==binding.id) where observation.instrumentation_point in %s
+            and observation.atom_index = %s and observation.sub_index = %s and verdict.function_call in %s
+            and binding.binding_space_index = %s order by observation.observation_time;""" % (
+                list_to_sql_string(points_list), atom_index, sub_index,
+                list_to_sql_string(calls_list), binding_index)
+        result = cursor.execute(query_string).fetchall()
 
-    atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
-        and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
-    formula = pickle.loads(base64.b64decode(atom_structure))
-    interval=formula._interval
-    lower=interval[0]
-    upper=interval[1]
+        prop_hash = cursor.execute("""select distinct function_property_pair.property_hash from
+        (((function_property_pair inner join function_call on function_property_pair.function==function_call.function)
+        inner join verdict on function_call.id==verdict.function_call) inner join observation
+           on observation.verdict==verdict.id) where observation.instrumentation_point=?""",
+           [points_list[0]]).fetchone()[0]
 
-    x_array = []
-    y_array = []
-    severity_array = []
+        atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
+            and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
+        formula = pickle.loads(base64.b64decode(atom_structure))
+        interval=formula._interval
+        lower=interval[0]
+        upper=interval[1]
 
-    for element in result:
-        x_array.append(element[1])
-        y = float(element[0])
-        #d is the distance from observed value to the nearest interval bound
-        d=min(abs(y-lower),abs(y-upper))
-        #sign=-1 if verdict value=0 and sign=1 if verdict is true
-        sign=-1+2*(element[3])
-        severity_array.append(sign*d)
-        y_array.append(y)
+        x_array = []
+        y_array = []
+        severity_array = []
 
-    connection.close()
-    return {"x": x_array, "observation": y_array, "severity" : severity_array}
+        for element in result:
+            x_array.append(element[1])
+            y = float(element[0])
+            #d is the distance from observed value to the nearest interval bound
+            d=min(abs(y-lower),abs(y-upper))
+            #sign=-1 if verdict value=0 and sign=1 if verdict is true
+            sign=-1+2*(element[3])
+            severity_array.append(sign*d)
+            y_array.append(y)
+
+        # build the plot data dictionary
+        plot_data = {"x": x_array, "observation": y_array, "severity": severity_array}
+        # generate a hash of the plot data
+        plot_hash = hashlib.sha1()
+        plot_hash.update(json.dumps(plot_data))
+        plot_hash.update(json.dumps(dict))
+        plot_hash = plot_hash.hexdigest()
+        # store the plot
+        store_plot(cursor, plot_hash, dict, plot_data)
+        connection.commit()
+
+        connection.close()
+
+        return {
+            "plot_hash" : plot_hash,
+            "plot_data" : plot_data
+        }
+
 
 def get_plot_data_between(dict):
     connection = get_connection()
     cursor = connection.cursor()
 
-    calls_list = dict["calls"]
-    binding_index = dict["binding"]
-    atom_index = dict["atom"]
-    points_list = dict["points"]
+    # first, check if the plot already exists
+    plot_results = get_plot(cursor, dict)
+    if len(plot_results) > 0:
+        print("existing plot found with hash %s" % plot_results[0][0])
+        # the plot exists, so use the precomputed data
+        final_dictionary = {
+            "plot_hash": plot_results[0][0],
+            "plot_data": json.loads(plot_results[0][2])
+        }
+        return final_dictionary
+    else:
 
-    query_string = """select o1.observed_value, o2.observed_value,
-                             o1.observation_time, o2.observation_time,
-                             verdict.verdict
-                      from verdict inner join observation o1 on verdict.id==o1.verdict
-                      inner join observation o2 where o1.verdict=o2.verdict
-                      and o1.instrumentation_point<o2.instrumentation_point
-                      and o1.instrumentation_point in %s and o2.instrumentation_point in %s
-                      and o1.verdict in (select verdict.id from verdict inner join binding
-                                         on verdict.binding == binding.id where verdict.function_call in %s and
-                                         binding.binding_space_index=%s)
-                      and o1.atom_index = %s and o2.atom_index = %s;""" % (
-            list_to_sql_string(points_list), list_to_sql_string(points_list),
-            list_to_sql_string(calls_list), binding_index, atom_index, atom_index)
-    result = cursor.execute(query_string).fetchall()
+        calls_list = dict["calls"]
+        binding_index = dict["binding"]
+        atom_index = dict["atom"]
+        points_list = dict["points"]
 
-    prop_hash = cursor.execute("""select distinct function_property_pair.property_hash from
-    (((function_property_pair inner join function_call on function_property_pair.function==function_call.function)
-    inner join verdict on function_call.id==verdict.function_call) inner join observation
-       on observation.verdict==verdict.id) where observation.instrumentation_point=?""",
-       [points_list[0]]).fetchone()[0]
+        query_string = """select o1.observed_value, o2.observed_value,
+                                 o1.observation_time, o2.observation_time,
+                                 verdict.verdict
+                          from verdict inner join observation o1 on verdict.id==o1.verdict
+                          inner join observation o2 where o1.verdict=o2.verdict
+                          and o1.instrumentation_point<o2.instrumentation_point
+                          and o1.instrumentation_point in %s and o2.instrumentation_point in %s
+                          and o1.verdict in (select verdict.id from verdict inner join binding
+                                             on verdict.binding == binding.id where verdict.function_call in %s and
+                                             binding.binding_space_index=%s)
+                          and o1.atom_index = %s and o2.atom_index = %s;""" % (
+                list_to_sql_string(points_list), list_to_sql_string(points_list),
+                list_to_sql_string(calls_list), binding_index, atom_index, atom_index)
+        result = cursor.execute(query_string).fetchall()
 
-    atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
-        and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
-    formula = pickle.loads(base64.b64decode(atom_structure))
-    interval=formula._interval
-    lower=interval[0]
-    upper=interval[1]
+        prop_hash = cursor.execute("""select distinct function_property_pair.property_hash from
+        (((function_property_pair inner join function_call on function_property_pair.function==function_call.function)
+        inner join verdict on function_call.id==verdict.function_call) inner join observation
+           on observation.verdict==verdict.id) where observation.instrumentation_point=?""",
+           [points_list[0]]).fetchone()[0]
 
-    x_array = []
-    y_array = []
-    severity_array = []
+        atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
+            and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
+        formula = pickle.loads(base64.b64decode(atom_structure))
+        interval=formula._interval
+        lower=interval[0]
+        upper=interval[1]
 
-    for element in result:
-        x_array.append(element[2])
-        time1 = element[1][12:-2] 
-        time2 = element[0][12:-2]
-        y = abs((dateutil.parser.parse(time1) - dateutil.parser.parse(time2)).total_seconds())
+        x_array = []
+        y_array = []
+        severity_array = []
 
-        #d is the distance from observed value to the nearest interval bound
-        d=min(abs(y-lower),abs(y-upper))
-        #sign=-1 if verdict value=0 and sign=1 if verdict is true
-        sign=-1+2*(element[4])
+        for element in result:
+            x_array.append(element[2])
+            time1 = element[1][12:-2]
+            time2 = element[0][12:-2]
+            y = abs((dateutil.parser.parse(time1) - dateutil.parser.parse(time2)).total_seconds())
 
-        severity_array.append(sign*d)
-        y_array.append(y)
+            #d is the distance from observed value to the nearest interval bound
+            d=min(abs(y-lower),abs(y-upper))
+            #sign=-1 if verdict value=0 and sign=1 if verdict is true
+            sign=-1+2*(element[4])
 
-    connection.close()
-    return {"x": x_array, "between-observation": y_array, "between-severity" : severity_array}
+            severity_array.append(sign*d)
+            y_array.append(y)
+
+        # build the final plot data
+        plot_data = {"x": x_array, "between-observation": y_array, "between-severity" : severity_array}
+        # generate a hash of the plot data
+        plot_hash = hashlib.sha1()
+        plot_hash.update(json.dumps(plot_data))
+        plot_hash.update(json.dumps(dict))
+        plot_hash = plot_hash.hexdigest()
+        # store the plot
+        store_plot(cursor, plot_hash, dict, plot_data)
+        connection.commit()
+
+        connection.close()
+
+        return {
+            "plot_hash": plot_hash,
+            "plot_data": plot_data
+        }
 
 
 """
@@ -699,6 +796,8 @@ Auxiliary functions for path reconstruction
 """
 
 atoms_list = []
+
+
 def property_to_atoms_list(prop):
     """
     Given a deserialised property, recurse down the formula structure and add atoms
@@ -718,6 +817,7 @@ def property_to_atoms_list(prop):
 
     return
 
+
 def list_to_sql_string(ids_list):
     """ Create a string which stores the list of ids as (1, 2, 3, 4)
      to be compatible with the sqlite query syntax: select * from ... where id in (1, 2, 3, 4)
@@ -729,6 +829,7 @@ def list_to_sql_string(ids_list):
         ids = ids + str(id)
     ids = ids + ")"
     return ids
+
 
 def get_qualifier_subsequence(function_qualifier):
     """Given a fully qualified function name, iterate over it and find the file in which the function is defined (
@@ -750,6 +851,7 @@ def get_qualifier_subsequence(function_qualifier):
             tokens.append(function_qualifier[last_position:])
 
     return tokens
+
 
 def get_scfg(func, location):
     if "-" in func[0:func.index(".")]:
@@ -778,6 +880,7 @@ def get_scfg(func, location):
     scfg = CFG()
     scfg.process_block(function_def.body)
     return scfg
+
 
 def edges_from_condition_sequence(scfg, path_subchain, instrumentation_point_path_length):
     """
