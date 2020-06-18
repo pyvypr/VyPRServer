@@ -16,7 +16,8 @@ var Store = {
     selected_calls : [],
     binding_selected : false,
     subatom_selected : false,
-    first_point_selected : false
+    first_point_selected : false,
+    type_of_atom : undefined
 };
 
 var start_loading = function() {
@@ -45,7 +46,8 @@ var html_space_replace = function(){
 
 var subatom_click = function(dict){
   Store.first_point_selected = false;
-  app.$emit("subatom-selected", dict)};
+  app.$emit("subatom-selected", dict)
+};
 
 var generate_plot = function(root_obj) {
     var that = root_obj;
@@ -521,6 +523,7 @@ Vue.component("code-view", {
       var start_line = this.start_line;
 
       // reset the background colors of previously highlighted lines
+      Store.first_point_selected = false;
       for (var i=0; i<whole_code.length; i++){
         var line = whole_code[i];
         line.addmenu = false;
@@ -732,11 +735,9 @@ Vue.component("code-view", {
           whole_code[i].background = "background-color: #ebf2ee";
           whole_code[i].addmenu = false;
           whole_code[i].class = "code_listing_line";
-          whole_code[i].dict = {};
         }
       }
 
-      Store.first_point_selected = false;
       // now highlight and add dropdowns to the lines in lines_list
       for (var i=0; i<lines_list.length; i++){
         var line = whole_code[lines_list[i]-obj2.start_line]
@@ -892,7 +893,7 @@ Vue.component("dropdown", {
   data(){
     // indicator variable tells if  the menu is a child of a line selected as
     // the second one in a pair (timeBetween atom)
-    console.log(Store.first_point_selected)
+
     if (Store.first_point_selected){
       var new_list = [];
       for (var i=0; i<plot_data["other_lines"].length; i++){
@@ -900,8 +901,7 @@ Vue.component("dropdown", {
           new_list.push(plot_data["other_lines"][i]["id"]);
         }
       }
-      return {store:Store,
-              options: [{text: "Fix this point as the other one and plot observations",
+      return {options: [{text: "Fix this point as the other one and plot observations",
                          data: {action: "between-observation-plot",
                                 new_points: new_list}},
                         {text: "Fix this point as the other one and plot severity",
@@ -931,6 +931,7 @@ Vue.component("dropdown", {
     axios.get('/get_atom_type/'+atom_index+"/"+inst_point_id+"/").then(function(response){
       var atom_type = response.data;
       console.log(atom_type);
+      Store.type_of_atom = atom_type;
       if (atom_type == "simple"){
         //for a simple atom we now need all observations made at these points,
         //filtered by: calls, binding, atom, subatom
@@ -986,8 +987,7 @@ Vue.component("dropdown", {
         options.push(option);
       }
     })
-    console.log(Store)
-    var return_data = {store: Store, options: options};
+    var return_data = {options: options};
     return return_data
   },
   methods: {
@@ -1034,11 +1034,78 @@ Vue.component("dropdown", {
   mounted(){
     var that = this;
     this.$root.$on("subatom-selected", function(dict){
-      console.log(JSON.stringify(that.options));
-      that.store.first_point_selected = false;
-      Store.first_point_selected = false;
-      console.log(that.store.first_point_selected)
+      if (Store.type_of_atom){
+      var options = [];
+      var atom_index = dict["atom"];
+      var sub_index = dict["subatom"];
+      var inst_points = that.tree[selected_binding][atom_index][sub_index];
+      var inst_point_id = inst_points[0]["id"];
+
+      var inst_points_list = [];
+      for (var i=0; i<inst_points.length; i++){
+        if (inst_points[i]["code_line"] == that.line){
+          inst_points_list.push(inst_points[i]["id"]);
+        }
+      }
+
+      var atom_type = Store.type_of_atom;
+      if (atom_type == "simple"){
+        //for a simple atom we now need all observations made at these points,
+        //filtered by: calls, binding, atom, subatom
+        //then we can calculate verdict severity for each of the observations
+        var option = {text: 'Plot severity of observations from this point',
+                      data: {action: "simple-severity-plot",
+                             calls: Store.selected_calls,
+                             binding: that.binding,
+                             atom: atom_index,
+                             subatom: sub_index,
+                             points: inst_points_list}};
+        options.push(option);
+        var option = {text: 'Plot observations from this point',
+                      data: {action: "simple-observation-plot",
+                             calls: Store.selected_calls,
+                             binding: that.binding,
+                             atom: atom_index,
+                             subatom: sub_index,
+                             points: inst_points_list}};
+        options.push(option);
+        var option2 = {text: 'Highlight paths by average verdict severity',
+                      data: {action: "simple-path",
+                             calls: Store.selected_calls,
+                             binding: that.binding,
+                             atom: atom_index,
+                             subatom: sub_index,
+                             points: inst_points_list}};
+        options.push(option2);
+      }
+      else if (atom_type == "timeBetween") {
+        // we need the list of inst points that belong to the same atom, but other than the selected subatom
+        var other_points_list = [];
+        var subtree = that.tree[selected_binding][atom_index];
+        for (subatom in subtree){
+          if (subatom != sub_index){
+            for (var i=0; i<subtree[subatom].length; i++){
+              other_points_list.push({id: subtree[subatom][i]["id"],
+                                      line: subtree[subatom][i]["code_line"]});
+            }
+          }
+        }
+        option = {text: 'Fix this point and select the other one',
+                  data: {action: "between-select",
+                         other_lines: other_points_list,
+                         calls: Store.selected_calls,
+                         binding: selected_binding,
+                         atom: atom_index,
+                         points: inst_points_list}};
+        options.push(option);
+      }
+      else if (atom_type == "mixed") {
+        option = {text: 'Fix this point and select the other one', data:{}};
+        options.push(option);
+      }
+      that.options = options;}
     })
+
   }
 })
 
