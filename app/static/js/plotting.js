@@ -77,6 +77,7 @@ var generate_plot = function(root_obj) {
 
 Vue.component("plot", {
   template: `<div id="plot-wrapper" class="plot">
+  <p><a href="#" @click="downloadPDF($event)">Download PDF</a></p>
   <!--<div id="plot-description" v-html="this.description"></div>-->
   <div id="plot-filters" v-if="is_severity_plot">Filters:
     <a href="#" id="violations" class="filter" v-bind:class="{active : violationFilterActive}"
@@ -144,6 +145,10 @@ Vue.component("plot", {
     })
   },
   methods:{
+    downloadPDF : function(e) {
+      e.preventDefault();
+      window.location = "/download_plot/" + this.store.plot.current_hash;
+    },
     toggleSuccessFilter : function(e) {
       e.preventDefault();
       this.store.plot.show_successes = !this.store.plot.show_successes;

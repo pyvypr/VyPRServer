@@ -16,6 +16,10 @@ import ast
 import os
 import hashlib
 import datetime
+import matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import figure, locator_params
 
 HTML_ON = False
 
@@ -586,6 +590,34 @@ def get_atom_type(atom_index, inst_point_id):
 
     else:
         return 'simple'
+
+
+def write_plot(plot_hash):
+    """
+    Given a plot hash, get the plot data, generate a plot, write it to a file and return the file name.
+    """
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    filename = "%s.pdf" % plot_hash
+
+    result = cursor.execute("select description, data from plot where hash = ?", [plot_hash]).fetchone()
+    plot_description = json.loads(result[0])
+    plot_data = json.loads(result[1])
+    plot_type = plot_description["type"]
+
+    xs = map(lambda x : x.split("T")[1], plot_data["x"])
+    ys = plot_data[plot_type]
+
+    figure(figsize=(20, 6))
+    plt.bar(xs, ys, align="center", ecolor="black")
+    plt.xlabel("TIMESTAMP")
+    plt.ylabel(plot_type.upper())
+    plt.xticks(rotation=90)
+    plt.tight_layout()
+    plt.savefig("generated_plots/%s" % filename)
+
+    return filename
 
 
 def get_plot(cursor, plot_dict):
