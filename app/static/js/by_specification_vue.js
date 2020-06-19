@@ -1122,7 +1122,10 @@ Vue.component("dropdown", {
 Vue.component("plot", {
   template: `<div id="plot-wrapper" class="plot">
   <div id="plot-controls"><a href="#" @click="hidePlot($event)" class="close-plot">close</a></div>
-  <div id="plot-new-window"><a href="#" @click="newPlotWindow($event)">Move to new window</a></div>
+  <div id="plot-new-window">
+    <p><a href="#" @click="newPlotWindow($event)">Move to new window</a></p>
+    <p><a href="#" @click="downloadPDF($event)">Download PDF</a></p>
+  </div>
   <div id="plot-description" v-html="this.description"></div>
   <div id="plot-filters" v-if="is_severity_plot">Filters:
     <a href="#" id="violations" class="filter" v-bind:class="{active : violationFilterActive}"
@@ -1229,6 +1232,10 @@ Vue.component("plot", {
       $("#plot-wrapper").toggleClass("show");
       plot_visible = false;
       window.open("/display_plot/" + this.store.plot.current_hash, "plot", "height=500,width=900");
+    },
+    downloadPDF : function(e) {
+      e.preventDefault();
+      window.location = "/download_plot/" + this.store.plot.current_hash;
     },
     toggleSuccessFilter : function(e) {
       e.preventDefault();
