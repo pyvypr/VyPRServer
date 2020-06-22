@@ -1092,8 +1092,17 @@ StateValueTypeEqualTo.__repr__ = \
 StateValueEqualToMixed.__repr__ = \
     lambda Atom: "%s(%s).equals(%s(%s))" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
 
+StateValueLessThanStateValueMixed.__repr__ = \
+    lambda Atom: "%s(%s) < %s(%s)" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
+StateValueLessThanEqualStateValueMixed.__repr__ = \
+    lambda Atom: "%s(%s) <= %s(%s)" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
 StateValueLengthLessThanStateValueLengthMixed.__repr__ = \
     lambda Atom: "%s(%s).length() < %s(%s).length()" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
+StateValueLengthLessThanEqualStateValueLengthMixed.__repr__ = \
+    lambda Atom: "%s(%s).length() <= %s(%s).length()" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
 
 StateValueLengthInInterval.__repr__ = \
     lambda Atom: "%s(%s).length()._in(%s)" % (Atom._state, Atom._name, Atom._interval)
@@ -1101,14 +1110,26 @@ StateValueLengthInInterval.__repr__ = \
 TransitionDurationInInterval.__repr__=\
     lambda Atom: "%s.duration()._in(%s)" % (Atom._transition, Atom._interval)
 
+TransitionDurationInOpenInterval.__repr__=\
+    lambda Atom: "%s.duration()._in(%s)" % (Atom._transition, Atom._interval)
+
 TransitionDurationLessThanTransitionDurationMixed.__repr__=\
     lambda Atom: "%s.duration() < %s.duration()" % (Atom._lhs, Atom._rhs)
+
+TransitionDurationLessThanEqualTransitionDurationMixed.__repr__=\
+    lambda Atom: "%s.duration() <= %s.duration()" % (Atom._lhs, Atom._rhs)
 
 TransitionDurationLessThanStateValueMixed.__repr__ = \
     lambda Atom: "%s.duration() < %s(%s)" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
 
+TransitionDurationLessThanEqualStateValueMixed.__repr__ = \
+    lambda Atom: "%s.duration() <= %s(%s)" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
+
 TransitionDurationLessThanStateValueLengthMixed.__repr__ = \
     lambda Atom: "%s.duration() < %s(%s).length()" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
+
+TransitionDurationLessThanEqualStateValueLengthMixed.__repr__ = \
+    lambda Atom: "%s.duration() <= %s(%s).length()" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
 
 TimeBetweenInInterval.__repr__ = \
     lambda Atom: "timeBetween(%s, %s)._in(%s)" % (Atom._lhs, Atom._rhs, Atom._interval)
@@ -1153,13 +1174,36 @@ StateValueEqualToMixed.HTMLrepr = \
         <span class="subatom" subatom-index="1">%s(%s)</span>)
         </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
 
+StateValueLessThanStateValueMixed.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span> <
+        <span class="subatom" subatom-index="1">%s(%s)</span>
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
+StateValueLessThanEqualStateValueMixed.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span> <=
+        <span class="subatom" subatom-index="1">%s(%s)</span>
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
 StateValueLengthLessThanStateValueLengthMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
         <span class="subatom" subatom-index="0">%s(%s)</span>.length() <
         <span class="subatom" subatom-index="1">%s(%s)</span>.length()
         </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
 
+StateValueLengthLessThanEqualStateValueLengthMixed.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span>.length() <=
+        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
 StateValueLengthInInterval.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s(%s)</span>.length()._in(%s)
+        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
+
+StateValueLengthInOpenInterval.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
         <span class="subatom" subatom-index="0">%s(%s)</span>.length()._in(%s)
         </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
@@ -1169,9 +1213,20 @@ TransitionDurationInInterval.HTMLrepr=\
         <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span>._in(%s)
         </span>""" % (atoms_list.index(Atom), Atom._transition, Atom._interval)
 
+TransitionDurationInOpenInterval.HTMLrepr=\
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span>._in(%s)
+        </span>""" % (atoms_list.index(Atom), Atom._transition, str(Atom._interval))
+
 TransitionDurationLessThanTransitionDurationMixed.HTMLrepr=\
     lambda Atom: """<span class="atom" atom-index="%i">
         <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <
+        <span class="duration"><span class="subatom" subatom-index="1">%s</span>.duration()</span>
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs)
+
+TransitionDurationLessThanEqualTransitionDurationMixed.HTMLrepr=\
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
         <span class="duration"><span class="subatom" subatom-index="1">%s</span>.duration()</span>
         </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs)
 
@@ -1181,9 +1236,21 @@ TransitionDurationLessThanStateValueMixed.HTMLrepr = \
         <span class="subatom" subatom-index="1">%s(%s) </span>
         </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
 
+TransitionDurationLessThanEqualStateValueMixed.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
+        <span class="subatom" subatom-index="1">%s(%s) </span>
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
+
 TransitionDurationLessThanStateValueLengthMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
         <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <
+        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
+
+TransitionDurationLessThanEqualStateValueLengthMixed.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
         <span class="subatom" subatom-index="1">%s(%s)</span>.length()
         </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
 
