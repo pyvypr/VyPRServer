@@ -1025,11 +1025,13 @@ Vue.component("dropdown", {
       }
       else if (data["action"] == "between-observation-plot") {
         plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        plot_data["type"] = "between-observation";
         Store.plot.type = "between-observation";
         generate_plot(this);
       }
       else if (data["action"] == "between-severity-plot") {
         plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        plot_data["type"] = "between-severity";
         Store.plot.type = "between-severity";
         generate_plot(this);
       }
