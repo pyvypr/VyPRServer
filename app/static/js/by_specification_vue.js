@@ -3,6 +3,7 @@ var code_highlight_palette = ["#cae2dc", "#eee3cd", "#cad7f2", "#ded4e7", "#e3e3
 // global plot data, used for when plot are updated with new data
 var plot_visible = false;
 var plot_data = null;
+var tests_exist = false;
 var selected_binding = undefined;
 var Store = {
     status : {
@@ -16,6 +17,7 @@ var Store = {
         current_hash : null
     },
     selected_calls : [],
+    selected_tests: [],
     binding_selected : false,
     subatom_selected : false,
     first_point_selected : false,
@@ -172,6 +174,89 @@ Vue.component("loading-spinner", {
 });
 
 
+Vue.component("test-data", {
+  template : `
+  <div v-if="test_data" class="panel panel-success">
+    <div class="panel-heading">
+      <h3 class="panel-title" id="test-cases-title" @click="showTests=!showTests">Test</h3>
+    </div>
+    <div class="panel-body">
+      <div v-show="showTests" class="list-group" id="test-cases-list">
+        <alert message="Select one or more tests to see monitored functions." />
+        <div class="list-group-item">
+
+        </div>
+        <button class="list-group-item">
+          <input type='checkbox' id="select-all-tests" @click="select_all_tests()"/><b> Select all </b>
+        </button>
+        <button v-for="(b, index) in this.buttons" :key="index" class="list-group-item">
+          <input type='checkbox' :test-id="b.testid" :value="b.testid" v-model="checkedTests"/>
+          <b>{{b.testid}}: </b>{{b.testname}}<span :style="b.style">{{b.testresult}}</span>
+        </button>
+      </div>
+    </div>
+  </div>`,
+  data() {
+    return {test_data: undefined, buttons: [], checkedTests: [], showTests : true}
+  },
+  methods: {
+    select_all_tests: function(){
+      var is_checked = $("#select-all-tests").prop("checked");
+      $("#test-cases-list input:checkbox").prop("checked", is_checked);
+      if (is_checked) {
+        for(var i=0; i<this.buttons.length; i++){
+          this.checkedTests.push(this.buttons[i].testid);
+        }
+      }
+      else {
+        this.checkedTests = [];
+      }
+    }
+  },
+  created(){
+    var that = this;
+    axios.get("/list_tests/").then(function(response){
+      console.log(response.data)
+      var test_list = response.data;
+      var n = test_list.length;
+      var buttons = [];
+      for (var i=0; i<n; i++){
+        var dict = {testid: test_list[i][0],
+                    testname: test_list[i][1],
+                    testresult: test_list[i][2],
+                    style: "float: right; color:"+((test_list[i][2]=="Success")? "#00802b" : "#cc0000")};
+        buttons.push(dict)
+      }
+      that.test_data = ( n > 0 );
+      if (n>0) {that.$root.$emit("tests-exist")}
+      that.buttons = buttons;
+    })
+  },
+  watch: {
+    checkedTests: function(value){
+      var test_ids = [];
+      var that = this;
+      for (var i=0; i<value.length; i++){
+        test_ids.push(""+value[i]);
+      }
+
+      Store.selected_tests = test_ids;
+      if (test_ids.length){
+        axios.post("/list_functions_by_tests/", {"ids" : test_ids}).then(function(response) {
+          tree = response.data;
+          that.$root.$emit('tests-selected', tree);
+        });
+      }
+
+    }
+  },
+  mounted(){
+    var that = this;
+    this.$root.$on("function-select", function(id){that.showTests = false;})
+  }
+})
+
+
 Vue.component("machine-function-property", {
   props: ['tree'],
   template : `
@@ -182,7 +267,7 @@ Vue.component("machine-function-property", {
         </h3>
       </div>
       <div class="panel-body">
-        <alert message="Select a specification to see relevant calls." />
+        <alert v-show="showFunctions" message="Select a specification to see relevant calls." />
         <transition name="slide-fade">
         <div v-show="showFunctions" class="list-group" id="function-list">
           <div id="function-list-data"></div>
@@ -200,7 +285,7 @@ Vue.component("machine-function-property", {
       </div>
     </div>`,
   data() {
-    return {showTab: "", showFunctions: true}
+    return {showTab: "", showFunctions : true}
   },
   methods : {
     selectTab: function(selectedTab){
@@ -216,12 +301,20 @@ Vue.component("machine-function-property", {
       machine_keys.push(key)
     }
     this.selectTab(machine_keys[0]);
-    var remember_this = this;
+    var that = this;
     this.$root.$on('function-select', function(dict){
       // after selecting a function (specification), hide functions list to make space for calls
-      remember_this.showFunctions = false;
+      that.showFunctions = false;
+    })
+    this.$root.$on('tests-exist', function(){
+      that.showFunctions = false;
+    })
+    this.$root.$on('tests-selected', function(tree){
+      that.tree = tree;
+      that.showFunctions = true;
     })
   }
+
 })
 
 
@@ -337,7 +430,7 @@ Vue.component("function-calls", {
             <button @click="select_filtered()"> Filter calls </button>
           </div>
           <button v-if="!message" class="list-group-item">
-            <input type='checkbox' id="select-all" @click="select_all_calls()"/><b> Select all </b>
+            <input type='checkbox' id="select-all-calls" @click="select_all_calls()"/><b> Select all </b>
           </button>
           <button v-for="(b, index) in this.buttons" :key="index" class="list-group-item">
             <input type='checkbox' :function-call-id="b.callid" :value="b.callid" v-model="checkedCalls"/>
@@ -359,8 +452,8 @@ Vue.component("function-calls", {
   methods: {
     select_all_calls: function(){
       start_loading();
-      var is_checked = $("#select-all").prop("checked");
-      $("input:checkbox").prop("checked", is_checked);
+      var is_checked = $("#select-all-calls").prop("checked");
+      $("#function-call-list input:checkbox").prop("checked", is_checked);
       if (is_checked) {
         for(var i=0; i<this.buttons.length; i++){
           this.checkedCalls.push(this.buttons[i].callid);
@@ -379,15 +472,16 @@ Vue.component("function-calls", {
     select_filtered: function(){
       start_loading();
 
-      $("input:checkbox").prop("checked", false);
+      $("#function-call-list input:checkbox").prop("checked", false);
       this.checkedCalls = [];
-      var time = {function: this.func_id, from: this.filter_from, to: this.filter_to};
+      var time = {function: this.func_id, from: this.filter_from, to: this.filter_to,
+                  tests: Store.selected_tests};
       var that = this;
 
       axios.post("/list_calls_between/", time).then(function(response){
         var ids_list = response.data;
         console.log(ids_list.length);
-        var calls_list = $("input:checkbox");
+        var calls_list = $("#function-call-list input:checkbox");
         for (var i=0; i<that.buttons.length; i++){
           if (that.buttons[i].callid == ids_list[0]){
             for (var j=i; j<i+ids_list.length; j++){
@@ -413,7 +507,7 @@ Vue.component("function-calls", {
       obj.checkedCalls = [];
       obj.func_id = dict["selected_function_id"];
 
-      axios.get('/list_function_calls/'+obj.func_id).then(function(response){
+      axios.post('/list_function_calls/',{function: obj.func_id, tests: Store.selected_tests}).then(function(response){
         var data = response.data["data"];
         obj.message = "";
         var buttons_list = [];
