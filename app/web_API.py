@@ -12,8 +12,25 @@ def list_transactions(function_id):
     return jsonify(data=database.list_transactions(function_id))
 
 
-@app_object.route("/list_function_calls/<function_id>/")
-def list_function_calls(function_id):
+@app_object.route("/list_tests/")
+def list_calls():
+    tests = database.web_list_tests()
+    return json.dumps(tests)
+
+
+@app_object.route("/list_functions_by_tests/", methods=["GET", "POST"])
+def list_functions_by_tests():
+    data = json.loads(request.data)
+    functions = database.web_list_functions(data)
+    return json.dumps(functions)
+
+
+@app_object.route("/list_function_calls/", methods=["GET", "POST"])
+def list_function_calls():
+    data = json.loads(request.data)
+    function_id = data["function"]
+    if data["tests"]!=[]:
+        return jsonify(data=database.list_calls_from_id(function_id, data["tests"]))
     return jsonify(data=database.list_calls_from_id(function_id))
 
 
@@ -65,14 +82,18 @@ def list_calls_between():
     start = json.loads(request.data)["from"]
     end = json.loads(request.data)["to"]
     id = json.loads(request.data)["function"]
-    list = database.list_calls_in_interval(start, end, id)
+    tests = json.loads(request.data)["tests"]
+    if tests != []:
+        list = database.list_calls_in_interval(start, end, id, tests)
+    else:
+        list = database.list_calls_in_interval(start, end, id)
     return json.dumps(list)
 
 
 """
 All plotting functions first check for the existence of a precomputed plot.
 If a plot is found, the data is returned along with the plot's identifying hash.
-If no plot is found, the data is generated, then returned along with the newly generated identifying hash. 
+If no plot is found, the data is generated, then returned along with the newly generated identifying hash.
 """
 
 
