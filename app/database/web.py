@@ -85,7 +85,7 @@ def list_transactions(function_id):
     return final_requests
 
 
-def list_calls_from_id(function_id, tests=None):
+def list_calls_from_id(function_id, tests = None):
     """
     Given a function id (which implicitly also fixes a property), list the calls found.
     The list of test IDs is optional, in case it is given, list only the calls that happen
@@ -131,7 +131,7 @@ def list_calls_during_request(transaction_id, function_name):
     return function_calls
 
 
-def list_calls_in_interval(start, end, function_id, test_ids=None):
+def list_calls_in_interval(start, end, function_id, test_ids = None):
     """start and end are strings in dd/mm/yyyy hh:mm:ss format"""
     connection = get_connection()
     cursor = connection.cursor()
@@ -172,7 +172,7 @@ def list_verdicts_from_function_call(function_call_id):
     return verdicts
 
 
-def web_list_tests():
+def web_list_tests(test_name = None):
     """
     Return a list of all tests in the database - possibly empty
     """
@@ -180,11 +180,16 @@ def web_list_tests():
     connection = get_connection()
     cursor = connection.cursor()
 
+    if test_name == None:
+        query_string = "select * from test_data"
+    else:
+        query_string = 'select * from test_data where test_name = "%s"' % test_name
+
     try:
-        tests = cursor.execute("select * from test_data").fetchall()
+        tests = cursor.execute(query_string).fetchall()
     except:
         tests = []
-
+    
     connection.close()
     return tests
 
