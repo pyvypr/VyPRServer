@@ -133,6 +133,7 @@ var generate_plot = function(root_obj) {
 };
 
 Vue.use(VuejQueryMask);
+Vue.use(VueSimpleSuggest);
 
 Vue.component("alert", {
   template : `
@@ -184,7 +185,8 @@ Vue.component("test-data", {
       <div v-show="showTests" class="list-group" id="test-cases-list">
         <alert message="Select one or more tests to see monitored functions." />
         <div class="list-group-item">
-
+          <vue-simple-suggest v-model="chosen" display-attribute="name" value-attribute="url"
+            :list="getSuggestionList" :filter-by-query="true" @select="filterTests"></vue-simple-suggest>
         </div>
         <button class="list-group-item">
           <input type='checkbox' id="select-all-tests" @click="select_all_tests()"/><b> Select all </b>
@@ -197,9 +199,36 @@ Vue.component("test-data", {
     </div>
   </div>`,
   data() {
-    return {test_data: undefined, buttons: [], checkedTests: [], showTests : true}
+    return {test_data: undefined, buttons: [], checkedTests: [], showTests : true, chosen: '', names:[]}
   },
   methods: {
+    getSuggestionList: function(){
+      return this.names
+    },
+    filterTests: function(selectedSuggestion){
+      var that = this;
+      if (selectedSuggestion != ""){
+        var url = "/list_tests_by_name/"+selectedSuggestion;
+      } else {
+        var url = "/list_tests/";
+      }
+
+      axios.get(url).then(function(response){
+        var test_list = response.data;
+        var n = test_list.length;
+        var buttons = [];
+        var names = [];
+        for (var i=0; i<n; i++){
+          var dict = {testid: test_list[i][0],
+                      testname: test_list[i][1],
+                      testresult: test_list[i][2],
+                      style: "float: right; color:"+((test_list[i][2]=="Success")? "#00802b" : "#cc0000")};
+          buttons.push(dict)
+        }
+
+        that.buttons = buttons;
+      })
+    },
     select_all_tests: function(){
       var is_checked = $("#select-all-tests").prop("checked");
       $("#test-cases-list input:checkbox").prop("checked", is_checked);
@@ -220,16 +249,21 @@ Vue.component("test-data", {
       var test_list = response.data;
       var n = test_list.length;
       var buttons = [];
+      var names = [];
       for (var i=0; i<n; i++){
         var dict = {testid: test_list[i][0],
                     testname: test_list[i][1],
                     testresult: test_list[i][2],
                     style: "float: right; color:"+((test_list[i][2]=="Success")? "#00802b" : "#cc0000")};
-        buttons.push(dict)
+        buttons.push(dict);
+        if (names.indexOf(dict["testname"]) == -1) {
+          names.push(dict["testname"]);
+        }
       }
       that.test_data = ( n > 0 );
       if (n>0) {that.$root.$emit("tests-exist")}
       that.buttons = buttons;
+      that.names = names;
     })
   },
   watch: {
@@ -247,7 +281,12 @@ Vue.component("test-data", {
           that.$root.$emit('tests-selected', tree);
         });
       }
-
+    },
+    chosen: function(value) {
+      if (value==''){
+        console.log("chosen is empty")
+        this.filterTests("")
+      }
     }
   },
   mounted(){
