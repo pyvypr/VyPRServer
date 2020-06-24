@@ -182,10 +182,11 @@ Vue.component("test-data", {
       <h3 class="panel-title" id="test-cases-title" @click="showTests=!showTests">Test</h3>
     </div>
     <div class="panel-body">
+      <transition name="slide-fade">
       <div v-show="showTests" class="list-group" id="test-cases-list">
         <alert message="Select one or more tests to see monitored functions." />
         <div class="list-group-item">
-          <vue-simple-suggest v-model="chosen" display-attribute="name" value-attribute="url"
+          <vue-simple-suggest v-model="chosen" placeholder="Filter tests by name"
             :list="getSuggestionList" :filter-by-query="true" @select="filterTests"></vue-simple-suggest>
         </div>
         <button class="list-group-item">
@@ -196,6 +197,7 @@ Vue.component("test-data", {
           <b>{{b.testid}}: </b>{{b.testname}}<span :style="b.style">{{b.testresult}}</span>
         </button>
       </div>
+      </transition>
     </div>
   </div>`,
   data() {
@@ -261,7 +263,7 @@ Vue.component("test-data", {
         }
       }
       that.test_data = ( n > 0 );
-      if (n>0) {that.$root.$emit("tests-exist")}
+      if (n>0) {that.$root.$emit("tests-detected")}
       that.buttons = buttons;
       that.names = names;
     })
@@ -345,7 +347,7 @@ Vue.component("machine-function-property", {
       // after selecting a function (specification), hide functions list to make space for calls
       that.showFunctions = false;
     })
-    this.$root.$on('tests-exist', function(){
+    this.$root.$on('tests-detected', function(){
       that.showFunctions = false;
     })
     this.$root.$on('tests-selected', function(tree){
