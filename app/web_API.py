@@ -13,8 +13,14 @@ def list_transactions(function_id):
 
 
 @app_object.route("/list_tests/")
-def list_calls():
+def list_tests():
     tests = database.web_list_tests()
+    return json.dumps(tests)
+
+
+@app_object.route("/list_tests_by_name/<name>/")
+def list_tests_by_name(name):
+    tests = database.web_list_tests(name)
     return json.dumps(tests)
 
 
