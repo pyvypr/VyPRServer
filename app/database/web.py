@@ -109,11 +109,35 @@ def list_calls_from_id(function_id, tests = None):
     modified_calls = []
     for function_call in function_calls:
         new_call = list(function_call)
+
+        # append the time taken
         new_call.append(
             (dateutil.parser.parse(new_call[3]) - dateutil.parser.parse(new_call[2])).total_seconds()
         )
+        # format the timestamps
         new_call[2] = dateutil.parser.parse(new_call[2]).strftime("%d/%m/%Y %H:%M:%S")
         new_call[3] = dateutil.parser.parse(new_call[3]).strftime("%d/%m/%Y %H:%M:%S")
+
+        # append verdict data
+        verdicts = map(
+            lambda row: row[0],
+            cursor.execute(
+                "select verdict from verdict where function_call = ?",
+                [function_call[0]]
+            ).fetchall()
+        )
+        # take the numerical product of verdicts
+        overall_verdict = 1
+        for verdict in verdicts:
+            overall_verdict *= verdict
+        new_call.append(overall_verdict)
+
+        # if tests were given, determine during which test this call took place
+        if tests:
+            test_result = cursor.execute("""select test_result from test_data
+                where start_time < ? and end_time > ?""", [function_call[2], function_call[3]]).fetchone()[0]
+            new_call.append(test_result)
+
         modified_calls.append(new_call)
     return modified_calls
 
@@ -149,7 +173,7 @@ def list_calls_in_interval(start, end, function_id, test_names = None):
         names = []
         for name in test_names:
             names.append('"%s"' %name)
-        function_calls = cursor.execute(""" select function_call.id from
+        function_calls = cursor.execute(""" select function_call.id, test_data.test_result from
             function_call inner join test_data where
             function_call.time_of_call>=test_data.start_time
             and function_call.end_time_of_call<=test_data.end_time
