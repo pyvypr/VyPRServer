@@ -179,22 +179,22 @@ Vue.component("test-data", {
   template : `
   <div v-if="test_data" class="panel panel-success">
     <div class="panel-heading">
-      <h3 class="panel-title" id="test-cases-title" @click="showTests=!showTests">Test Cases</h3>
+      <h3 class="panel-title" id="test-cases-title" @click="showTests=!showTests">Test</h3>
     </div>
     <div class="panel-body">
       <transition name="slide-fade">
       <div v-show="showTests" class="list-group" id="test-cases-list">
-        <alert message="Select a test to browse performance data related to it." />
+        <alert message="Select one or more tests to see monitored functions." />
         <div class="list-group-item">
           <input type="text" v-model="filter_string" placeholder="Filter tests..."/>
         </div>
-        <form>
-        <div v-for="(b, index) in filtered_buttons" :key="index" class="list-group-item">
-          <input type='radio' :test-id="b.testname" :value="b.testname" v-model="checked_test"
-            @click="select_test($event)"/>
+        <button class="list-group-item">
+          <input type='checkbox' id="select-all-tests" @click="select_all_tests()"/><b> Select all </b>
+        </button>
+        <button v-for="(b, index) in filtered_buttons" :key="index" class="list-group-item">
+          <input type='checkbox' :test-id="b.testname" :value="b.testname" v-model="checkedTests"/>
           {{b.testname}}
-        </div>
-        </form>
+        </button>
       </div>
       </transition>
     </div>
@@ -202,12 +202,12 @@ Vue.component("test-data", {
   data() {
     return {
       test_data: undefined,
+      checkedTests: [],
       showTests : true,
       chosen: '',
       all_names:[],
       filter_string: "",
-      all_buttons : [],
-      checked_test : null
+      all_buttons : []
     }
   },
   computed : {
@@ -227,18 +227,6 @@ Vue.component("test-data", {
     }
   },
   methods: {
-    select_test : function(e) {
-      // get the functions called during executions of the selected test
-      // and emit an event that tells the specification-listing component to reload
-      var that = this;
-      // get the test name from the DOM since reactivity hasn't caught up yet
-      test_name = $(e.target).attr("value");
-      axios.post("/list_functions_by_tests/", {"names" : [test_name]}).then(function(response) {
-        tree = response.data;
-        that.$root.$emit('tests-selected', tree);
-      });
-      Store.selected_tests = [test_name];
-    },
     select_all_tests: function(){
       var is_checked = $("#select-all-tests").prop("checked");
       $("#test-cases-list input:checkbox").prop("checked", is_checked);
@@ -274,9 +262,24 @@ Vue.component("test-data", {
     })
   },
   watch: {
+    checkedTests: function(value){
+      var test_names = [];
+      var that = this;
+      for (var i=0; i<value.length; i++){
+        test_names.push(""+value[i]);
+      }
+
+      Store.selected_tests = test_names;
+      if (test_names.length){
+        axios.post("/list_functions_by_tests/", {"names" : test_names}).then(function(response) {
+          tree = response.data;
+          that.$root.$emit('tests-selected', tree);
+        });
+      }
+    },
     chosen: function(value) {
       if (value==''){
-        this.filterTests("");
+        this.filterTests("")
       }
     }
   },
@@ -434,6 +437,7 @@ Vue.component("subtreelevel", {
   },
   methods : {
     selectFunction: function(id, code){
+      console.log(id);
       start_loading();
       this.$root.$emit('function-select', {selected_function_id: id, specification_code: code})
     }
@@ -526,6 +530,15 @@ Vue.component("function-calls", {
   },
   mounted(){
     var obj = this;
+    this.$root.$on('tests-selected', function(tree){
+      obj.message = "Select a function first.";
+      obj.buttons = [];
+      obj.checkedCalls = [];
+      obj.filter_from = "";
+      obj.filter_to = "";
+      obj.func_id = 0;
+      obj.store = Store;
+    })
     this.$root.$on('function-select', function(dict){
       // when a specification is selected, get the calls list from server
       // while it's loading, display a temporary message
@@ -690,6 +703,15 @@ Vue.component("code-view", {
   },
   mounted(){
     var obj2 = this;
+    this.$root.$on('tests-selected', function(tree){
+      obj2.message = "Select a function and then one or more calls, first.";
+      obj2.specification_code = "";
+      obj2.code_lines = [];
+      obj2.start_line = 0;
+      obj2.tree = {};
+      obj2.binding = undefined;
+      obj2.store = Store;
+    })
     this.$root.$on('calls-loaded', function(dict){
       start_loading();
       obj2.message = "";
