@@ -201,8 +201,6 @@ Vue.component("test-data", {
   </div>`,
   data() {
     return {
-      test_data: undefined,
-      //checkedTests: [],
       showTests : true,
       chosen: '',
       all_names:[],
@@ -527,10 +525,9 @@ Vue.component("function-calls", {
 
       axios.post("/list_calls_between/", time).then(function(response){
         var ids_list = response.data;
-        console.log(ids_list.length);
         var calls_list = $("#function-call-list input:checkbox");
         for (var i=0; i<that.buttons.length; i++){
-          if (that.buttons[i].callid == ids_list[0]){
+          if (that.buttons[i].callid == ids_list[0][0]){
             for (var j=i; j<i+ids_list.length; j++){
               that.checkedCalls.push(that.buttons[j].callid);
               $(calls_list[j+1]).prop("checked", true);
