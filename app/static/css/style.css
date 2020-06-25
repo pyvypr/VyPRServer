@@ -89,6 +89,14 @@ div.alert {
 	border: none!important;
 }
 
+.list-group-item span.badge.Success {
+    background: green;
+}
+
+.list-group-item span.badge.Violation, .list-group-item span.badge.Error {
+    background: red;
+}
+
 div.please-select {
 	padding: 10px;
 }

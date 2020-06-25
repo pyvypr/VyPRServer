@@ -3,7 +3,6 @@ var code_highlight_palette = ["#cae2dc", "#eee3cd", "#cad7f2", "#ded4e7", "#e3e3
 // global plot data, used for when plot are updated with new data
 var plot_visible = false;
 var plot_data = null;
-var tests_exist = false;
 var selected_binding = undefined;
 var Store = {
     status : {
@@ -21,7 +20,8 @@ var Store = {
     binding_selected : false,
     subatom_selected : false,
     first_point_selected : false,
-    type_of_atom : undefined
+    type_of_atom : undefined,
+    tests_exist : null
 };
 
 var start_loading = function() {
@@ -177,7 +177,7 @@ Vue.component("loading-spinner", {
 
 Vue.component("test-data", {
   template : `
-  <div v-if="test_data" class="panel panel-success">
+  <div v-if="tests_exist" class="panel panel-success">
     <div class="panel-heading">
       <h3 class="panel-title" id="test-cases-title" @click="showTests=!showTests">Test Cases</h3>
     </div>
@@ -208,10 +208,14 @@ Vue.component("test-data", {
       all_names:[],
       filter_string: "",
       all_buttons : [],
-      checked_test : null
+      checked_test : null,
+      store : Store
     }
   },
   computed : {
+    tests_exist : function() {
+      return this.store.tests_exist;
+    },
     filtered_buttons : function() {
       // use the value of this.filter_string to decide which buttons we should display
       if(this.filter_string != "") {
@@ -268,7 +272,7 @@ Vue.component("test-data", {
         buttons.push(dict);
         names.push(dict["testname"]);
       }
-      that.test_data = ( n > 0 );
+      that.store.tests_exist = ( n > 0 );
       if (n>0) {that.$root.$emit("tests-detected")}
       that.all_buttons = buttons;
       that.all_names = names;
@@ -294,11 +298,11 @@ Vue.component("machine-function-property", {
     <div class="panel panel-success">
       <div class="panel-heading">
         <h3 class="panel-title" id="function-title" @click="showFunctions=!showFunctions">
-            Machine / Function / Property
+            Machine / Function / Query
         </h3>
       </div>
       <div class="panel-body">
-        <alert v-show="showFunctions" message="Select a specification to see relevant calls." />
+        <alert v-show="showFunctions" message="Select a query to see relevant calls." />
         <transition name="slide-fade">
         <div v-show="showFunctions" class="list-group" id="function-list">
           <div id="function-list-data"></div>
@@ -465,7 +469,10 @@ Vue.component("function-calls", {
           </button>
           <button v-for="(b, index) in this.buttons" :key="index" class="list-group-item">
             <input type='checkbox' :function-call-id="b.callid" :value="b.callid" v-model="checkedCalls"/>
-            <b>Start:</b> {{b.callstart}}, <b>lasting: </b> {{b.callduration}} seconds
+            {{b.callstart}}
+            <span v-if="tests_exist" class="badge" v-bind:class="b.testresult">unit test</span>
+            <span class="badge" v-bind:class="translate_verdict(b.verdict)">query</span>
+            <span class="badge">lasted {{b.callduration}} seconds</span>
           </button>
         </div>
       </div>
@@ -480,7 +487,16 @@ Vue.component("function-calls", {
       func_id: 0,
       store : Store}
   },
+  computed : {
+    tests_exist : function() {
+      return this.store.tests_exist;
+    }
+  },
   methods: {
+    translate_verdict : function(v) {
+      if(v == 1) return "Success";
+      else return "Violation";
+    },
     select_all_calls: function(){
       start_loading();
       var is_checked = $("#select-all-calls").prop("checked");
@@ -553,7 +569,13 @@ Vue.component("function-calls", {
         var buttons_list = [];
         var i;
         for(i=0; i<data.length; i++) {
-          var button = {callid : data[i][0], callstart: data[i][2], callduration: data[i][6]}
+          var button = {
+            callid : data[i][0],
+            callstart: data[i][2],
+            callduration: data[i][6],
+            verdict: data[i][7],
+            testresult: obj.store.tests_exist ? data[i][8] : null
+          }
           buttons_list.push(button)
         }
         obj.buttons = buttons_list;
@@ -608,7 +630,7 @@ Vue.component("code-view", {
       <div class="panel-body" id="verdict-list">
         <div v-if="message" class="please-select">{{message}}</div>
         <alert v-if="binding_is_selected"
-            message="Select a part of the specification to narrow down critical statements in the code." />
+            message="Select a part of the query to narrow down critical statements in the code." />
         <div v-if="specification_code" id='specification_listing'>
           <specification :spec="this.specification_code" :change="1" />
         </div>
