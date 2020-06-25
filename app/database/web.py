@@ -258,7 +258,8 @@ def web_list_functions(tests = None):
 
         #in case it does not
         if len(machine_rest) == 1:
-            path_rest =machine_rest[0].split(".")
+            path_rest = machine_rest[0].split(".")
+            machine = [""]
         else:
             path_rest = machine_rest[1].split(".")
 

@@ -231,8 +231,8 @@ Vue.component("test-data", {
       var is_checked = $("#select-all-tests").prop("checked");
       $("#test-cases-list input:checkbox").prop("checked", is_checked);
       if (is_checked) {
-        for(var i=0; i<this.buttons.length; i++){
-          this.checkedTests.push(this.buttons[i].testname);
+        for(var i=0; i<this.filtered_buttons.length; i++){
+          this.checkedTests.push(this.filtered_buttons[i].testname);
         }
       }
       else {
@@ -306,7 +306,7 @@ Vue.component("machine-function-property", {
           <div id="function-list-data"></div>
           <div class="tab">
             <button v-for="(value,key) in tree" :class="(key===showTab)? 'tablinks active':'tablinks' "
-                @click="selectTab(key)">
+                @click="selectTab(key)" v-show="key">
                 {{key}}
             </button>
           </div>
