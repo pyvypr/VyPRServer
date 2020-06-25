@@ -85,13 +85,26 @@ def list_transactions(function_id):
     return final_requests
 
 
-def list_calls_from_id(function_id):
+def list_calls_from_id(function_id, tests = None):
     """
     Given a function id (which implicitly also fixes a property), list the calls found.
+    The list of test IDs is optional, in case it is given, list only the calls that happen
+    during the tests.
     """
     connection = get_connection()
     cursor = connection.cursor()
-    function_calls = cursor.execute("select * from function_call where function = ?", [function_id]).fetchall()
+    if tests == None:
+        function_calls = cursor.execute("select * from function_call where function = ?", [function_id]).fetchall()
+    else:
+        names = []
+        for name in tests:
+            names.append('"%s"' %name)
+        function_calls = cursor.execute("""select * from function_call where function=?
+            and id in (select function_call.id from function_call inner join test_data
+                        where function_call.time_of_call>=test_data.start_time
+                        and function_call.end_time_of_call<=test_data.end_time
+                        and test_data.test_name in %s);"""%list_to_sql_string(names), [function_id]).fetchall()
+
     # perform any processing on each function call that we need
     modified_calls = []
     for function_call in function_calls:
@@ -120,7 +133,8 @@ def list_calls_during_request(transaction_id, function_name):
 
     return function_calls
 
-def list_calls_in_interval(start, end, function_id):
+
+def list_calls_in_interval(start, end, function_id, test_names = None):
     """start and end are strings in dd/mm/yyyy hh:mm:ss format"""
     connection = get_connection()
     cursor = connection.cursor()
@@ -128,8 +142,21 @@ def list_calls_in_interval(start, end, function_id):
     start_timestamp = dateutil.parser.parse(start.replace("%20"," ")).strftime("%Y-%m-%dT%H:%M:%S")
     end_timestamp = dateutil.parser.parse(end.replace("%20", " ")).strftime("%Y-%m-%dT%H:%M:%S")
 
-    function_calls = cursor.execute("""select id from function_call where time_of_call>=?
+    if test_names == None:
+        function_calls = cursor.execute("""select id from function_call where time_of_call>=?
         and end_time_of_call <= ? and function=?""", [start_timestamp, end_timestamp, function_id]).fetchall()
+    else:
+        names = []
+        for name in test_names:
+            names.append('"%s"' %name)
+        function_calls = cursor.execute(""" select function_call.id from
+            function_call inner join test_data where
+            function_call.time_of_call>=test_data.start_time
+            and function_call.end_time_of_call<=test_data.end_time
+            and function_call.time_of_call>=? and function_call.end_time_of_call <= ?
+            and function=? and test_data.test_name in %s; """%list_to_sql_string(names),
+            [start_timestamp, end_timestamp, function_id]).fetchall()
+
 
     connection.close()
     return function_calls
@@ -151,9 +178,30 @@ def list_verdicts_from_function_call(function_call_id):
     return verdicts
 
 
-def web_list_functions():
+def web_list_tests():
     """
-    Return a list of all functions found.
+    Return a list of all tests in the database - possibly empty
+    """
+
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    query_string = "select distinct test_name from test_data"
+
+    try:
+        tests = cursor.execute(query_string).fetchall()
+    except:
+        tests = []
+
+    connection.close()
+    return tests
+
+
+def web_list_functions(tests = None):
+    """
+    Return a list of all functions found. Adding an optional tests parameter
+    - if a list of test IDs is passed, the list of functions will be filtered so that only those
+      monitored during the selected tests get listed
     """
 
     print("listing functions")
@@ -161,10 +209,28 @@ def web_list_functions():
     connection = get_connection()
     cursor = connection.cursor()
 
-    functions = cursor.execute(
+    if tests==None:
+        functions = cursor.execute(
         """select function.id, function.fully_qualified_name, property.hash, property.serialised_structure
             from (function inner join function_property_pair on function.id==function_property_pair.function)
-            inner join property on function_property_pair.property_hash=property.hash""").fetchall()
+            inner join property on function_property_pair.property_hash==property.hash""").fetchall()
+    else:
+        names = []
+        for name in tests["names"]:
+            names.append('"%s"' %name)
+        ids = cursor.execute(
+        """select distinct function_call.function from test_data inner join function_call
+            where function_call.time_of_call>=test_data.start_time
+            and function_call.end_time_of_call<=test_data.end_time
+            and test_data.test_name in %s;""" % list_to_sql_string(names)).fetchall()
+        ids_new = []
+        for id in ids:
+            ids_new.append(id[0])
+        functions = cursor.execute(
+        """select function.id, function.fully_qualified_name, property.hash, property.serialised_structure
+            from (function inner join function_property_pair on function.id==function_property_pair.function)
+            inner join property on function_property_pair.property_hash==property.hash
+            where function.id in %s;"""%list_to_sql_string(ids_new)).fetchall()
 
     # process the functions into a hierarchy by splitting the function names up by dots
     dictionary_tree_structure = {}
@@ -1091,25 +1157,46 @@ StateValueTypeEqualTo.__repr__ = \
 
 StateValueEqualToMixed.__repr__ = \
     lambda Atom: "%s(%s).equals(%s(%s))" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+"""
+StateValueLessThanStateValueMixed.__repr__ = \
+    lambda Atom: "%s(%s) < %s(%s)" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
 
+StateValueLessThanEqualStateValueMixed.__repr__ = \
+    lambda Atom: "%s(%s) <= %s(%s)" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+"""
 StateValueLengthLessThanStateValueLengthMixed.__repr__ = \
     lambda Atom: "%s(%s).length() < %s(%s).length()" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
-
+"""
+StateValueLengthLessThanEqualStateValueLengthMixed.__repr__ = \
+    lambda Atom: "%s(%s).length() <= %s(%s).length()" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+"""
 StateValueLengthInInterval.__repr__ = \
     lambda Atom: "%s(%s).length()._in(%s)" % (Atom._state, Atom._name, Atom._interval)
 
 TransitionDurationInInterval.__repr__=\
     lambda Atom: "%s.duration()._in(%s)" % (Atom._transition, Atom._interval)
-
+"""
+TransitionDurationInOpenInterval.__repr__=\
+    lambda Atom: "%s.duration()._in(%s)" % (Atom._transition, Atom._interval)
+"""
 TransitionDurationLessThanTransitionDurationMixed.__repr__=\
     lambda Atom: "%s.duration() < %s.duration()" % (Atom._lhs, Atom._rhs)
-
+"""
+TransitionDurationLessThanEqualTransitionDurationMixed.__repr__=\
+    lambda Atom: "%s.duration() <= %s.duration()" % (Atom._lhs, Atom._rhs)
+"""
 TransitionDurationLessThanStateValueMixed.__repr__ = \
     lambda Atom: "%s.duration() < %s(%s)" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
-
+"""
+TransitionDurationLessThanEqualStateValueMixed.__repr__ = \
+    lambda Atom: "%s.duration() <= %s(%s)" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
+"""
 TransitionDurationLessThanStateValueLengthMixed.__repr__ = \
     lambda Atom: "%s.duration() < %s(%s).length()" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
-
+"""
+TransitionDurationLessThanEqualStateValueLengthMixed.__repr__ = \
+    lambda Atom: "%s.duration() <= %s(%s).length()" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
+"""
 TimeBetweenInInterval.__repr__ = \
     lambda Atom: "timeBetween(%s, %s)._in(%s)" % (Atom._lhs, Atom._rhs, Atom._interval)
 
@@ -1153,21 +1240,49 @@ StateValueEqualToMixed.HTMLrepr = \
         <span class="subatom" subatom-index="1">%s(%s)</span>)
         </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
 
+#StateValueLessThanStateValueMixed.HTMLrepr = \
+#    lambda Atom: """<span class="atom" atom-index="%i">
+#        <span class="subatom" subatom-index="0">%s(%s)</span> <
+#        <span class="subatom" subatom-index="1">%s(%s)</span>
+#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
+#StateValueLessThanEqualStateValueMixed.HTMLrepr = \
+#    lambda Atom: """<span class="atom" atom-index="%i">
+#        <span class="subatom" subatom-index="0">%s(%s)</span> <=
+#        <span class="subatom" subatom-index="1">%s(%s)</span>
+#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
 StateValueLengthLessThanStateValueLengthMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
         <span class="subatom" subatom-index="0">%s(%s)</span>.length() <
         <span class="subatom" subatom-index="1">%s(%s)</span>.length()
         </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
 
+#StateValueLengthLessThanEqualStateValueLengthMixed.HTMLrepr = \
+#    lambda Atom: """<span class="atom" atom-index="%i">
+#        <span class="subatom" subatom-index="0">%s(%s)</span>.length() <=
+#        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
+#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
 StateValueLengthInInterval.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
         <span class="subatom" subatom-index="0">%s(%s)</span>.length()._in(%s)
         </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
 
+#StateValueLengthInOpenInterval.HTMLrepr = \
+#    lambda Atom: """<span class="atom" atom-index="%i">
+#        <span class="subatom" subatom-index="0">%s(%s)</span>.length()._in(%s)
+#        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
+
 TransitionDurationInInterval.HTMLrepr=\
     lambda Atom: """<span class="atom" atom-index="%i">
         <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span>._in(%s)
         </span>""" % (atoms_list.index(Atom), Atom._transition, Atom._interval)
+
+#TransitionDurationInOpenInterval.HTMLrepr=\
+#    lambda Atom: """<span class="atom" atom-index="%i">
+#        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span>._in(%s)
+#        </span>""" % (atoms_list.index(Atom), Atom._transition, str(Atom._interval))
 
 TransitionDurationLessThanTransitionDurationMixed.HTMLrepr=\
     lambda Atom: """<span class="atom" atom-index="%i">
@@ -1175,17 +1290,35 @@ TransitionDurationLessThanTransitionDurationMixed.HTMLrepr=\
         <span class="duration"><span class="subatom" subatom-index="1">%s</span>.duration()</span>
         </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs)
 
+#TransitionDurationLessThanEqualTransitionDurationMixed.HTMLrepr=\
+#    lambda Atom: """<span class="atom" atom-index="%i">
+#        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
+#        <span class="duration"><span class="subatom" subatom-index="1">%s</span>.duration()</span>
+#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs)
+
 TransitionDurationLessThanStateValueMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
         <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <
         <span class="subatom" subatom-index="1">%s(%s) </span>
         </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
 
+#TransitionDurationLessThanEqualStateValueMixed.HTMLrepr = \
+#    lambda Atom: """<span class="atom" atom-index="%i">
+#        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
+#        <span class="subatom" subatom-index="1">%s(%s) </span>
+#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
+
 TransitionDurationLessThanStateValueLengthMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
         <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <
         <span class="subatom" subatom-index="1">%s(%s)</span>.length()
         </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
+
+#TransitionDurationLessThanEqualStateValueLengthMixed.HTMLrepr = \
+#    lambda Atom: """<span class="atom" atom-index="%i">
+#        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
+#        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
+#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
 
 TimeBetweenInInterval.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">timeBetween(
