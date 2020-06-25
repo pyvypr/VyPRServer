@@ -507,7 +507,7 @@ def get_code(function_id):
     return dict
 
 
-def get_calls_data(ids_list):
+def get_calls_data(ids_list, property_hash):
     """
     Given a list of function call IDs, using path condition sequence,
      reconstruct the path taken to an instrumentation point
@@ -519,41 +519,50 @@ def get_calls_data(ids_list):
 
     ids = list_to_sql_string(ids_list)
 
-    query_string = "select id, function, time_of_call, end_time_of_call, trans, path_condition_id_sequence from function_call where id in %s;" % ids
+    query_string = "select id, function, time_of_call, end_time_of_call, trans, path_condition_id_sequence " \
+                   "from function_call where id in %s;" % ids
     calls = cursor.execute(query_string).fetchall()
     #print(calls)
 
-
-    #check if the monitored service path was given as an argument
+    # check if the monitored service path was given as an argument
     location = app.monitored_service_path
     if (location==None):
-        error_dict = {"error" : "Please parse the monitored service path as an argument (--path)"}
+        error_dict = {"error" : "Please pass the monitored service path as an argument (--path)"}
         return error_dict
-
 
     # get the scfg of the function called by these calls and get all their path_condition_id_sequences
     # but without duplicate instances of sequences - store them as keys in dictionary 'sequences'
     # the corresponding value is a list of the IDs of the calls that generated the sequence (key)
-    function = cursor.execute("""select function.fully_qualified_name, function_property_pair.property_hash
-    from (function inner join function_property_pair on function.id==function_property_pair.function)
-    where function.id = ?""", [calls[0][1]]).fetchone()
+    function = cursor.execute("select fully_qualified_name from function where id = ?", [calls[0][1]]
+    ).fetchone()
     func = function[0]
     scfg = get_scfg(func, location)
     sequences = {}
     inst_point_ids = set()
     lines = set()
 
+    # get the set of binding IDs for the given function
+    bindings = map(
+        lambda row : row[0],
+        cursor.execute(
+            "select id from binding where function = ? and property_hash = ?",
+            [calls[0][1], property_hash]
+        ).fetchall()
+    )
+
+    print("bindings %s" % bindings)
+
     for call in calls:
-        seq = call[5] # get the list of path condition ids
+        seq = call[5]  # get the list of path condition ids
         if seq not in sequences.keys():
-            sequences[seq]=[call[0]]
+            sequences[seq] = [call[0]]
         else:
             sequences[seq].append(call[0])
 
-
     for seq in sequences:
-        #if there are more calls that generated the sequence, take the first one
+        # if there are more calls that generated the sequence, take the first one
         call_id = sequences[seq][0]
+        print("call id %i" % call_id)
         # get the list of path conditions defined by the ids above
         subchain = []
         for condition in json.loads(seq):
@@ -562,11 +571,16 @@ def get_calls_data(ids_list):
             subchain.append(condition_string)
         print(subchain)
 
-        # get observations generated during this function call
-        observations = cursor.execute("""select observation.id, observation.instrumentation_point,
+        # get observations generated during this function call that are relevant to the property
+        observations = cursor.execute(
+            """select observation.id, observation.instrumentation_point,
             observation.previous_condition_offset from
             (observation inner join verdict on observation.verdict == verdict.id)
-            where verdict.function_call = ?""", [call_id]).fetchall()
+            where verdict.function_call = ? and verdict.binding in %s""" % list_to_sql_string(bindings),
+            [call_id]
+        ).fetchall()
+
+        print(observations)
 
         # reconstruct the path to each observation to find the line in the code
         # that generates that observation (last element in the found path)
@@ -581,7 +595,6 @@ def get_calls_data(ids_list):
 
     print("Instrumentation points' IDs: %s" % inst_point_ids)
     print("Pairs (instrumentation point ID, line number): %s" % lines)
-
 
     # now we want to group the instrumenation points by bindings and atoms
 

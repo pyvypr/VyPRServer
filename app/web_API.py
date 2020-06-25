@@ -64,10 +64,12 @@ def get_source_code(function_id):
 @app_object.route("/get_function_calls_data/",methods=["GET", "POST"])
 def get_function_calls_data():
     if request.data:
-        ids_list = json.loads(request.data)["ids"]
+        request_dict = json.loads(request.data)
+        ids_list = request_dict["ids"]
+        property_hash = request_dict["property_hash"]
     else:
         ids_list = request.form.getlist('ids[]')
-    data = database.get_calls_data(ids_list)
+    data = database.get_calls_data(ids_list, property_hash)
     return json.dumps(data)
 
 
