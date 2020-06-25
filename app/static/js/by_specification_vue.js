@@ -193,8 +193,8 @@ Vue.component("test-data", {
           <input type='checkbox' id="select-all-tests" @click="select_all_tests()"/><b> Select all </b>
         </button>
         <button v-for="(b, index) in this.buttons" :key="index" class="list-group-item">
-          <input type='checkbox' :test-id="b.testid" :value="b.testid" v-model="checkedTests"/>
-          <b>{{b.testid}}: </b>{{b.testname}}<span :style="b.style">{{b.testresult}}</span>
+          <input type='checkbox' :test-id="b.testname" :value="b.testname" v-model="checkedTests"/>
+          {{b.testname}}
         </button>
       </div>
       </transition>
@@ -210,33 +210,28 @@ Vue.component("test-data", {
     filterTests: function(selectedSuggestion){
       var that = this;
       if (selectedSuggestion != ""){
-        var url = "/list_tests_by_name/"+selectedSuggestion;
+        that.buttons = [{testname: selectedSuggestion}]
       } else {
         var url = "/list_tests/";
+        axios.get(url).then(function(response){
+          var test_list = response.data;
+          var n = test_list.length;
+          var buttons = [];
+          for (var i=0; i<n; i++){
+            var dict = {testname: test_list[i][0]}
+            buttons.push(dict)
+          }
+
+          that.buttons = buttons;
+        })
       }
-
-      axios.get(url).then(function(response){
-        var test_list = response.data;
-        var n = test_list.length;
-        var buttons = [];
-        var names = [];
-        for (var i=0; i<n; i++){
-          var dict = {testid: test_list[i][0],
-                      testname: test_list[i][1],
-                      testresult: test_list[i][2],
-                      style: "float: right; color:"+((test_list[i][2]=="Success")? "#00802b" : "#cc0000")};
-          buttons.push(dict)
-        }
-
-        that.buttons = buttons;
-      })
     },
     select_all_tests: function(){
       var is_checked = $("#select-all-tests").prop("checked");
       $("#test-cases-list input:checkbox").prop("checked", is_checked);
       if (is_checked) {
         for(var i=0; i<this.buttons.length; i++){
-          this.checkedTests.push(this.buttons[i].testid);
+          this.checkedTests.push(this.buttons[i].testname);
         }
       }
       else {
@@ -253,14 +248,9 @@ Vue.component("test-data", {
       var buttons = [];
       var names = [];
       for (var i=0; i<n; i++){
-        var dict = {testid: test_list[i][0],
-                    testname: test_list[i][1],
-                    testresult: test_list[i][2],
-                    style: "float: right; color:"+((test_list[i][2]=="Success")? "#00802b" : "#cc0000")};
+        var dict = {testname: test_list[i][0]}
         buttons.push(dict);
-        if (names.indexOf(dict["testname"]) == -1) {
-          names.push(dict["testname"]);
-        }
+        names.push(dict["testname"]);
       }
       that.test_data = ( n > 0 );
       if (n>0) {that.$root.$emit("tests-detected")}
@@ -270,15 +260,15 @@ Vue.component("test-data", {
   },
   watch: {
     checkedTests: function(value){
-      var test_ids = [];
+      var test_names = [];
       var that = this;
       for (var i=0; i<value.length; i++){
-        test_ids.push(""+value[i]);
+        test_names.push(""+value[i]);
       }
 
-      Store.selected_tests = test_ids;
-      if (test_ids.length){
-        axios.post("/list_functions_by_tests/", {"ids" : test_ids}).then(function(response) {
+      Store.selected_tests = test_names;
+      if (test_names.length){
+        axios.post("/list_functions_by_tests/", {"names" : test_names}).then(function(response) {
           tree = response.data;
           that.$root.$emit('tests-selected', tree);
         });
@@ -286,7 +276,6 @@ Vue.component("test-data", {
     },
     chosen: function(value) {
       if (value==''){
-        console.log("chosen is empty")
         this.filterTests("")
       }
     }

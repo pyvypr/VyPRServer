@@ -96,11 +96,14 @@ def list_calls_from_id(function_id, tests = None):
     if tests == None:
         function_calls = cursor.execute("select * from function_call where function = ?", [function_id]).fetchall()
     else:
+        names = []
+        for name in tests:
+            names.append('"%s"' %name)
         function_calls = cursor.execute("""select * from function_call where function=?
             and id in (select function_call.id from function_call inner join test_data
                         where function_call.time_of_call>=test_data.start_time
                         and function_call.end_time_of_call<=test_data.end_time
-                        and test_data.id in %s);"""%list_to_sql_string(tests), [function_id]).fetchall()
+                        and test_data.test_name in %s);"""%list_to_sql_string(names), [function_id]).fetchall()
 
     # perform any processing on each function call that we need
     modified_calls = []
@@ -131,7 +134,7 @@ def list_calls_during_request(transaction_id, function_name):
     return function_calls
 
 
-def list_calls_in_interval(start, end, function_id, test_ids = None):
+def list_calls_in_interval(start, end, function_id, test_names = None):
     """start and end are strings in dd/mm/yyyy hh:mm:ss format"""
     connection = get_connection()
     cursor = connection.cursor()
@@ -139,16 +142,19 @@ def list_calls_in_interval(start, end, function_id, test_ids = None):
     start_timestamp = dateutil.parser.parse(start.replace("%20"," ")).strftime("%Y-%m-%dT%H:%M:%S")
     end_timestamp = dateutil.parser.parse(end.replace("%20", " ")).strftime("%Y-%m-%dT%H:%M:%S")
 
-    if test_ids == None:
+    if test_names == None:
         function_calls = cursor.execute("""select id from function_call where time_of_call>=?
         and end_time_of_call <= ? and function=?""", [start_timestamp, end_timestamp, function_id]).fetchall()
     else:
+        names = []
+        for name in test_names:
+            names.append('"%s"' %name)
         function_calls = cursor.execute(""" select function_call.id from
             function_call inner join test_data where
             function_call.time_of_call>=test_data.start_time
             and function_call.end_time_of_call<=test_data.end_time
             and function_call.time_of_call>=? and function_call.end_time_of_call <= ?
-            and function=? and test_data.id in %s; """%list_to_sql_string(test_ids),
+            and function=? and test_data.test_name in %s; """%list_to_sql_string(names),
             [start_timestamp, end_timestamp, function_id]).fetchall()
 
 
@@ -172,7 +178,7 @@ def list_verdicts_from_function_call(function_call_id):
     return verdicts
 
 
-def web_list_tests(test_name = None):
+def web_list_tests():
     """
     Return a list of all tests in the database - possibly empty
     """
@@ -180,16 +186,13 @@ def web_list_tests(test_name = None):
     connection = get_connection()
     cursor = connection.cursor()
 
-    if test_name == None:
-        query_string = "select * from test_data"
-    else:
-        query_string = 'select * from test_data where test_name = "%s"' % test_name
+    query_string = "select distinct test_name from test_data"
 
     try:
         tests = cursor.execute(query_string).fetchall()
     except:
         tests = []
-    
+
     connection.close()
     return tests
 
@@ -212,12 +215,14 @@ def web_list_functions(tests = None):
             from (function inner join function_property_pair on function.id==function_property_pair.function)
             inner join property on function_property_pair.property_hash==property.hash""").fetchall()
     else:
-        print(tests["ids"])
+        names = []
+        for name in tests["names"]:
+            names.append('"%s"' %name)
         ids = cursor.execute(
         """select distinct function_call.function from test_data inner join function_call
             where function_call.time_of_call>=test_data.start_time
             and function_call.end_time_of_call<=test_data.end_time
-            and test_data.id in %s;""" % list_to_sql_string(tests["ids"])).fetchall()
+            and test_data.test_name in %s;""" % list_to_sql_string(names)).fetchall()
         ids_new = []
         for id in ids:
             ids_new.append(id[0])
