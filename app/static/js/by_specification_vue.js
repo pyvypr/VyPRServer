@@ -186,13 +186,12 @@ Vue.component("test-data", {
       <div v-show="showTests" class="list-group" id="test-cases-list">
         <alert message="Select one or more tests to see monitored functions." />
         <div class="list-group-item">
-          <vue-simple-suggest v-model="chosen" placeholder="Filter tests by name"
-            :list="getSuggestionList" :filter-by-query="true" @select="filterTests"></vue-simple-suggest>
+          <input type="text" v-model="filter_string" placeholder="Filter tests..."/>
         </div>
         <button class="list-group-item">
           <input type='checkbox' id="select-all-tests" @click="select_all_tests()"/><b> Select all </b>
         </button>
-        <button v-for="(b, index) in this.buttons" :key="index" class="list-group-item">
+        <button v-for="(b, index) in filtered_buttons" :key="index" class="list-group-item">
           <input type='checkbox' :test-id="b.testname" :value="b.testname" v-model="checkedTests"/>
           {{b.testname}}
         </button>
@@ -201,31 +200,33 @@ Vue.component("test-data", {
     </div>
   </div>`,
   data() {
-    return {test_data: undefined, buttons: [], checkedTests: [], showTests : true, chosen: '', names:[]}
+    return {
+      test_data: undefined,
+      checkedTests: [],
+      showTests : true,
+      chosen: '',
+      all_names:[],
+      filter_string: "",
+      all_buttons : []
+    }
+  },
+  computed : {
+    filtered_buttons : function() {
+      // use the value of this.filter_string to decide which buttons we should display
+      if(this.filter_string != "") {
+        var final_list = [];
+        for(var i=0; i<this.all_buttons.length; i++) {
+          if(this.all_buttons[i].testname.includes(this.filter_string)) {
+            final_list.push(this.all_buttons[i]);
+          }
+        }
+        return final_list;
+      } else {
+        return this.all_buttons;
+      }
+    }
   },
   methods: {
-    getSuggestionList: function(){
-      return this.names
-    },
-    filterTests: function(selectedSuggestion){
-      var that = this;
-      if (selectedSuggestion != ""){
-        that.buttons = [{testname: selectedSuggestion}]
-      } else {
-        var url = "/list_tests/";
-        axios.get(url).then(function(response){
-          var test_list = response.data;
-          var n = test_list.length;
-          var buttons = [];
-          for (var i=0; i<n; i++){
-            var dict = {testname: test_list[i][0]}
-            buttons.push(dict)
-          }
-
-          that.buttons = buttons;
-        })
-      }
-    },
     select_all_tests: function(){
       var is_checked = $("#select-all-tests").prop("checked");
       $("#test-cases-list input:checkbox").prop("checked", is_checked);
@@ -241,6 +242,8 @@ Vue.component("test-data", {
   },
   created(){
     var that = this;
+    // get all tests, without a filter
+    // for now we'll perform filtering on the client side
     axios.get("/list_tests/").then(function(response){
       console.log(response.data)
       var test_list = response.data;
@@ -254,8 +257,8 @@ Vue.component("test-data", {
       }
       that.test_data = ( n > 0 );
       if (n>0) {that.$root.$emit("tests-detected")}
-      that.buttons = buttons;
-      that.names = names;
+      that.all_buttons = buttons;
+      that.all_names = names;
     })
   },
   watch: {

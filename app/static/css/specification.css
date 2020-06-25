@@ -59,18 +59,18 @@
   text-decoration: underline;
 }
 
-.subatom-clickable{
+#specification_listing .subatom-clickable{
   border: 2px solid #def1fc;
   background-color: #def1fc;
 }
 
-.subatom-clickable-active{
+#specification_listing .subatom-clickable-active{
   border: 2px solid grey;
   background-color: grey;
   color: white;
 }
 
-.subatom-clickable:hover{
+#specification_listing .subatom-clickable:hover{
   text-decoration: underline;
   cursor: pointer;
 }
