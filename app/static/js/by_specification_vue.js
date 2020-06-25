@@ -527,7 +527,7 @@ Vue.component("function-calls", {
         var ids_list = response.data;
         var calls_list = $("#function-call-list input:checkbox");
         for (var i=0; i<that.buttons.length; i++){
-          if (that.buttons[i].callid == ids_list[0][0]){
+          if (that.buttons[i].callid == ids_list[0]){
             for (var j=i; j<i+ids_list.length; j++){
               that.checkedCalls.push(that.buttons[j].callid);
               $(calls_list[j+1]).prop("checked", true);
