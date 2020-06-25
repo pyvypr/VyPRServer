@@ -173,7 +173,7 @@ def list_calls_in_interval(start, end, function_id, test_names = None):
         names = []
         for name in test_names:
             names.append('"%s"' %name)
-        function_calls = cursor.execute(""" select function_call.id, test_data.test_result from
+        function_calls = cursor.execute(""" select function_call.id from
             function_call inner join test_data where
             function_call.time_of_call>=test_data.start_time
             and function_call.end_time_of_call<=test_data.end_time

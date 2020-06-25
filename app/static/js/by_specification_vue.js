@@ -524,7 +524,6 @@ Vue.component("function-calls", {
 
       axios.post("/list_calls_between/", time).then(function(response){
         var ids_list = response.data;
-        console.log(ids_list.length);
         var calls_list = $("#function-call-list input:checkbox");
         for (var i=0; i<that.buttons.length; i++){
           if (that.buttons[i].callid == ids_list[0]){
