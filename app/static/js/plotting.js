@@ -123,11 +123,12 @@ Vue.component("plot", {
           .showControls(false);
 
         // omitting date from time format - moslty the difference is in seconds
+        var y_label = this.is_severity_plot ? 'Verdict severity' : 'Observation';
         chart.xAxis
           .axisLabel('Time of observation')
           .tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)); });
         chart.yAxis
-          .axisLabel('Verdict severity')
+          .axisLabel(y_label)
           .tickFormat(d3.format('.02f'))
           .showMaxMin(true);
 
