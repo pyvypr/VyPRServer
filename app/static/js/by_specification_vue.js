@@ -17,6 +17,7 @@ var Store = {
     },
     selected_calls : [],
     selected_tests: [],
+    selected_property_hash : null,
     binding_selected : false,
     subatom_selected : false,
     first_point_selected : false,
@@ -69,7 +70,7 @@ var generate_plot = function(root_obj) {
         var data = response.data.plot_data;
         Store.plot.current_hash = response.data.plot_hash;
         // perform necessary processing on data before plotting
-        console.log(JSON.stringify(data));
+        //console.log(JSON.stringify(data));
 
         var myData = [{key: 'group 1', values: []}];
         for (var i=0; i<data["x"].length; i++){
@@ -260,7 +261,7 @@ Vue.component("test-data", {
     // get all tests, without a filter
     // for now we'll perform filtering on the client side
     axios.get("/list_tests/").then(function(response){
-      console.log(response.data)
+      //console.log(response.data)
       var test_list = response.data;
       var n = test_list.length;
       var buttons = [];
@@ -327,6 +328,7 @@ Vue.component("machine-function-property", {
     }
   },
   mounted() {
+    console.log(this.tree);
     // all tabs except for the one whose ID is == showTab are hidden
     // store the ID of the first tab so that it gets displayed
     var machine_keys=[];
@@ -386,7 +388,8 @@ Vue.component("subtreelevel", {
           :keyname="level.keyname"></subtreelevel>
           <div v-if="!this.subtreelist">
             <button v-for="(b, index) in this.buttons" type="button" class="list-group-item"
-              :function-id="b.functionid" :style="b.padding" @click="selectFunction(b.functionid, b.str)">
+              :function-id="b.functionid" :style="b.padding"
+                @click="selectFunction(b.functionid, b.property_hash, b.str)">
               <specification :spec=b.str :change="0"></specification>
             </button>
           </div>
@@ -407,9 +410,18 @@ Vue.component("subtreelevel", {
       for(var i=0; i<subtree.length; i++) {
         var str = subtree[i][2];
         //str = decodeHTML(str);
-        buttons.push({functionid: subtree[i][0], padding : "padding-left:" + padding, str : str});
+        buttons.push({
+          functionid: subtree[i][0],
+          padding : "padding-left:" + padding,
+          str : str,
+          property_hash : subtree[i][1]
+        });
       }
-      return {buttons: buttons, subtreeslist:[]}
+      return {
+        buttons: buttons,
+        subtreeslist:[],
+        store : Store
+      }
 
     // if this is not the last level, iterate through the keys in the subtree and return the list
     // based on which new subtree components will be defined
@@ -418,7 +430,7 @@ Vue.component("subtreelevel", {
       for (var key in subtree) {
         keys.push(key);
       }
-      console.log("path="+path+"; keys="+ keys);
+      //console.log("path="+path+"; keys="+ keys);
 
       var dicts_list = [];
       for(var i=0; i<keys.length; i++) {
@@ -436,10 +448,19 @@ Vue.component("subtreelevel", {
     }
   },
   methods : {
-    selectFunction: function(id, code){
-      console.log(id);
+    selectFunction: function(id, property_hash, code){
+
       start_loading();
-      this.$root.$emit('function-select', {selected_function_id: id, specification_code: code})
+
+      this.store.selected_property_hash = property_hash;
+      this.$root.$emit(
+        'function-select',
+        {
+          selected_function_id: id,
+          specification_code: code,
+          property_hash: property_hash
+        }
+      );
     }
   }
 })
@@ -560,7 +581,13 @@ Vue.component("function-calls", {
       obj.checkedCalls = [];
       obj.func_id = dict["selected_function_id"];
 
-      axios.post('/list_function_calls/',{function: obj.func_id, tests: Store.selected_tests}).then(function(response){
+      axios.post(
+        '/list_function_calls/',
+        {
+          function: obj.func_id,
+          tests: Store.selected_tests
+        }
+      ).then(function(response){
         var data = response.data["data"];
         obj.message = "";
         var buttons_list = [];
@@ -585,7 +612,6 @@ Vue.component("function-calls", {
   },
   watch: {
     checkedCalls: function(value){
-      console.log(value)
       var function_call_ids = [];
       var that = this;
       for (var i=0; i<value.length; i++){
@@ -596,9 +622,14 @@ Vue.component("function-calls", {
       if (!plot_visible) {
         // display code interface
         if (function_call_ids.length){
-          axios.post("/get_function_calls_data/", {"ids" : function_call_ids}).then(function(response) {
+          axios.post(
+            "/get_function_calls_data/",
+            {
+              "ids" : function_call_ids,
+              "property_hash" : Store.selected_property_hash
+            }
+          ).then(function(response) {
             tree = response.data;
-            console.log(JSON.stringify(tree))
             that.$root.$emit('calls-selected',tree);
           });
         }
@@ -1098,7 +1129,7 @@ Vue.component("dropdown", {
 
     axios.get('/get_atom_type/'+atom_index+"/"+inst_point_id+"/").then(function(response){
       var atom_type = response.data;
-      console.log(atom_type);
+      //console.log(atom_type);
       Store.type_of_atom = atom_type;
       if (atom_type == "simple"){
         //for a simple atom we now need all observations made at these points,
