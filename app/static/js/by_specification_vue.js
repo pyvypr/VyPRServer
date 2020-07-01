@@ -131,6 +131,47 @@ var generate_plot = function(root_obj) {
         start_loading();
       })
     }
+    if (type == "mixed-severity" || type == "mixed-observation"){
+      axios.post('/get_plot_data_mixed/', data).then(function(response){
+        var data = response.data.plot_data;
+        Store.plot.current_hash = response.data.plot_hash;
+
+        var myData = [{key: 'group 1', values: []}, {key: 'group2', values: []}];
+        for (var i=0; i<data["x1"].length; i++){
+          if(type == "mixed-severity") {
+            var value = data[type][i];
+            // check whether we should plot this based on the filters
+            if(value >= 0) {
+              if(!Store.plot.show_successes) continue;
+            } else {
+              if(!Store.plot.show_violations) continue;
+            }
+            // negative verdict severity represents violation - colour these bars red
+            var color = "#cc0000";
+            // other columns in the plot are green since they show non-violating observations
+            if (value >= 0) {color = "#00802b"}
+            myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
+                                  value: value,
+                                  color: color});
+          } else {
+            var value1 = data[type+"-1"][i];
+            var value2 = data[type+"-2"][i]
+
+            myData[0].values.push({label: new Date(Date.parse(data["x1"][i])),
+                                  value: value1,
+                                  color: "blue"});
+            myData[0].values.push({label: new Date(Date.parse(data["x1"][i])),
+                                   value: value2,
+                                   color: "orange"});
+          }
+
+        }
+
+        // emit plot data ready event so the plot will be drawn
+        that.$root.$emit("plot-data-ready", myData);
+        start_loading();
+      })
+    }
 };
 
 Vue.use(VuejQueryMask);
@@ -1093,18 +1134,19 @@ Vue.component("dropdown", {
 
     if (Store.first_point_selected){
       var new_list = [];
+      var between_or_mixed = Store.plot.type;
       for (var i=0; i<plot_data["other_lines"].length; i++){
         if (plot_data["other_lines"][i]["line"] == this.line){
           new_list.push(plot_data["other_lines"][i]["id"]);
         }
       }
       return {options: [{text: "Fix this point as the other one and plot observations",
-                         data: {action: "between-observation-plot",
-                                type : "between-observation",
+                         data: {action: between_or_mixed + "-observation-plot",
+                                type : between_or_mixed + "-observation",
                                 new_points: new_list}},
                         {text: "Fix this point as the other one and plot severity",
-                         data: {action: "between-severity-plot",
-                                type : "between-severity",
+                         data: {action: between_or_mixed + "-severity-plot",
+                                type : between_or_mixed + "-severity",
                                 new_points: new_list}}]}
     }
 
@@ -1162,7 +1204,7 @@ Vue.component("dropdown", {
                              points: inst_points_list}};
         options.push(option2);
       }
-      else if (atom_type == "timeBetween") {
+      else if (atom_type == "timeBetween" || atom_type == "mixed") {
         // we need the list of inst points that belong to the same atom, but other than the selected subatom
         var other_points_list = [];
         var subtree = that.tree[selected_binding][atom_index];
@@ -1175,17 +1217,13 @@ Vue.component("dropdown", {
           }
         }
         option = {text: 'Fix this point and select the other one',
-                  data: {action: "between-select",
-                         type : "between-select",
+                  data: {action: (atom_type=="timeBetween") ? "between-select" : "mixed-select",
+                         type : (atom_type=="timeBetween") ? "between-select" : "mixed-select",
                          other_lines: other_points_list,
                          calls: Store.selected_calls,
                          binding: selected_binding,
                          atom: atom_index,
                          points: inst_points_list}};
-        options.push(option);
-      }
-      else if (atom_type == "mixed") {
-        option = {text: 'Fix this point and select the other one', data:{}};
         options.push(option);
       }
     })
@@ -1211,9 +1249,10 @@ Vue.component("dropdown", {
         // plot the data we just set
         generate_plot(this);
       }
-      if (data["action"] == "between-select") {
+      if (data["action"] == "between-select" || data["action"] == "mixed-select") {
         plot_data = data;
         Store.first_point_selected = true;
+        Store.plot.type = data["action"].split("-")[0];
         this.$emit("firstselected", data["other_lines"]);
       }
       else if (data["action"] == "between-observation-plot") {
@@ -1228,9 +1267,20 @@ Vue.component("dropdown", {
         Store.plot.type = "between-severity";
         generate_plot(this);
       }
+      else if (data["action"] == "mixed-observation-plot") {
+        plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        plot_data["type"] = "mixed-observation";
+        Store.plot.type = "mixed-observation";
+        generate_plot(this);
+      }
+      else if (data["action"] == "mixed-severity-plot") {
+        plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        plot_data["type"] = "mixed-severity";
+        Store.plot.type = "mixed-severity";
+        generate_plot(this);
+      }
       // TODO
       if (data["action"] == "simple-path") {}
-      if (data["action"] == "mixed-select") {}
 
       stop_loading();
     }
@@ -1282,7 +1332,7 @@ Vue.component("dropdown", {
                              points: inst_points_list}};
         options.push(option2);
       }
-      else if (atom_type == "timeBetween") {
+      else if (atom_type == "timeBetween" || atom_type == "mixed") {
         // we need the list of inst points that belong to the same atom, but other than the selected subatom
         var other_points_list = [];
         var subtree = that.tree[selected_binding][atom_index];
@@ -1295,16 +1345,13 @@ Vue.component("dropdown", {
           }
         }
         option = {text: 'Fix this point and select the other one',
-                  data: {action: "between-select",
+                  data: {action: (atom_type=="timeBetween") ? "between-select" : "mixed-select",
+                         type : (atom_type=="timeBetween") ? "between-select" : "mixed-select",
                          other_lines: other_points_list,
                          calls: Store.selected_calls,
                          binding: selected_binding,
                          atom: atom_index,
                          points: inst_points_list}};
-        options.push(option);
-      }
-      else if (atom_type == "mixed") {
-        option = {text: 'Fix this point and select the other one', data:{}};
         options.push(option);
       }
       that.options = options;}
@@ -1387,7 +1434,7 @@ Vue.component("plot", {
           .showControls(false);
 
         // omitting date from time format - moslty the difference is in seconds
-        var y_label = this.is_severity_plot ? 'Verdict severity' : 'Observation';
+        var y_label = that.is_severity_plot ? 'Verdict severity' : 'Observation';
         chart.xAxis
           .axisLabel('Time of observation')
           .tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)); });
