@@ -804,9 +804,18 @@ def get_plot_data_simple(dict):
         atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
             and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
         formula = pickle.loads(base64.b64decode(atom_structure))
-        interval=formula._interval
-        lower=interval[0]
-        upper=interval[1]
+        try:
+            interval = formula._interval
+            lower = interval[0]
+            upper = interval[1]
+        except:
+            #TODO
+            #right now, for simple atoms are either observation in interval or obs = value
+            #hence, inequalities are not covered here
+            #what about non numeric data?
+            value = formula._value
+            lower = value
+            upper = value
 
         x_array = []
         y_array = []
@@ -816,9 +825,9 @@ def get_plot_data_simple(dict):
             x_array.append(element[1])
             y = float(element[0])
             #d is the distance from observed value to the nearest interval bound
-            d=min(abs(y-lower),abs(y-upper))
+            d = min(abs(y-lower),abs(y-upper))
             #sign=-1 if verdict value=0 and sign=1 if verdict is true
-            sign=-1+2*(element[3])
+            sign = -1 + 2 * (element[3])
             severity_array.append(sign*d)
             y_array.append(y)
 
@@ -925,6 +934,81 @@ def get_plot_data_between(dict):
             "plot_hash": plot_hash,
             "plot_data": plot_data
         }
+
+
+def get_plot_data_mixed(dict):
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    # first, check if the plot already exists
+    plot_results = get_plot(cursor, dict)
+    if len(plot_results) > 0:
+        print("existing plot found with hash %s" % plot_results[0][0])
+        # the plot exists, so use the precomputed data
+        final_dictionary = {
+            "plot_hash": plot_results[0][0],
+            "plot_data": json.loads(plot_results[0][2])
+        }
+        return final_dictionary
+    else:
+
+        calls_list = dict["calls"]
+        binding_index = dict["binding"]
+        atom_index = dict["atom"]
+        points_list = dict["points"]
+
+        query_string = """select o1.observed_value, o2.observed_value,
+                                 o1.observation_time, o2.observation_time,
+                                 verdict.verdict
+                          from verdict inner join observation o1 on verdict.id==o1.verdict
+                          inner join observation o2 where o1.verdict=o2.verdict
+                          and o1.instrumentation_point<o2.instrumentation_point
+                          and o1.instrumentation_point in %s and o2.instrumentation_point in %s
+                          and o1.verdict in (select verdict.id from verdict inner join binding
+                                             on verdict.binding == binding.id where verdict.function_call in %s and
+                                             binding.binding_space_index=%s)
+                          and o1.atom_index = %s and o2.atom_index = %s;""" % (
+                list_to_sql_string(points_list), list_to_sql_string(points_list),
+                list_to_sql_string(calls_list), binding_index, atom_index, atom_index)
+        result = cursor.execute(query_string).fetchall()
+
+        x1_array = []
+        y1_array = []
+        x2_array = []
+        y2_array = []
+        severity_array = []
+
+        for element in result:
+            x1_array.append(element[2])
+            x2_array.append(element[3])
+            y1_array.append(element[0])
+            y2_array.append(element[1])
+
+            sign = -1 + 2*element[4]
+            d = abs(element[1] - element[0])
+
+            severity_array.append(sign*d)
+
+        # build the final plot data
+        plot_data = {"x1" : x1_array, "mixed-observation-1" : y1_array,
+                     "x2" : x2_array, "mixed-observation-2" : y2_array,
+                     "mixed-severity" : severity_array}
+        # generate a hash of the plot data
+        plot_hash = hashlib.sha1()
+        plot_hash.update(json.dumps(plot_data))
+        plot_hash.update(json.dumps(dict))
+        plot_hash = plot_hash.hexdigest()
+        # store the plot
+        store_plot(cursor, plot_hash, dict, plot_data)
+        connection.commit()
+
+        connection.close()
+
+        return {
+            "plot_hash": plot_hash,
+            "plot_data": plot_data
+        }
+
 
 
 """
