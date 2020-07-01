@@ -167,14 +167,14 @@
 
 #plot-description .constraint {
   font-weight: bold!important;
-  font-family: monaco!important;
+  font-family: courier!important;
 }
 
 #plot-description .subatom-clickable-active {
   border: none;
   background-color: white!important;
   color: black!important;
-  font-family: monaco!important;
+  font-family: courier!important;
 }
 
 .plot #plot-controls {
