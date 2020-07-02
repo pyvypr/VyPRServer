@@ -89,6 +89,7 @@ var generate_plot = function(root_obj) {
           } else {
             color = "blue";
           }
+          //value = ( value >= 0 )? value : -Math.abs(Math.log(-value));
           myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
                                 value: value,
                                 color: color});
@@ -1384,7 +1385,7 @@ Vue.component("plot", {
   },
   computed : {
     description : function() {
-      if(this.store.plot.type == "severity" || this.store.plot.type == "between-severity") {
+      if(this.store.plot.type == "severity" || this.store.plot.type == "between-severity" || this.store.plot.type == "mixed-severity") {
         return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span> severity";
       } else {
         return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span>";
@@ -1397,7 +1398,7 @@ Vue.component("plot", {
       return this.store.plot.show_successes;
     },
     is_severity_plot : function() {
-      return this.store.plot.type == "severity" || this.store.plot.type == "between-severity";
+      return this.store.plot.type == "severity" || this.store.plot.type == "between-severity" || this.store.plot.type == "mixed-severity";
     }
   },
   mounted(){
