@@ -1,3 +1,11 @@
+.phase {
+  display: none;
+}
+
+.phase.show {
+  display:block;
+}
+
 #test-cases-list {
     max-height: 500px !important;
     overflow: hidden scroll !important;
@@ -53,6 +61,7 @@
   height: 20px;
   line-height: 2px;
   font-family: arial;
+  border-radius: 10px 10px 10px 10px;
 }
 
 .binding-button:hover{
@@ -167,14 +176,14 @@
 
 #plot-description .constraint {
   font-weight: bold!important;
-  font-family: monaco!important;
+  font-family: courier new!important;
 }
 
 #plot-description .subatom-clickable-active {
   border: none;
   background-color: white!important;
   color: black!important;
-  font-family: monaco!important;
+  font-family: courier new!important;
 }
 
 .plot #plot-controls {

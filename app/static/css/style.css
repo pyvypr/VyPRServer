@@ -119,7 +119,7 @@ div.please-select {
 }
 
 #verdict-list .code_listing_line {
-    font-family: monaco;
+    font-family: courier new;
     padding: 2px;
 }
 
@@ -194,7 +194,7 @@ table.function-list-table td {
 }
 
 .list-group-item-text.code {
-	font-family: monaco;
+	font-family: courier new;
 	padding: 2px;
 	font-family: 12px;
 }
