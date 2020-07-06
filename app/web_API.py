@@ -113,6 +113,13 @@ def get_plot_data_between():
     return json.dumps(return_data)
 
 
+@app_object.route("/get_plot_data_mixed/", methods=["GET", "POST"])
+def get_plot_data_mixed():
+    result_dict = json.loads(request.data)
+    return_data = database.get_plot_data_mixed(result_dict)
+    return json.dumps(return_data)
+
+
 @app_object.route("/get_plot_data_from_hash/<plot_hash>/", methods=["GET"])
 def get_plot_data_from_hash(plot_hash):
     plot_data = database.get_plot_data_from_hash(plot_hash)

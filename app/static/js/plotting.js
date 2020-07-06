@@ -21,6 +21,9 @@ var generate_plot = function(root_obj) {
       // prepare data for plotting
       var data = response.data.data;
       var type = response.data.description.type;
+      Store.plot.type = type;
+      that.store.plot.type = type;
+      console.log(type)
 
       if(type == "observation" || type == "severity") {
         var myData = [{key: 'group 1', values: []}];
@@ -109,6 +112,7 @@ Vue.component("plot", {
     this.store.plot.current_hash = this.hash;
     // generate the plot based on the hash
     generate_plot(this);
+    this.store.plot.type = Store.plot.type;
     var that = this;
     this.$root.$on("plot-data-ready", function(data_array){
       nv.addGraph(function() {
@@ -123,11 +127,12 @@ Vue.component("plot", {
           .showControls(false);
 
         // omitting date from time format - moslty the difference is in seconds
+        var y_label = that.is_severity_plot ? 'Verdict severity' : 'Observation';
         chart.xAxis
           .axisLabel('Time of observation')
           .tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)); });
         chart.yAxis
-          .axisLabel('Verdict severity')
+          .axisLabel(y_label)
           .tickFormat(d3.format('.02f'))
           .showMaxMin(true);
 
