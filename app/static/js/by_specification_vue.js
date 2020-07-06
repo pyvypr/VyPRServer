@@ -374,7 +374,7 @@ Vue.component("test-data", {
 Vue.component("machine-function-property", {
   props: ['tree'],
   template : `
-    <div class="panel panel-success">
+    <div class="panel panel-success" :style="{height: page_height}">
       <div class="panel-heading">
         <h3 class="panel-title" id="function-title">
             Machine / Function / Query
@@ -400,6 +400,11 @@ Vue.component("machine-function-property", {
     </div>`,
   data() {
     return {showTab: ""}
+  },
+  computed : {
+    page_height : function() {
+      return ($(window).height()-2) + "px";
+    }
   },
   methods : {
     selectTab: function(selectedTab){
@@ -552,12 +557,12 @@ Vue.component("subtreelevel", {
 
 Vue.component("function-calls", {
   template : `
-    <div class="panel panel-success">
+    <div class="panel panel-success" :style="{height: page_height}">
       <div class="panel-heading">
-        <h3 class="panel-title" id="function-call-title">Function Call</h3>
+        <h3 class="panel-title" id="function-call-title">Function Calls</h3>
       </div>
       <div class="panel-body">
-        <div class="list-group" id="function-call-list">
+        <div class="list-group" id="function-call-list" :style="{height: page_height_inner}">
           <div v-if="message" class="please-select"><p>{{message}}</p></div>
           <alert v-if="!message" message="Select one or more calls to load performance data." />
           <div v-if="!message" class="list-group-item">
@@ -594,6 +599,12 @@ Vue.component("function-calls", {
   computed : {
     tests_exist : function() {
       return this.store.tests_exist;
+    },
+    page_height : function() {
+      return ($(window).height()-2) + "px";
+    },
+    page_height_inner : function() {
+      return ($(window).height()*0.9) + "px";
     }
   },
   methods: {
@@ -740,7 +751,7 @@ Vue.component("code-view", {
   the lines in the code that quantifiers in the specification refer to are highlighted.
   When the calls are also selected, more data is displayed and some code lines are hidden.*/
   template : `
-    <div class="panel panel-success">
+    <div class="panel panel-success" :style="{height : page_height}">
       <div class="panel-heading">
         <h3 class="panel-title">Code View</h3>
       </div>
@@ -790,6 +801,9 @@ Vue.component("code-view", {
     },
     subatom_is_selected : function() {
       return this.store.subatom_selected;
+    },
+    page_height : function() {
+      return ($(window).height()-2) + "px";
     }
   },
   methods:{
