@@ -90,6 +90,7 @@ var generate_plot = function(root_obj) {
           } else {
             color = "blue";
           }
+          //value = ( value >= 0 )? value : -Math.abs(Math.log(-value));
           myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
                                 value: value,
                                 color: color});
@@ -125,6 +126,47 @@ var generate_plot = function(root_obj) {
           myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
                                 value: value,
                                 color: color});
+        }
+
+        // emit plot data ready event so the plot will be drawn
+        that.$root.$emit("plot-data-ready", myData);
+        start_loading();
+      })
+    }
+    if (type == "mixed-severity" || type == "mixed-observation"){
+      axios.post('/get_plot_data_mixed/', data).then(function(response){
+        var data = response.data.plot_data;
+        Store.plot.current_hash = response.data.plot_hash;
+
+        var myData = [{key: 'group 1', values: []}, {key: 'group2', values: []}];
+        for (var i=0; i<data["x1"].length; i++){
+          if(type == "mixed-severity") {
+            var value = data[type][i];
+            // check whether we should plot this based on the filters
+            if(value >= 0) {
+              if(!Store.plot.show_successes) continue;
+            } else {
+              if(!Store.plot.show_violations) continue;
+            }
+            // negative verdict severity represents violation - colour these bars red
+            var color = "#cc0000";
+            // other columns in the plot are green since they show non-violating observations
+            if (value >= 0) {color = "#00802b"}
+            myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
+                                  value: value,
+                                  color: color});
+          } else {
+            var value1 = data[type+"-1"][i];
+            var value2 = data[type+"-2"][i]
+
+            myData[0].values.push({label: new Date(Date.parse(data["x1"][i])),
+                                  value: value1,
+                                  color: "blue"});
+            myData[0].values.push({label: new Date(Date.parse(data["x1"][i])),
+                                   value: value2,
+                                   color: "orange"});
+          }
+
         }
 
         // emit plot data ready event so the plot will be drawn
@@ -280,8 +322,8 @@ Vue.component("test-data", {
       var is_checked = $("#select-all-tests").prop("checked");
       $("#test-cases-list input:checkbox").prop("checked", is_checked);
       if (is_checked) {
-        for(var i=0; i<this.buttons.length; i++){
-          this.checkedTests.push(this.buttons[i].testname);
+        for(var i=0; i<this.filtered_buttons.length; i++){
+          this.checkedTests.push(this.filtered_buttons[i].testname);
         }
       }
       else {
@@ -345,7 +387,7 @@ Vue.component("machine-function-property", {
           <div id="function-list-data"></div>
           <div class="tab">
             <button v-for="(value,key) in tree" :class="(key===showTab)? 'tablinks active':'tablinks' "
-                @click="selectTab(key)">
+                @click="selectTab(key)" v-show="key">
                 {{key}}
             </button>
           </div>
@@ -488,6 +530,7 @@ Vue.component("subtreelevel", {
   },
   methods : {
     selectFunction: function(id, property_hash, code){
+
       start_loading();
 
       // switch to the tab showing the list of calls
@@ -608,6 +651,15 @@ Vue.component("function-calls", {
   },
   mounted(){
     var obj = this;
+    this.$root.$on('tests-selected', function(tree){
+      obj.message = "Select a function first.";
+      obj.buttons = [];
+      obj.checkedCalls = [];
+      obj.filter_from = "";
+      obj.filter_to = "";
+      obj.func_id = 0;
+      obj.store = Store;
+    })
     this.$root.$on('function-select', function(dict){
       // when a specification is selected, get the calls list from server
       // while it's loading, display a temporary message
@@ -789,6 +841,15 @@ Vue.component("code-view", {
   },
   mounted(){
     var obj2 = this;
+    this.$root.$on('tests-selected', function(tree){
+      obj2.message = "Select a function and then one or more calls, first.";
+      obj2.specification_code = "";
+      obj2.code_lines = [];
+      obj2.start_line = 0;
+      obj2.tree = {};
+      obj2.binding = undefined;
+      obj2.store = Store;
+    })
     this.$root.$on('calls-loaded', function(dict){
       start_loading();
       obj2.message = "";
@@ -1122,18 +1183,19 @@ Vue.component("dropdown", {
 
     if (Store.first_point_selected){
       var new_list = [];
+      var between_or_mixed = Store.plot.type;
       for (var i=0; i<plot_data["other_lines"].length; i++){
         if (plot_data["other_lines"][i]["line"] == this.line){
           new_list.push(plot_data["other_lines"][i]["id"]);
         }
       }
       return {options: [{text: "Fix this point as the other one and plot observations",
-                         data: {action: "between-observation-plot",
-                                type : "between-observation",
+                         data: {action: between_or_mixed + "-observation-plot",
+                                type : between_or_mixed + "-observation",
                                 new_points: new_list}},
                         {text: "Fix this point as the other one and plot severity",
-                         data: {action: "between-severity-plot",
-                                type : "between-severity",
+                         data: {action: between_or_mixed + "-severity-plot",
+                                type : between_or_mixed + "-severity",
                                 new_points: new_list}}]}
     }
 
@@ -1191,7 +1253,7 @@ Vue.component("dropdown", {
                              points: inst_points_list}};
         options.push(option2);
       }
-      else if (atom_type == "timeBetween") {
+      else if (atom_type == "timeBetween" || atom_type == "mixed") {
         // we need the list of inst points that belong to the same atom, but other than the selected subatom
         var other_points_list = [];
         var subtree = that.tree[selected_binding][atom_index];
@@ -1204,17 +1266,13 @@ Vue.component("dropdown", {
           }
         }
         option = {text: 'Fix this point and select the other one',
-                  data: {action: "between-select",
-                         type : "between-select",
+                  data: {action: (atom_type=="timeBetween") ? "between-select" : "mixed-select",
+                         type : (atom_type=="timeBetween") ? "between-select" : "mixed-select",
                          other_lines: other_points_list,
                          calls: Store.selected_calls,
                          binding: selected_binding,
                          atom: atom_index,
                          points: inst_points_list}};
-        options.push(option);
-      }
-      else if (atom_type == "mixed") {
-        option = {text: 'Fix this point and select the other one', data:{}};
         options.push(option);
       }
     })
@@ -1240,9 +1298,10 @@ Vue.component("dropdown", {
         // plot the data we just set
         generate_plot(this);
       }
-      if (data["action"] == "between-select") {
+      if (data["action"] == "between-select" || data["action"] == "mixed-select") {
         plot_data = data;
         Store.first_point_selected = true;
+        Store.plot.type = data["action"].split("-")[0];
         this.$emit("firstselected", data["other_lines"]);
       }
       else if (data["action"] == "between-observation-plot") {
@@ -1257,9 +1316,20 @@ Vue.component("dropdown", {
         Store.plot.type = "between-severity";
         generate_plot(this);
       }
+      else if (data["action"] == "mixed-observation-plot") {
+        plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        plot_data["type"] = "mixed-observation";
+        Store.plot.type = "mixed-observation";
+        generate_plot(this);
+      }
+      else if (data["action"] == "mixed-severity-plot") {
+        plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        plot_data["type"] = "mixed-severity";
+        Store.plot.type = "mixed-severity";
+        generate_plot(this);
+      }
       // TODO
       if (data["action"] == "simple-path") {}
-      if (data["action"] == "mixed-select") {}
 
       stop_loading();
     }
@@ -1311,7 +1381,7 @@ Vue.component("dropdown", {
                              points: inst_points_list}};
         options.push(option2);
       }
-      else if (atom_type == "timeBetween") {
+      else if (atom_type == "timeBetween" || atom_type == "mixed") {
         // we need the list of inst points that belong to the same atom, but other than the selected subatom
         var other_points_list = [];
         var subtree = that.tree[selected_binding][atom_index];
@@ -1324,16 +1394,13 @@ Vue.component("dropdown", {
           }
         }
         option = {text: 'Fix this point and select the other one',
-                  data: {action: "between-select",
+                  data: {action: (atom_type=="timeBetween") ? "between-select" : "mixed-select",
+                         type : (atom_type=="timeBetween") ? "between-select" : "mixed-select",
                          other_lines: other_points_list,
                          calls: Store.selected_calls,
                          binding: selected_binding,
                          atom: atom_index,
                          points: inst_points_list}};
-        options.push(option);
-      }
-      else if (atom_type == "mixed") {
-        option = {text: 'Fix this point and select the other one', data:{}};
         options.push(option);
       }
       that.options = options;}
@@ -1366,7 +1433,7 @@ Vue.component("plot", {
   },
   computed : {
     description : function() {
-      if(this.store.plot.type == "severity" || this.store.plot.type == "between-severity") {
+      if(this.store.plot.type == "severity" || this.store.plot.type == "between-severity" || this.store.plot.type == "mixed-severity") {
         return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span> severity";
       } else {
         return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span>";
@@ -1379,7 +1446,7 @@ Vue.component("plot", {
       return this.store.plot.show_successes;
     },
     is_severity_plot : function() {
-      return this.store.plot.type == "severity" || this.store.plot.type == "between-severity";
+      return this.store.plot.type == "severity" || this.store.plot.type == "between-severity" || this.store.plot.type == "mixed-severity";
     }
   },
   mounted(){
@@ -1416,11 +1483,12 @@ Vue.component("plot", {
           .showControls(false);
 
         // omitting date from time format - moslty the difference is in seconds
+        var y_label = that.is_severity_plot ? 'Verdict severity' : 'Observation';
         chart.xAxis
           .axisLabel('Time of observation')
           .tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)); });
         chart.yAxis
-          .axisLabel('Verdict severity')
+          .axisLabel(y_label)
           .tickFormat(d3.format('.02f'))
           .showMaxMin(true);
 

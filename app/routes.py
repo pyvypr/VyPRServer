@@ -7,3 +7,4 @@ from .analysis_API import *
 from .insertion_API import *
 from .web_API import *
 from .web_front_end import *
+from .events.routes import *
