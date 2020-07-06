@@ -124,7 +124,6 @@ div.please-select {
 }
 
 #function-call-list {
-    max-height: 500px;
     overflow: hidden scroll;
 }
 
