@@ -180,12 +180,12 @@ Vue.use(VuejQueryMask);
 
 Vue.component("alert", {
   template : `
-  <div class="alert alert-info alert-dismissible" role="alert" v-if="is_open">
+  <!--<div class="alert alert-info alert-dismissible" role="alert" v-if="is_open">
     <button type="button" class="close" data-dismiss="alert" aria-label="Close" @click="close()">
       <span aria-hidden="true">&times;</span>
     </button>
     {{ message }}
-  </div>
+  </div>-->
   `,
   props : ["message"],
   data : function() {
@@ -751,7 +751,7 @@ Vue.component("code-view", {
   the lines in the code that quantifiers in the specification refer to are highlighted.
   When the calls are also selected, more data is displayed and some code lines are hidden.*/
   template : `
-    <div class="panel panel-success" :style="{height : page_height}">
+    <div class="panel panel-success" :style="{'min-height' : page_height}">
       <div class="panel-heading">
         <h3 class="panel-title">Code View</h3>
       </div>
