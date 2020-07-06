@@ -6,3 +6,4 @@ Module to define the routes in this test service.
 from .analysis_API import *
 from .insertion_API import *
 from .webFrontEnd import *
+from .events.routes import *

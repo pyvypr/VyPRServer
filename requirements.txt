@@ -1,3 +1,4 @@
 flask
 requests
-dateutil
+python-dateutil
+flask-cors

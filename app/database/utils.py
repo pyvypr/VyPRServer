@@ -10,7 +10,7 @@ import app
 
 def get_connection():
     # for now, let exceptions appear in the log
-    #global database_string
+    print(app.database_string)
     return sqlite3.connect(app.database_string)
 
 
