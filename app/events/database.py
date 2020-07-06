@@ -30,7 +30,9 @@ def get_events(type, start_time=None):
 
     if not start_time:
         # set the start time to long ago enough to capture all events
-        start_time = datetime.datetime.now() - datetime.timedelta(minutes=10000)
+        #start_time = datetime.datetime.now() - datetime.timedelta(minutes=1000000)
+        # set start time to the epoch
+        start_time = datetime.datetime.utcfromtimestamp(0)
 
     # fix a time up to which we are taking events, so we know from
     # which time to start the next time we poll for events
