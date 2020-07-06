@@ -115,7 +115,7 @@ div.please-select {
 
 #verdict-list #specification_listing {
     padding: 10px;
-    border-bottom: 2px solid black;
+    border-bottom: 1px solid grey;
 }
 
 #verdict-list .code_listing_line {
