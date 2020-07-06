@@ -18,10 +18,6 @@ def shutdown():
     func()
 
 
-
-
-
-
 """
 Queries based on paths.
 """
@@ -42,6 +38,7 @@ def get_parametric_path():
 def get_path_condition_sequence(observation_id):
     return json.dumps(database.compute_condition_sequence_and_path_length(observation_id))
 
+
 """
 Queries based on the function table.
 """
@@ -50,6 +47,10 @@ Queries based on the function table.
 @app_object.route("/client/function/")
 def list_functions():
     return database.list_functions()
+
+@app_object.route("/client/function/id/<function_id>/properties/")
+def list_properties_from_function(function_id):
+    return database.list_properties_function(function_id)
 
 
 @app_object.route("/client/function/id/<function_id>/transaction/id/<transaction_id>/function_calls/")
@@ -62,9 +63,9 @@ def get_function_by_name(function_name):
     return database.get_f_byname(function_name)
 
 
-@app_object.route("/client/function/name/<function_name>/function_calls/")
-def get_function_calls_from_function_name(function_name):
-    return database.list_calls_function(function_name)
+@app_object.route("/client/function/id/<id>/function_calls/")
+def get_function_calls_from_function_id(id):
+    return database.list_calls_function(id)
 
 
 @app_object.route("/client/function/id/<function_id>/")
@@ -74,6 +75,7 @@ def get_function_by_id(function_id):
 
 @app_object.route("/client/function/id/<id>/bindings/")
 def get_bindings_from_function_property_pair(id):
+    #TODO CHANGE
     return database.get_bindings_from_function_property_pair(id)
 
 
@@ -85,6 +87,16 @@ def list_verdicts_of_function(function_id):
 @app_object.route("/client/function/id/<function_id>/verdict/value/<verdict_value>/")
 def list_verdicts_of_function_with_value(function_id, verdict_value):
     return database.list_verdicts_of_function_with_value(function_id, verdict_value)
+
+
+"""
+Queries based on test_data table.
+"""
+
+
+@app_object.route("/client/test_data/")
+def list_test_data():
+    return database.list_test_data()
 
 
 """
@@ -134,6 +146,18 @@ def list_observations_during_call(call_id):
 @app_object.route("/client/function_call/id/<call_id>/verdict/value/<verdict_value>/")
 def list_verdicts_with_value_of_call(call_id, verdict_value):
     return database.list_verdicts_with_value_of_call(call_id, verdict_value)
+
+@app_object.route("/client/function_call/id/<call_id>/hash/<property_hash>/verdicts/")
+def list_verdicts_of_call_property(call_id, property_hash):
+    return database.list_verdicts_of_call_by_property(call_id, property_hash)
+
+@app_object.route("/client/function_call/id/<call_id>/verdict/value/<verdict_value>/hash/<property_hash>/")
+def list_verdicts_with_value_of_call_property(call_id, verdict_value, property_hash):
+    return database.list_verdicts_with_value_of_call_by_property(call_id, verdict_value, property_hash)
+
+@app_object.route("/client/function_call/between/<start_time>/<end_time>/")
+def list_function_calls_between_times(start_time, end_time):
+    return database.list_function_calls_between_times(start_time, end_time)
 
 
 """

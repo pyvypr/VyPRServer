@@ -1,0 +1,3 @@
+# Web Tool Testing
+
+Before we commit any changes to the VyPRServer repository, it is a good idea to run the testing of the web tool to see if the changes affect it badly. It is an option to just run the testing python script with ``python run.py``, but this might not work if selenium and geckodriver are not set up properly. Hence, you can also run the testing by giving the execute permission to the shell test.sh script and running it with ``./test.sh``. Note that the server should be running in a separate terminal. Alternatively, let the shell script run the server as a subprocess by running it as ``./test.sh "/path/to/monitored/service/source/code"``.

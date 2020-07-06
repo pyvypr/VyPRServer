@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block body %}
+
+<div id="app">
+
+    <loading-spinner></loading-spinner>
+
+    <div class="container-fluid">
+
+        <div class="row">
+
+            <div class="col-md-4 selection">
+
+                <div class="fluid-container">
+                    <test-data></test-data>
+                    <machine-function-property v-bind:tree="{{functions}}"></machine-function-property>
+                    <function-calls></function-calls>
+                </div>
+
+            </div>
+
+            <div class="col-md-8 selection">
+
+                <div class="fluid-container">
+                    <code-view></code-view>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

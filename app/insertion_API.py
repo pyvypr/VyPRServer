@@ -12,16 +12,10 @@ def register_verdicts():
     """
     Receives a verdict from a monitored service, and stores it
     """
-    print("attempting verdict insertion")
-    print(request.data)
 
     verdict_data = json.loads(request.data)
 
-    print("attempting verdict insertion for data %s" % str(verdict_data))
-
     database.insert_verdicts(verdict_data)
-
-    print("verdicts inserted")
 
     return "success"
 
@@ -48,10 +42,7 @@ def store_property():
     """
     property_data = json.loads(request.data)
 
-    print(property_data)
-    print("attempting property insertion")
     atom_index_to_db_index, function_id = database.insert_property(property_data)
-    print("property inserted")
 
     return json.dumps({"atom_index_to_db_index": atom_index_to_db_index, "function_id": function_id})
 
@@ -62,11 +53,7 @@ def store_binding():
     Receives a serialised binding and stores it.
     """
     binding_data = json.loads(request.data)
-
-    print(binding_data)
-    print("attempting binding insertion")
     new_id = database.insert_binding(binding_data)
-    print("binding inserted")
 
     return str(new_id)
 
@@ -80,10 +67,7 @@ def store_instrumentation_point():
     so we can determine which instrumentation point in the SCFG generated observations at runtime.
     """
     instrumentation_point_data = json.loads(request.data)
-    print(instrumentation_point_data)
-    print("attempting instrumentation point insertion")
     new_id = database.insert_instrumentation_point(instrumentation_point_data)
-    print("instrumentation point inserted")
 
     return str(new_id)
 
@@ -95,9 +79,27 @@ def store_branching_condition():
     Note: this returns an ID which instrumentation then attaches to branch recording instruments.
     """
     branching_condition_data = json.loads(request.data)
-    print(branching_condition_data)
-    print("attempting branching condition insertion")
     new_id = database.insert_branching_condition(branching_condition_data)
-    print("branching condition inserted or already existed")
 
     return str(new_id)
+
+
+@app_object.route("/get_property_from_hash/<hash>/", methods=["get"])
+def get_property_from_hash(hash):
+    """
+    Given a property hash, get the property data.  We need the property index in this case.
+    :param: hash
+    :return: String of serialised property.
+    """
+    return database.get_property_byhash(hash)
+
+
+@app_object.route("/insert_test_data/", methods=["post"])
+def insert_test_data():
+    """
+    Insert test result data in the case that VyPR is being used in a test suite.
+    :return: String of insertion result.
+    """
+    test_data = json.loads(request.data)
+    insertion_result = database.insert_test_call_data(test_data)
+    return json.dumps(insertion_result)

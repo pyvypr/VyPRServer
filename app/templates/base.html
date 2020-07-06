@@ -4,44 +4,41 @@
 
 <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet" />
 <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet" />
-<script type="text/javascript" src="{{ url_for('static', filename='js/jquery-3.3.1.min.js') }}"></script>
+<link href="{{ url_for('static', filename='css/specification.css') }}" rel="stylesheet" />
+<link rel="stylesheet" type="text/css" href="https://raw.github.com/novus/nvd3/master/src/nv.d3.css"/>
+<link rel="stylesheet" href="https://unpkg.com/vue-simple-suggest/dist/styles.css">
 
-{% block js_import %}
-{% endblock %}
-
-<title>Verdict Data</title>
+<title>VyPR Analysis Environment</title>
 </head>
 
 <body>
 
-<nav class="navbar navbar-inverse navbar-static-top">
+<!--<nav class="navbar navbar navbar-static-top">
   <div class="container-fluid">
-    <!-- Brand and toggle get grouped for better mobile display -->
     <div class="navbar-header vypr-logo">
       <a class="navbar-brand" href="/">
         <img alt="Brand" src="{{url_for('static', filename='logos/vypr-logo.jpeg') }}">
       </a>
+        <div class="tagline">
+            Analysis Environment
+        </div>
     </div>
-
-    <!-- Collect the nav links, forms, and other content for toggling -->
-    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-
-      <ul class="nav navbar-nav navbar-right">
-        <div class="logo-wrapper">
-			    <div class="navbar-left">
-	          <img alt="Brand" src="{{url_for('static', filename='logos/cern-logo.png') }}" height="40px">
-	        </div>
-	        <div class="navbar-left">
-	          <img alt="Brand" src="{{url_for('static', filename='logos/manchester-logo.png') }}" height="40px">
-	        </div>
-    	</div>
-      </ul>
-    </div><!-- /.navbar-collapse -->
-  </div><!-- /.container-fluid -->
-</nav>
+    </div>
+  </div>
+</nav>-->
 
 {% block body %}
 {% endblock %}
+
+<script type="text/javascript" src="{{ url_for('static', filename='js/jquery-3.3.1.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script src="https://cdn.rawgit.com/novus/nvd3/v1.8.1/build/nv.d3.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js" integrity="sha256-Kg2zTcFO9LXOc7IwcBx1YeUBJmekycsnTsq2RuFHSZU=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue-jquery-mask"></script>
+<script type="text/javascript" src="https://unpkg.com/vue-simple-suggest"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/by_specification_vue.js') }}"></script>
 
 </body>
 

@@ -1,17 +1,24 @@
 CREATE TABLE function (
     id integer primary key autoincrement,
-    fully_qualified_name text not null,
-    property text not null,
-    foreign key(property) references property(hash)
+    fully_qualified_name text not null
+);
+CREATE TABLE function_property_pair (
+    function integer not null,
+    property_hash text not null,
+    foreign key(function) references function(id),
+    foreign key(property_hash) references property(hash),
+    primary key(function, property_hash)
 );
 CREATE TABLE property (
     hash text primary key,
-    serialised_structure text not null
+    serialised_structure text not null,
+    index_in_specification_file integer not null
 );
 CREATE TABLE binding (
     id integer primary key autoincrement,
     binding_space_index int not null,
     function int not null,
+    property_hash text not null,
     binding_statement_lines text not null,
     foreign key(function) references function(id)
 );
@@ -24,6 +31,13 @@ CREATE TABLE function_call (
     path_condition_id_sequence text not null,
     foreign key(function) references function(id),
     foreign key(trans) references trans(id)
+);
+CREATE TABLE test_data (
+    id integer primary key autoincrement,
+    test_name text,
+    test_result text,
+    start_time timestamp,
+    end_time timestamp
 );
 CREATE TABLE verdict (
     id integer not null primary key autoincrement,
@@ -95,4 +109,10 @@ CREATE TABLE assignment (
 CREATE TABLE path_condition_structure (
     id integer not null primary key autoincrement,
     serialised_condition text not null
+);
+CREATE TABLE plot (
+    hash text not null primary key,
+    description text not null,
+    data text not null,
+    creation_time timestamp not null
 );
