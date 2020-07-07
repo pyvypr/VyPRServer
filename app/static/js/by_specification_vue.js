@@ -836,6 +836,10 @@ Vue.component("code-view", {
       this.$root.$emit("binding-selected", tree);
     },
     selectOther : function(list){
+      for (var i=0; i<this.code_lines.length; i++){
+        this.code_lines[i].addmenu = false;
+      }
+
       for (var i=0; i<list.length; i++){
         var index = list[i]["line"]-this.start_line;
         var line = this.code_lines[index];
@@ -1309,6 +1313,21 @@ Vue.component("dropdown", {
         plot_data = data;
         Store.first_point_selected = true;
         Store.plot.type = data["action"].split("-")[0];
+        var new_list = [];
+        var between_or_mixed = Store.plot.type;
+        for (var i=0; i<plot_data["other_lines"].length; i++){
+          if (plot_data["other_lines"][i]["line"] == this.line){
+            new_list.push(plot_data["other_lines"][i]["id"]);
+          }
+        }
+        this.options = [{text: "Fix this point as the other one and plot observations",
+                         data: {action: between_or_mixed + "-observation-plot",
+                                  type : between_or_mixed + "-observation",
+                                  new_points: new_list}},
+                         {text: "Fix this point as the other one and plot severity",
+                          data: {action: between_or_mixed + "-severity-plot",
+                                  type : between_or_mixed + "-severity",
+                                  new_points: new_list}}];
         this.$emit("firstselected", data["other_lines"]);
       }
       else if (data["action"] == "between-observation-plot") {

@@ -1287,7 +1287,7 @@ StateValueLessThanEqualStateValueMixed.__repr__ = \
     lambda Atom: "%s(%s) <= %s(%s)" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
 """
 StateValueLengthLessThanStateValueLengthMixed.__repr__ = \
-    lambda Atom: "%s(%s).length() < %s(%s).length()" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+    lambda Atom: "%s('%s').length() < %s('%s').length()" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
 """
 StateValueLengthLessThanEqualStateValueLengthMixed.__repr__ = \
     lambda Atom: "%s(%s).length() <= %s(%s).length()" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
