@@ -4,10 +4,6 @@ body {
 	font-family: arial;
 }
 
-.row {
-  align-items: baseline!important;
-}
-
 div.alert {
   margin: 10px;
 }
