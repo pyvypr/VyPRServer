@@ -22,7 +22,8 @@ var Store = {
     subatom_selected : false,
     first_point_selected : false,
     type_of_atom : undefined,
-    tests_exist : null
+    tests_exist : null,
+    current_tab : null
 };
 
 var start_loading = function() {
@@ -176,16 +177,15 @@ var generate_plot = function(root_obj) {
 };
 
 Vue.use(VuejQueryMask);
-Vue.use(VueSimpleSuggest);
 
 Vue.component("alert", {
   template : `
-  <div class="alert alert-info alert-dismissible" role="alert" v-if="is_open">
+  <!--<div class="alert alert-info alert-dismissible" role="alert" v-if="is_open">
     <button type="button" class="close" data-dismiss="alert" aria-label="Close" @click="close()">
       <span aria-hidden="true">&times;</span>
     </button>
     {{ message }}
-  </div>
+  </div>-->
   `,
   props : ["message"],
   data : function() {
@@ -213,6 +213,39 @@ Vue.component("loading-spinner", {
   computed : {
     in_progress : function() {
       return this.store.status.loading;
+    }
+  }
+});
+
+Vue.component("selection-tabs", {
+  props : ["tree"],
+  template : `
+    <div class="selection-phases">
+      <div class="phase" v-bind:class="{show : show_test_data}">
+        <test-data></test-data>
+      </div>
+      <div class="phase" v-bind:class="{show : show_spec}">
+        <machine-function-property :tree="tree"></machine-function-property>
+      </div>
+      <div class="phase" v-bind:class="{show : show_calls}">
+        <function-calls></function-calls>
+      </div>
+    </div>
+  `,
+  data : function() {
+    return {
+      store : Store
+    }
+  },
+  computed : {
+    show_test_data : function() {
+      return this.store.current_tab == "test-data";
+    },
+    show_spec : function() {
+      return this.store.current_tab == "machine-function-property";
+    },
+    show_calls : function() {
+      return this.store.current_tab == "function-calls";
     }
   }
 });
@@ -314,7 +347,12 @@ Vue.component("test-data", {
         names.push(dict["testname"]);
       }
       that.store.tests_exist = ( n > 0 );
-      if (n>0) {that.$root.$emit("tests-detected")}
+      if (n>0) {
+        that.store.current_tab = "test-data";
+        that.$root.$emit("tests-detected");
+      } else {
+        that.store.current_tab = "machine-function-property";
+      }
       that.all_buttons = buttons;
       that.all_names = names;
     })
@@ -336,16 +374,16 @@ Vue.component("test-data", {
 Vue.component("machine-function-property", {
   props: ['tree'],
   template : `
-    <div class="panel panel-success">
+    <div class="panel panel-success" :style="{height: page_height}">
       <div class="panel-heading">
-        <h3 class="panel-title" id="function-title" @click="showFunctions=!showFunctions">
+        <h3 class="panel-title" id="function-title">
             Machine / Function / Query
         </h3>
       </div>
       <div class="panel-body">
-        <alert v-show="showFunctions" message="Select a query to see relevant calls." />
+        <alert message="Select a query to see relevant calls." />
         <transition name="slide-fade">
-        <div v-show="showFunctions" class="list-group" id="function-list">
+        <div class="list-group" id="function-list">
           <div id="function-list-data"></div>
           <div class="tab">
             <button v-for="(value,key) in tree" :class="(key===showTab)? 'tablinks active':'tablinks' "
@@ -361,7 +399,12 @@ Vue.component("machine-function-property", {
       </div>
     </div>`,
   data() {
-    return {showTab: "", showFunctions : true}
+    return {showTab: ""}
+  },
+  computed : {
+    page_height : function() {
+      return ($(window).height()-2) + "px";
+    }
   },
   methods : {
     selectTab: function(selectedTab){
@@ -370,6 +413,7 @@ Vue.component("machine-function-property", {
     }
   },
   mounted() {
+    console.log("tree on lhs:");
     console.log(this.tree);
     // all tabs except for the one whose ID is == showTab are hidden
     // store the ID of the first tab so that it gets displayed
@@ -381,14 +425,14 @@ Vue.component("machine-function-property", {
     var that = this;
     this.$root.$on('function-select', function(dict){
       // after selecting a function (specification), hide functions list to make space for calls
-      that.showFunctions = false;
+      //that.showFunctions = false;
     })
     this.$root.$on('tests-detected', function(){
-      that.showFunctions = false;
+      //that.showFunctions = false;
     })
     this.$root.$on('tests-selected', function(tree){
       that.tree = tree;
-      that.showFunctions = true;
+      //that.showFunctions = true;
     })
   }
 
@@ -494,6 +538,9 @@ Vue.component("subtreelevel", {
 
       start_loading();
 
+      // switch to the tab showing the list of calls
+      this.store.current_tab = 'function-calls';
+
       this.store.selected_property_hash = property_hash;
       this.$root.$emit(
         'function-select',
@@ -510,15 +557,16 @@ Vue.component("subtreelevel", {
 
 Vue.component("function-calls", {
   template : `
-    <div class="panel panel-success">
+    <div class="panel panel-success" :style="{height: page_height}">
       <div class="panel-heading">
-        <h3 class="panel-title" id="function-call-title">Function Call</h3>
+        <h3 class="panel-title" id="function-call-title">Function Calls</h3>
       </div>
       <div class="panel-body">
-        <div class="list-group" id="function-call-list">
+        <div class="list-group" id="function-call-list" :style="{height: page_height_inner}">
           <div v-if="message" class="please-select"><p>{{message}}</p></div>
           <alert v-if="!message" message="Select one or more calls to load performance data." />
           <div v-if="!message" class="list-group-item">
+            <p><a href="#" @click="previous($event)">&lt; Back</a></p>
             <b>From</b> <vue-mask id="filter-from" v-model="filter_from" mask="00/00/0000 00:00:00"
                          placeholder="DD/MM/YYYY hh:mm:ss" :raw="false"> </vue-mask>
             <b>To</b> <vue-mask id="filter-to" v-model="filter_to" mask="00/00/0000 00:00:00"
@@ -551,9 +599,19 @@ Vue.component("function-calls", {
   computed : {
     tests_exist : function() {
       return this.store.tests_exist;
+    },
+    page_height : function() {
+      return ($(window).height()-2) + "px";
+    },
+    page_height_inner : function() {
+      return ($(window).height()*0.9) + "px";
     }
   },
   methods: {
+    previous : function(e) {
+      e.preventDefault();
+      this.store.current_tab = 'machine-function-property';
+    },
     translate_verdict : function(v) {
       if(v == 1) return "Success";
       else return "Violation";
@@ -693,7 +751,7 @@ Vue.component("code-view", {
   the lines in the code that quantifiers in the specification refer to are highlighted.
   When the calls are also selected, more data is displayed and some code lines are hidden.*/
   template : `
-    <div class="panel panel-success">
+    <div class="panel panel-success" :style="{'min-height' : page_height}">
       <div class="panel-heading">
         <h3 class="panel-title">Code View</h3>
       </div>
@@ -712,10 +770,11 @@ Vue.component("code-view", {
           :id="line.id" :style="line.background" :save-background-color="line.color"
           v-show="line.show">
             <b> {{line.line_number}} </b> <span v-html="line.content"> </span>
-            <span class="span-binding" :id="line.spanid"><button v-for="b in line.buttons"
+            <span class="span-binding" :id="line.spanid">
+            <button v-for="b in line.buttons"
             class="binding-button" :binding-button="b.binding" :style="b.font"
-            @click="selectBinding(b.binding, b.subtree, b.lines)">
-            binding {{b.binding}}</button></span>
+            @click="selectBinding(b.binding, b.subtree, b.lines)">binding {{b.binding}}</button>
+            </span>
             <p v-show="line.showempty" class="empty-line" :id="line.emptyid"><b> ... </b><br> </p>
             <dropdown v-if="line.addmenu" :tree="this.tree" :dict="line.dict" :binding="this.binding"
             :line=line.line_number @firstselected="selectOther($event)"> </dropdown>
@@ -742,6 +801,9 @@ Vue.component("code-view", {
     },
     subatom_is_selected : function() {
       return this.store.subatom_selected;
+    },
+    page_height : function() {
+      return ($(window).height()-2) + "px";
     }
   },
   methods:{

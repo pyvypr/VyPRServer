@@ -115,16 +115,15 @@ div.please-select {
 
 #verdict-list #specification_listing {
     padding: 10px;
-    border-bottom: 2px solid black;
+    border-bottom: 1px solid grey;
 }
 
 #verdict-list .code_listing_line {
-    font-family: courier;
+    font-family: courier new;
     padding: 2px;
 }
 
 #function-call-list {
-    max-height: 500px;
     overflow: hidden scroll;
 }
 
@@ -194,7 +193,7 @@ table.function-list-table td {
 }
 
 .list-group-item-text.code {
-	font-family: courier;
+	font-family: courier new;
 	padding: 2px;
 	font-family: 12px;
 }
