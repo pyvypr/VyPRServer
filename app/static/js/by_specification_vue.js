@@ -152,7 +152,7 @@ var generate_plot = function(root_obj) {
             var color = "#cc0000";
             // other columns in the plot are green since they show non-violating observations
             if (value >= 0) {color = "#00802b"}
-            myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
+            myData[0].values.push({label: new Date(Date.parse(data["x1"][i])),
                                   value: value,
                                   color: color});
           } else {
@@ -1508,7 +1508,8 @@ Vue.component("plot", {
           .x(function(d) { return d.label })
           .y(function(d) { return d.value })
           .reduceXTicks(true)    //alternatively, use staggering or rotated labels to prevent overlapping
-          .showControls(false);
+          .showControls(false)   //Allow user to switch between 'Grouped' and 'Stacked' mode.
+          
 
         // omitting date from time format - moslty the difference is in seconds
         var y_label = that.is_severity_plot ? 'Verdict severity' : 'Observation';
