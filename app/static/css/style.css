@@ -26,7 +26,7 @@ div.alert {
     width: 2rem;
     height: 2rem;
     vertical-align: text-bottom;
-    border: .15em solid black;
+    border: .25em solid black;
     border-right-color: transparent;
     border-radius: 50%;
     -webkit-animation: spinner-border .75s linear infinite;
@@ -134,7 +134,7 @@ div.please-select {
 
 #function-call-list {
     overflow: hidden scroll;
-    max-height: 700px;
+    max-height: 90vh;
 }
 
 #function-call-list input[type=checkbox] {
