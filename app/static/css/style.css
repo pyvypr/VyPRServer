@@ -65,11 +65,20 @@ div.alert {
 .selection {
 	padding-left: 0px!important;
 	padding-right: 0px!important;
+	height: 100vh!important;
+}
+
+.selection-phases {
+    height: 100vh;
 }
 
 .selection .panel {
 	border-radius: 0px!important;
 	margin-bottom: 0px!important;
+}
+
+.panel.panel-success.machine-function-property, .panel.panel-success.function-calls, .panel.panel-success.code-view {
+    min-height: 100vh;
 }
 
 .col-md-4.selection .panel-body .panel-title {
@@ -125,6 +134,7 @@ div.please-select {
 
 #function-call-list {
     overflow: hidden scroll;
+    max-height: 700px;
 }
 
 #function-call-list input[type=checkbox] {
