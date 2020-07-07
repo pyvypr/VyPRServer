@@ -979,13 +979,19 @@ def get_plot_data_mixed(dict):
         severity_array = []
 
         for element in result:
+            dict0 = ast.literal_eval(element[0])
+            dict1 = ast.literal_eval(element[1])
+            for key in dict0:
+                elem0 = dict0[key]
+            for key in dict1:
+                elem1 = dict1[key]
             x1_array.append(element[2])
             x2_array.append(element[3])
-            y1_array.append(element[0])
-            y2_array.append(element[1])
+            y1_array.append(elem0)
+            y2_array.append(elem1)
 
             sign = -1 + 2*element[4]
-            d = abs(element[1] - element[0])
+            d = abs(elem1 - elem0)
 
             severity_array.append(sign*d)
 
