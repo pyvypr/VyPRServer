@@ -759,7 +759,7 @@ Vue.component("code-view", {
           :id="line.id" :style="line.background" :save-background-color="line.color"
           v-show="line.show">
             <b> {{line.line_number}} </b>
-            <span v-html="line.content"> </span>
+            <span class="language-python" v-html="line.content"> </span>
             <span v-if="line.addmenu"><a href="#" class="badge options" @click="toggle_menu($event)">options</a></span>
             <span class="span-binding" :id="line.spanid">
             <button v-for="b in line.buttons"
@@ -884,6 +884,7 @@ Vue.component("code-view", {
         // also add a span element to the content of the line - later, we will add binding labels to it
         var lines_list = [];
         for(var i=0; i < code_lines.length; i++) {
+          code_lines[i] = hljs.highlight("python", code_lines[i]).value;
           var line_text = code_lines[i].replace(/\t/g, "&nbsp;&nbsp;&nbsp;").replace(/^[ \t]+/mg, html_space_replace);
           var line_div = {line_number: current_line, id: "line-number-" + current_line,
                           background: "background-color: transparent", color: "", show: true,
@@ -917,6 +918,7 @@ Vue.component("code-view", {
             //$("#span-bindings-line-"+no).append(" "+binding["id"]);
           } //end j-loop
         } //end i-loop
+
         stop_loading();
       })
     })
