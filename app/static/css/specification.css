@@ -94,25 +94,23 @@
 
 }
 
+.badge.options {
+  font-size: 9px;
+  font-family: arial;
+}
+
+.badge.options.active {
+  background: black;
+}
+
 .dropdown-content{
   /*position: absolute;
   left: 0;
   z-index: -1;*/
   /*transition: ease-in-out 0.5s;*/
   font-family: arial;
-  padding: 0px!important;
-  height: 0px;
-  overflow: hidden;
-
-  transition-property: height;
-  transition-duration: .5s;
-  transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
-}
-
-.code_listing_line-clickable:hover > .dropdown-content{
   padding: 12px 16px;
-  height: 100px;
-  display: block;
+  display: none;
 }
 
 .dropdown-menu-option{
