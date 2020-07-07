@@ -758,7 +758,9 @@ Vue.component("code-view", {
           <div v-for="(line,index) in code_lines" :key="index" :class="line.class"
           :id="line.id" :style="line.background" :save-background-color="line.color"
           v-show="line.show">
-            <b> {{line.line_number}} </b> <span v-html="line.content"> </span>
+            <b> {{line.line_number}} </b>
+            <span v-html="line.content"> </span>
+            <span v-if="line.addmenu"><a href="#" class="badge options" @click="toggle_menu($event)">options</a></span>
             <span class="span-binding" :id="line.spanid">
             <button v-for="b in line.buttons"
             class="binding-button" :binding-button="b.binding" :style="b.font"
@@ -793,6 +795,11 @@ Vue.component("code-view", {
     }
   },
   methods:{
+    toggle_menu : function(e) {
+      e.preventDefault();
+      $(e.target).parent().parent().find(".dropdown-content").slideToggle();
+      $(e.target).toggleClass("active");
+    },
     selectBinding : function(binding, tree, lines){
       // binding stores the index of the binding, tree is the branch tree[binding]
       // lines is a list of line numbers that need to be highlighted
