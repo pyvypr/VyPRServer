@@ -1500,7 +1500,7 @@ Vue.component("plot", {
       $("#plot-wrapper").height(
         $(".panel.panel-success.code-view").outerHeight() -
         $(".panel.panel-success.code-view").find(".panel-heading").first().outerHeight() -
-        $("#code-listing").outerHeight());
+        $("#specification_listing").outerHeight());
       $("#plot-svg").width($("#code-listing").outerWidth());
       if(that.store.plot.type == "severity") {
           $("#plot-svg").height($("#plot-wrapper").outerHeight() - $("#plot-controls").outerHeight()
