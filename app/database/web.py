@@ -959,7 +959,7 @@ def get_plot_data_mixed(dict):
 
         query_string = """select o1.observed_value, o2.observed_value,
                                  o1.observation_time, o2.observation_time,
-                                 verdict.verdict
+                                 verdict.verdict, o1.sub_index
                           from verdict inner join observation o1 on verdict.id==o1.verdict
                           inner join observation o2 where o1.verdict=o2.verdict
                           and o1.instrumentation_point<o2.instrumentation_point
@@ -972,6 +972,16 @@ def get_plot_data_mixed(dict):
                 list_to_sql_string(calls_list), binding_index, atom_index, atom_index)
         result = cursor.execute(query_string).fetchall()
 
+        prop_hash = cursor.execute("""select distinct function_property_pair.property_hash from
+        (((function_property_pair inner join function_call on function_property_pair.function==function_call.function)
+        inner join verdict on function_call.id==verdict.function_call) inner join observation
+           on observation.verdict==verdict.id) where observation.instrumentation_point=?""",
+           [points_list[0]]).fetchone()[0]
+
+        atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
+            and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
+        formula = pickle.loads(base64.b64decode(atom_structure))
+
         x1_array = []
         y1_array = []
         x2_array = []
@@ -979,21 +989,50 @@ def get_plot_data_mixed(dict):
         severity_array = []
 
         for element in result:
-            dict0 = ast.literal_eval(element[0])
-            dict1 = ast.literal_eval(element[1])
+            if element[5] == 0:
+                dict0 = ast.literal_eval(element[0])
+                dict1 = ast.literal_eval(element[1])
+                x1_array.append(element[2])
+                x2_array.append(element[3])
+            else:
+                dict0 = ast.literal_eval(element[1])
+                dict1 = ast.literal_eval(element[0])
+                x1_array.append(element[3])
+                x2_array.append(element[2])
+
             for key in dict0:
                 elem0 = dict0[key]
             for key in dict1:
                 elem1 = dict1[key]
-            x1_array.append(element[2])
-            x2_array.append(element[3])
+
             y1_array.append(elem0)
             y2_array.append(elem1)
 
             sign = -1 + 2*element[4]
             d = abs(elem1 - elem0)
-
             severity_array.append(sign*d)
+
+        if type(formula) in [StateValueEqualToMixed, StateValueLengthLessThanStateValueLengthMixed]:
+            severity_array = []
+            stack_left = formula._lhs._arithmetic_stack
+            stack_right = formula._rhs._arithmetic_stack
+            for i in range(len(y1_array)):
+                verdict = result[i][4]
+                sign = -1 + 2*verdict
+                d = abs(apply_arithmetic_stack(stack_right, y2_array[i]) -
+                        apply_arithmetic_stack(stack_left, y1_array[i]))
+                severity_array.append(sign*d)
+
+        if type(formula) in [TransitionDurationLessThanStateValueMixed,
+            TransitionDurationLessThanStateValueLengthMixed]:
+            severity_array = []
+            stack_right = formula._rhs._arithmetic_stack
+            for i in range(len(y1_array)):
+                verdict = result[i][4]
+                sign = -1 + 2*verdict
+                d = abs(apply_arithmetic_stack(stack_right, y2_array[i]) - y1_array[i])
+                severity_array.append(sign*d)
+
 
         # build the final plot data
         plot_data = {"x1" : x1_array, "mixed-observation-1" : y1_array,
@@ -1055,6 +1094,24 @@ def list_to_sql_string(ids_list):
         ids = ids + str(id)
     ids = ids + ")"
     return ids
+
+
+def stack_repr(op_list):
+    str = ""
+    for o in op_list:
+        str += "%s " % o
+    return str
+
+
+def logical_repr(op_list, HTML):
+    if HTML:
+        str = "%s" % op_list[0].HTMLrepr()
+        for op in op_list[1:]:
+            str += ", %s" % op.HTMLrepr()
+    else:
+        str = "%s" % op_list[0]
+        for op in op_list[1:]:
+            str += ", %s" % op
 
 
 def get_qualifier_subsequence(function_qualifier):
@@ -1332,10 +1389,10 @@ TimeBetweenInOpenInterval.__repr__ = \
     lambda Atom: "timeBetween(%s, %s)._in(%s)" % (Atom._lhs, Atom._rhs, str(Atom._interval))
 
 LogicalAnd.__repr__= \
-    lambda object: ('land(%s' % (object.operands[0])) + (', %s'%str for str in object.operands[1:]) + ')'
+    lambda object: 'land(%s)' % logical_repr(object.operands, HTML = False)
 
 LogicalOr.__repr__= \
-    lambda object: ('lor(%s' % (object.operands[0])) + (', %s'%str for str in object.operands[1:]) + ')'
+    lambda object: 'lor(%s' % logical_repr(object.operands, HTML = False)
 
 LogicalNot.__repr__ = \
     lambda object: 'lnot(%s)' % object.operand
@@ -1344,62 +1401,72 @@ LogicalNot.__repr__ = \
 
 StateValueInInterval.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>._in(%s)
+        <span class="subatom" subatom-index="0">%s('%s')</span>._in(%s)
         </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
 
 StateValueInOpenInterval.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>._in(%s)
+        <span class="subatom" subatom-index="0">%s('%s')</span>._in(%s)
         </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
 
 StateValueEqualTo.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>.equals(%s)
+        <span class="subatom" subatom-index="0">%s('%s')</span>.equals(%s)
         </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._value)
 
 StateValueTypeEqualTo.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>.type().equals(%s)
+        <span class="subatom" subatom-index="0">%s('%s')</span>.type().equals(%s)
         </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._value)
 
 StateValueEqualToMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>.equals(
-        <span class="subatom" subatom-index="1">%s(%s)</span>)
-        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+        <span class="subatom" subatom-index="0">%s('%s') %s</span>.equals(
+        <span class="subatom" subatom-index="1">%s('%s') %s</span>)
+        </span>""" % (atoms_list.index(Atom),
+            Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
+            Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 #StateValueLessThanStateValueMixed.HTMLrepr = \
 #    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="subatom" subatom-index="0">%s(%s)</span> <
-#        <span class="subatom" subatom-index="1">%s(%s)</span>
-#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+#        <span class="subatom" subatom-index="0">%s('%s') %s</span> <
+#        <span class="subatom" subatom-index="1">%s('%s') %s</span>
+#        </span>""" % (atoms_list.index(Atom),
+#           Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
+#           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 #StateValueLessThanEqualStateValueMixed.HTMLrepr = \
 #    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="subatom" subatom-index="0">%s(%s)</span> <=
-#        <span class="subatom" subatom-index="1">%s(%s)</span>
-#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+#        <span class="subatom" subatom-index="0">%s('%s') %s</span> <=
+#        <span class="subatom" subatom-index="1">%s('%s') %s</span>
+#        </span>""" % (atoms_list.index(Atom),
+#           Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
+#           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 StateValueLengthLessThanStateValueLengthMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>.length() <
-        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
-        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+        <span class="subatom" subatom-index="0">%s('%s') %s</span>.length() <
+        <span class="subatom" subatom-index="1">%s('%s') %s</span>.length()
+        </span>""" % (atoms_list.index(Atom),
+            Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
+            Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 #StateValueLengthLessThanEqualStateValueLengthMixed.HTMLrepr = \
 #    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="subatom" subatom-index="0">%s(%s)</span>.length() <=
-#        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
-#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+#        <span class="subatom" subatom-index="0">%s('%s') %s</span>.length() <=
+#        <span class="subatom" subatom-index="1">%s('%s') %s</span>.length()
+#        </span>""" % (atoms_list.index(Atom),
+#           Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
+#           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 StateValueLengthInInterval.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>.length()._in(%s)
+        <span class="subatom" subatom-index="0">%s('%s')</span>.length()._in(%s)
         </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
 
 #StateValueLengthInOpenInterval.HTMLrepr = \
 #    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="subatom" subatom-index="0">%s(%s)</span>.length()._in(%s)
+#        <span class="subatom" subatom-index="0">%s('%s')</span>.length()._in(%s)
 #        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
 
 TransitionDurationInInterval.HTMLrepr=\
@@ -1427,26 +1494,30 @@ TransitionDurationLessThanTransitionDurationMixed.HTMLrepr=\
 TransitionDurationLessThanStateValueMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
         <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <
-        <span class="subatom" subatom-index="1">%s(%s) </span>
-        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
+        <span class="subatom" subatom-index="1">%s('%s') %s </span>
+        </span>""" % (atoms_list.index(Atom), Atom._lhs,
+            Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 #TransitionDurationLessThanEqualStateValueMixed.HTMLrepr = \
 #    lambda Atom: """<span class="atom" atom-index="%i">
 #        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
-#        <span class="subatom" subatom-index="1">%s(%s) </span>
-#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
+#        <span class="subatom" subatom-index="1">%s('%s') %s </span>
+#        </span>""" % (atoms_list.index(Atom), Atom._lhs,
+#           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 TransitionDurationLessThanStateValueLengthMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
         <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <
-        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
-        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
+        <span class="subatom" subatom-index="1">%s('%s') %s</span>.length()
+        </span>""" % (atoms_list.index(Atom), Atom._lhs,
+            Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 #TransitionDurationLessThanEqualStateValueLengthMixed.HTMLrepr = \
 #    lambda Atom: """<span class="atom" atom-index="%i">
 #        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
-#        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
-#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
+#        <span class="subatom" subatom-index="1">%s('%s') %s</span>.length()
+#        </span>""" % (atoms_list.index(Atom), Atom._lhs,
+#           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 TimeBetweenInInterval.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">timeBetween(
@@ -1461,10 +1532,10 @@ TimeBetweenInOpenInterval.HTMLrepr = \
         </span> """ % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, str(Atom._interval))
 
 LogicalAnd.HTMLrepr= \
-    lambda object: ('land(%s' % (object.operands[0].HTMLrepr())) + (', %s'%str.HTMLrepr() for str in object.operands[1:]) + ')'
+    lambda object: 'land(%s)' % logical_repr(object.operands, HTML = True)
 
 LogicalOr.HTMLrepr= \
-    lambda object: ('lor(%s' % (object.operands[0].HTMLrepr())) + (', %s'%str.HTMLrepr() for str in object.operands[1:]) + ')'
+    lambda object: 'lor(%s)' % logical_repr(object.operands, HTML = True)
 
 LogicalNot.HTMLrepr = \
     lambda object: 'lnot(%s)' % object.operand.HTMLrepr()

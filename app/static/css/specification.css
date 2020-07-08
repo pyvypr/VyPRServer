@@ -6,6 +6,7 @@
   display:block;
 }
 
+
 #test-cases-list {
     max-height: 500px !important;
     overflow: hidden scroll !important;
@@ -13,10 +14,6 @@
 
 #test-cases-list input[type="checkbox"] {
     margin-right: 20px;
-}
-
-.vue-simple-suggest{
-  max-width: 80%;
 }
 
 .tab {
@@ -244,10 +241,6 @@
 
 .nv-point-paths {
   display: none !important;
-}
-
-.nv-legendWrap{
-  display: none;
 }
 
 .tick line{
