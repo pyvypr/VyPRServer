@@ -1497,14 +1497,17 @@ Vue.component("plot", {
       // display the plot
       $("#plot-wrapper").addClass("show");
       // set height of plot wrapper
-      $("#plot-wrapper").height($("#code-listing").outerHeight());
+      $("#plot-wrapper").height(
+        $(".panel.panel-success.code-view").outerHeight() -
+        $(".panel.panel-success.code-view").find(".panel-heading").first().outerHeight() -
+        $("#specification_listing").outerHeight());
       $("#plot-svg").width($("#code-listing").outerWidth());
       if(that.store.plot.type == "severity") {
-          $("#plot-svg").height($("#code-listing").outerHeight() - $("#plot-controls").outerHeight()
+          $("#plot-svg").height($("#plot-wrapper").outerHeight() - $("#plot-controls").outerHeight()
                                 - $("#plot-description").outerHeight()
                                 - $("#plot-filters").outerHeight());
       } else {
-          $("#plot-svg").height($("#code-listing").outerHeight() - $("#plot-controls").outerHeight()
+          $("#plot-svg").height($("#plot-wrapper").outerHeight() - $("#plot-controls").outerHeight()
                                 - $("#plot-description").outerHeight());
       }
       //var data_array = data["array"];
@@ -1525,6 +1528,10 @@ Vue.component("plot", {
           .axisLabel(y_label)
           .tickFormat(d3.format('.02f'))
           .showMaxMin(true);
+
+        chart.tooltip(function(key, x, y, e, graph) {
+          return x + " -> " + y;
+        });
 
         d3.select('#plot-svg')
           .datum(data_array)
