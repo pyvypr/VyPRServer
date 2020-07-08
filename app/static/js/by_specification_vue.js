@@ -138,7 +138,7 @@ var generate_plot = function(root_obj) {
         var data = response.data.plot_data;
         Store.plot.current_hash = response.data.plot_hash;
 
-        var myData = [{key: 'group 1', values: []}, {key: 'group2', values: []}];
+        var myData = [{key: 'subatom 0', values: []}, {key: 'subatom 1', values: []}];
         for (var i=0; i<data["x1"].length; i++){
           if(type == "mixed-severity") {
             var value = data[type][i];
@@ -162,7 +162,7 @@ var generate_plot = function(root_obj) {
             myData[0].values.push({label: new Date(Date.parse(data["x1"][i])),
                                   value: value1,
                                   color: "blue"});
-            myData[0].values.push({label: new Date(Date.parse(data["x1"][i])),
+            myData[1].values.push({label: new Date(Date.parse(data["x1"][i])),
                                    value: value2,
                                    color: "orange"});
           }
@@ -216,6 +216,7 @@ Vue.component("loading-spinner", {
     }
   }
 });
+
 
 Vue.component("selection-tabs", {
   props : ["tree"],
@@ -317,6 +318,7 @@ Vue.component("test-data", {
         that.$root.$emit('tests-selected', tree);
       });
       Store.selected_tests = [test_name];
+      that.store.current_tab = "machine-function-property";
     },
     select_all_tests: function(){
       var is_checked = $("#select-all-tests").prop("checked");
@@ -1475,6 +1477,9 @@ Vue.component("plot", {
     },
     is_severity_plot : function() {
       return this.store.plot.type == "severity" || this.store.plot.type == "between-severity" || this.store.plot.type == "mixed-severity";
+    },
+    is_mixed_observation_plot : function() {
+      return this.store.plot.type == "mixed-observation"
     }
   },
   mounted(){
@@ -1492,7 +1497,7 @@ Vue.component("plot", {
       // display the plot
       $("#plot-wrapper").addClass("show");
       // set height of plot wrapper
-      $("#plot-wrapper").height($("#code-listing").outerHeight() + 10);
+      $("#plot-wrapper").height($("#code-listing").outerHeight());
       $("#plot-svg").width($("#code-listing").outerWidth());
       if(that.store.plot.type == "severity") {
           $("#plot-svg").height($("#code-listing").outerHeight() - $("#plot-controls").outerHeight()
@@ -1508,8 +1513,8 @@ Vue.component("plot", {
           .x(function(d) { return d.label })
           .y(function(d) { return d.value })
           .reduceXTicks(true)    //alternatively, use staggering or rotated labels to prevent overlapping
-          .showControls(false)   //Allow user to switch between 'Grouped' and 'Stacked' mode.
-          
+          .showControls(that.is_mixed_observation_plot)   //Allow user to switch between 'Grouped' and 'Stacked' mode.
+          .showLegend(that.is_mixed_observation_plot)
 
         // omitting date from time format - moslty the difference is in seconds
         var y_label = that.is_severity_plot ? 'Verdict severity' : 'Observation';
