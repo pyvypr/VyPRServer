@@ -1445,16 +1445,16 @@ StateValueEqualToMixed.HTMLrepr = \
 
 StateValueLengthLessThanStateValueLengthMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s('%s') %s</span>.length() <
-        <span class="subatom" subatom-index="1">%s('%s') %s</span>.length()
+        <span class="subatom" subatom-index="0">%s('%s')</span>.length() %s<
+        <span class="subatom" subatom-index="1">%s('%s')</span>.length() %s
         </span>""" % (atoms_list.index(Atom),
             Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
             Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 #StateValueLengthLessThanEqualStateValueLengthMixed.HTMLrepr = \
 #    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="subatom" subatom-index="0">%s('%s') %s</span>.length() <=
-#        <span class="subatom" subatom-index="1">%s('%s') %s</span>.length()
+#        <span class="subatom" subatom-index="0">%s('%s')</span>.length() %s <=
+#        <span class="subatom" subatom-index="1">%s('%s')</span>.length() %s
 #        </span>""" % (atoms_list.index(Atom),
 #           Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
 #           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
@@ -1508,14 +1508,14 @@ TransitionDurationLessThanStateValueMixed.HTMLrepr = \
 TransitionDurationLessThanStateValueLengthMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
         <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <
-        <span class="subatom" subatom-index="1">%s('%s') %s</span>.length()
+        <span class="subatom" subatom-index="1">%s('%s')</span>.length() %s
         </span>""" % (atoms_list.index(Atom), Atom._lhs,
             Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 #TransitionDurationLessThanEqualStateValueLengthMixed.HTMLrepr = \
 #    lambda Atom: """<span class="atom" atom-index="%i">
 #        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
-#        <span class="subatom" subatom-index="1">%s('%s') %s</span>.length()
+#        <span class="subatom" subatom-index="1">%s('%s')</span>.length() %s
 #        </span>""" % (atoms_list.index(Atom), Atom._lhs,
 #           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 

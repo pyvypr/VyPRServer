@@ -1,9 +1,12 @@
 .phase {
-  display: none;
+  height: 0;
+  overflow: hidden;
+  transition: height 0.8s;
+  transition-timing-function: ease;
 }
 
 .phase.show {
-  display:block;
+  height: inherit;
 }
 
 

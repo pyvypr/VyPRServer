@@ -138,9 +138,9 @@ var generate_plot = function(root_obj) {
         var data = response.data.plot_data;
         Store.plot.current_hash = response.data.plot_hash;
 
-        var myData = [{key: 'subatom 0', values: []}, {key: 'subatom 1', values: []}];
-        for (var i=0; i<data["x1"].length; i++){
-          if(type == "mixed-severity") {
+        if(type == "mixed-severity") {
+          var myData = [{key: 'group 1', values: []}];
+          for (var i=0; i<data["x1"].length; i++){
             var value = data[type][i];
             // check whether we should plot this based on the filters
             if(value >= 0) {
@@ -155,18 +155,18 @@ var generate_plot = function(root_obj) {
             myData[0].values.push({label: new Date(Date.parse(data["x1"][i])),
                                   value: value,
                                   color: color});
-          } else {
+          }
+        } else {
+          var myData = [{key: 'subatom 0', values: []}, {key: 'subatom 1', values: []}];
+          for (var i=0; i<data["x1"].length; i++){
             var value1 = data[type+"-1"][i];
             var value2 = data[type+"-2"][i]
 
             myData[0].values.push({label: new Date(Date.parse(data["x1"][i])),
-                                  value: value1,
-                                  color: "blue"});
+                                  value: value1});
             myData[1].values.push({label: new Date(Date.parse(data["x1"][i])),
-                                   value: value2,
-                                   color: "orange"});
+                                   value: value2});
           }
-
         }
 
         // emit plot data ready event so the plot will be drawn
@@ -368,7 +368,7 @@ Vue.component("test-data", {
   },
   mounted(){
     var that = this;
-    this.$root.$on("function-select", function(id){that.showTests = false;})
+    //this.$root.$on("function-select", function(id){that.showTests = false;})
   }
 })
 
@@ -386,6 +386,8 @@ Vue.component("machine-function-property", {
         <alert message="Select a query to see relevant calls." />
         <transition name="slide-fade">
         <div class="list-group" id="function-list">
+          <p v-if="store.tests_exist"/>
+          <p v-if="store.tests_exist"><a href="#" @click="previous($event)" style="padding-left: 15px;">&lt; Back</a></p>
           <div id="function-list-data"></div>
           <div class="tab">
             <button v-for="(value,key) in tree" :class="(key===showTab)? 'tablinks active':'tablinks' "
@@ -401,12 +403,16 @@ Vue.component("machine-function-property", {
       </div>
     </div>`,
   data() {
-    return {showTab: ""}
+    return {showTab: "", store: Store}
   },
   methods : {
     selectTab: function(selectedTab){
       // selectedTab contains the ID of the tabcontent element which needs to be displayed
       this.showTab = selectedTab;
+    },
+    previous : function(e) {
+      e.preventDefault();
+      Store.current_tab = 'test-data';
     }
   },
   mounted() {
@@ -1454,6 +1460,7 @@ Vue.component("plot", {
     <a href="#" id="successes" class="filter" v-bind:class="{active : successFilterActive}"
       @click="toggleSuccessFilter($event)">Successes</a>
   </div>
+  <p></p>
   <svg id="plot-svg"></svg>
   </div>`,
   data() {
@@ -1516,8 +1523,9 @@ Vue.component("plot", {
           .x(function(d) { return d.label })
           .y(function(d) { return d.value })
           .reduceXTicks(true)    //alternatively, use staggering or rotated labels to prevent overlapping
-          .showControls(that.is_mixed_observation_plot)   //Allow user to switch between 'Grouped' and 'Stacked' mode.
+          .showControls(false)   //Allow user to switch between 'Grouped' and 'Stacked' mode.
           .showLegend(that.is_mixed_observation_plot)
+          .color(["#2b5fed", "#f5b52c"])
 
         // omitting date from time format - moslty the difference is in seconds
         var y_label = that.is_severity_plot ? 'Verdict severity' : 'Observation';
@@ -1582,7 +1590,6 @@ Vue.component("plot", {
       generate_plot(this);
     }
   }
-
 
 })
 
