@@ -368,7 +368,7 @@ Vue.component("test-data", {
   },
   mounted(){
     var that = this;
-    this.$root.$on("function-select", function(id){that.showTests = false;})
+    //this.$root.$on("function-select", function(id){that.showTests = false;})
   }
 })
 
@@ -386,6 +386,8 @@ Vue.component("machine-function-property", {
         <alert message="Select a query to see relevant calls." />
         <transition name="slide-fade">
         <div class="list-group" id="function-list">
+          <p v-if="store.tests_exist"/>
+          <p v-if="store.tests_exist"><a href="#" @click="previous($event)" style="padding-left: 15px;">&lt; Back</a></p>
           <div id="function-list-data"></div>
           <div class="tab">
             <button v-for="(value,key) in tree" :class="(key===showTab)? 'tablinks active':'tablinks' "
@@ -401,12 +403,16 @@ Vue.component("machine-function-property", {
       </div>
     </div>`,
   data() {
-    return {showTab: ""}
+    return {showTab: "", store: Store}
   },
   methods : {
     selectTab: function(selectedTab){
       // selectedTab contains the ID of the tabcontent element which needs to be displayed
       this.showTab = selectedTab;
+    },
+    previous : function(e) {
+      e.preventDefault();
+      Store.current_tab = 'test-data';
     }
   },
   mounted() {
