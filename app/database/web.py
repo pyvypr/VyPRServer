@@ -1153,6 +1153,9 @@ def get_path_data_between(dict):
     parameter_value_indices_to_severities = {}
     subpaths = []
 
+    if len(path_parameters) == 0:
+        path_parameters = [[]]
+
     n_of_trees = len(parse_trees)
     for (n, parse_tree) in enumerate(parse_trees):
       subtree = parse_tree.get_parameter_subtree(path_parameters[0])
