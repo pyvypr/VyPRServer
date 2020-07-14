@@ -268,3 +268,20 @@
 	stroke: black !important;
 	opacity: 1;
 }
+
+
+.path #path-controls a.close-path {
+  color: black;
+  background: red;
+  padding: 5px;
+  text-decoration: none;
+  width: 100%;
+  font-size: 10px;
+  display: block;
+  opacity: 0.6;
+  text-align: center;
+}
+
+.path #path-controls a.close-path:hover {
+  opacity: 1.0;
+}
