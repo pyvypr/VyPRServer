@@ -201,7 +201,8 @@ var highlight_paths = function(root_obj) {
       }
       var min_sev = Math.min(...all_severities);
       var max_sev = Math.max(...all_severities);
-      var range = max_sev - min_sev;
+      var negative_range = min_sev<0 ? (0 - min_sev) : 0;
+      var positive_range = max_sev>0 ? (max_sev) : 0;
 
       for (var i=0; i<resp.length; i++) {
         var avg = 0;
@@ -209,7 +210,12 @@ var highlight_paths = function(root_obj) {
           avg += resp[i]["severities"][j];
         }
         avg /= resp[i]["severities"].length;
-        var avg_index = Math.round((avg - min_sev)/range * 120);
+        var avg_index
+        if (avg < 0) {
+          avg_index = Math.round((avg - min_sev)/negative_range * 60);
+        } else {
+          avg_index = Math.round(60 + avg/positive_range * 60);
+        }
         var dict = {lines: resp[i]["lines"],
                     color: "hsl("+avg_index+", 78%, 50%)"};
         lines_to_colors.push(dict);
