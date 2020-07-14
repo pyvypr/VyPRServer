@@ -82,7 +82,7 @@ var generate_plot = function(root_obj) {
           // check whether we should plot this based on the filters
           if(value >= 0) {
             if(!Store.plot.show_successes) continue;
-            } else {
+          } else {
             if(!Store.plot.show_violations) continue;
           }
           // negative verdict severity represents violation - colour these bars red
@@ -1663,7 +1663,7 @@ Vue.component("path-code", {
   props: ["code", "start"],
   template: `<div id="path-wrapper" class="path">
   <div id="path-controls"><a href="#" @click="hidePath($event)" class="close-path">close</a></div>
-    <div v-if="code_lines" class='code_listing' id="code-listing">
+    <div v-if="code_lines" class='code_listing'>
       <div v-for="(line,index) in code_lines" :key="index" :class="line.class"
       :id="line.id" :style="line.background" :save-background-color="line.color"
       v-show="line.show">
@@ -1678,9 +1678,6 @@ Vue.component("path-code", {
       code_lines: this.code,
       start_line: this.start
     }
-  },
-  computed : {
-
   },
   mounted(){
     var that = this;
