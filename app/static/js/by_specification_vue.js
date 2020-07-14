@@ -191,7 +191,8 @@ var highlight_paths = function(root_obj) {
   // the selected option was to highlight the paths by severity
   if (type == "between-path"){
     axios.post('/get_path_data_between/', data).then(function(response){
-      var resp = response.data;
+      var resp = response.data.parameters;
+      var main_lines = response.data.main_lines;
       console.log(resp);
       var lines_to_colors = [];
 
@@ -217,12 +218,13 @@ var highlight_paths = function(root_obj) {
           avg_index = Math.round(60 + avg/positive_range * 60);
         }
         var dict = {lines: resp[i]["lines"],
-                    color: "hsl("+avg_index+", 78%, 50%)"};
+                    color: "hsl("+avg_index+", 78%, 90%)"};
         lines_to_colors.push(dict);
       }
       var data = {first_line: first_line,
                   last_line: last_line,
-                  lines_to_colors: lines_to_colors}
+                  lines_to_colors: lines_to_colors,
+                  main_lines: main_lines}
       that.$root.$emit('path-data-ready', data)
     })
   }
@@ -1698,12 +1700,18 @@ Vue.component("path-code", {
         }
       }
 
+      console.log(data_ready);
+
       for (var i=0; i<data_ready["lines_to_colors"].length; i++) {
         var dict = data_ready["lines_to_colors"][i];
         for (var j=0; j<dict["lines"].length; j++) {
           console.log(dict["color"])
           whole_code[dict["lines"][j]-that.start].background = "background-color: " + dict["color"];
         }
+      }
+
+      for (var i=0; i<data_ready["main_lines"].length; i++) {
+        whole_code[data_ready["main_lines"][i]-that.start].background = "background-color: #cce0ff";
       }
 
       that.code_lines = whole_code;
