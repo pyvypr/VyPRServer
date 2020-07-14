@@ -678,11 +678,12 @@ def get_atom_type(atom_index, inst_point_id):
        on observation.verdict==verdict.id) where observation.instrumentation_point=?""",
        [inst_point_id]).fetchone()[0]
 
+    print("%s -> inst point %s" % (prop_hash, inst_point_id))
+
     print(prop_hash)
     atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
         and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
     atom_deserialised = pickle.loads(base64.b64decode(atom_structure))
-    print(type(atom_deserialised))
 
     connection.close()
 
@@ -1146,6 +1147,20 @@ def get_path_data_between(dict):
 
     intersection = parse_trees[0].intersect(parse_trees[1:])
 
+    main_path = intersection.read_leaves()
+    main_lines = []
+    for element in main_path:
+        if type(element) is CFGEdge:
+            try:
+                line_number = element._instruction.lineno
+                main_lines.append(line_number)
+            except:
+                try:
+                    line_number = element._instruction._structure_obj.lineno
+                    main_lines.append(line_number)
+                except:
+                    pass
+
     path_parameters = []
     intersection.get_parameter_paths(intersection._root_vertex, [], path_parameters)
 
@@ -1176,7 +1191,6 @@ def get_path_data_between(dict):
     for (i, subpath) in enumerate(subpaths):
         lines = []
         for element in subpath:
-            print(type(element))
             try:
                 line_number = element._instruction.lineno
                 lines.append(line_number)
@@ -1187,12 +1201,20 @@ def get_path_data_between(dict):
                 except:
                     pass
 
-        lines_by_subpaths.append({"lines": lines,
+            # fill in gaps in lines
+            final_lines = []
+            for n in range(len(lines)-1):
+                final_lines += [m for m in range(lines[n], lines[n+1]+1)]
+
+        lines_by_subpaths.append({"lines": final_lines,
                                   "observations": parameter_value_indices_to_times[i],
                                   "severities": parameter_value_indices_to_severities[i]})
 
 
-    return lines_by_subpaths
+    return {
+        "parameters": lines_by_subpaths,
+        "main_lines": main_lines
+    }
 
 
 
