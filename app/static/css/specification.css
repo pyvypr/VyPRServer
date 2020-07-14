@@ -150,7 +150,17 @@
   width: 100%;
   background-color: white;
   color: #fff;
-  text-align: center;;
+  text-align: center;
+  position: absolute;
+  z-index: 1;
+}
+
+.path {
+  /*visibility: hidden;*/
+  display: none;
+  width: 100%;
+  background-color: white;
+  color: black;
   position: absolute;
   z-index: 1;
 }
@@ -168,6 +178,10 @@
 }*/
 
 .plot .show{
+  display: block;
+}
+
+.path .show{
   display: block;
 }
 
