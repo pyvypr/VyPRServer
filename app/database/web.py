@@ -1178,7 +1178,11 @@ def get_path_data_between(dict):
                 line_number = element._instruction.lineno
                 lines.append(line_number)
             except:
-                pass
+                try:
+                    line_number = element._instruction._structure_obj.lineno
+                    lines.append(line_number)
+                except:
+                    pass
 
         lines_by_subpaths.append({"lines": lines,
                                   "observations": parameter_value_indices_to_times[i],
