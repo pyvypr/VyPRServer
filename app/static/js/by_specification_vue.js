@@ -5,6 +5,7 @@ var plot_visible = false;
 var path_visible = false;
 var plot_data = null;
 var selected_binding = undefined;
+var sidebar_scroll_timeout = null;
 var Store = {
   status : {
     loading : false,
@@ -313,6 +314,14 @@ Vue.component("selection-tabs", {
     show_calls : function() {
       return this.store.current_tab == "function-calls";
     }
+  },
+  mounted : function() {
+    $(window).scroll(function() {
+        clearTimeout(sidebar_scroll_timeout);
+        sidebar_scroll_timeout = setTimeout(function() {
+            $(".selection-phases").animate({"margin-top": $(window).scrollTop()});
+        }, 100);
+    });
   }
 });
 
@@ -830,8 +839,7 @@ Vue.component("code-view", {
           <alert v-if="calls_are_selected" message="Select a binding in the code listing below." />
           <alert v-if="subatom_is_selected" message="Hover over a critical statement to see analysis options." />
           <div v-for="(line,index) in code_lines" :key="index" :class="line.class"
-          :id="line.id" :style="line.background" :save-background-color="line.color"
-          v-show="line.show">
+          :id="line.id" :style="line.background" :save-background-color="line.color">
             <b> {{line.line_number}} </b>
             <span class="language-python" v-html="line.content"> </span>
             <span v-if="line.addmenu"><a href="#" class="badge options" @click="toggle_menu($event)">options</a></span>
@@ -840,7 +848,7 @@ Vue.component("code-view", {
             class="binding-button" :binding-button="b.binding" :style="b.font"
             @click="selectBinding(b.binding, b.subtree, b.lines)">binding {{b.binding}}</button>
             </span>
-            <p v-show="line.showempty" class="empty-line" :id="line.emptyid"><b> ... </b><br> </p>
+            <!--<p v-show="line.showempty" class="empty-line" :id="line.emptyid"><b> ... </b><br> </p>-->
             <dropdown v-if="line.addmenu" :tree="this.tree" :dict="line.dict" :binding="this.binding"
             :line=line.line_number @firstselected="selectOther($event)"> </dropdown>
           </div>
