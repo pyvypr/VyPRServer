@@ -192,9 +192,11 @@ var highlight_paths = function(root_obj) {
   // the selected option was to highlight the paths by severity
   if (type == "between-path"){
     axios.post('/get_path_data_between/', data).then(function(response){
-      var resp = response.data.parameters;
+      var resp = response.data.parameter_values;
       var main_lines = response.data.main_lines;
-      console.log(resp);
+      var parameter_lines = response.data.parameters;
+      console.log("parameter lines received");
+      console.log(parameter_lines);
       var lines_to_colors = [];
 
       if(resp.length > 0) {
@@ -224,16 +226,20 @@ var highlight_paths = function(root_obj) {
                         color: "hsl("+avg_index+", 78%, 90%)"};
             lines_to_colors.push(dict);
           }
-          var data = {first_line: first_line,
-                      last_line: last_line,
-                      lines_to_colors: lines_to_colors,
-                      main_lines: main_lines}
+          var data = {
+            first_line: first_line,
+            last_line: last_line,
+            lines_to_colors: lines_to_colors,
+            main_lines: main_lines,
+            parameter_lines: parameter_lines
+          };
       } else {
           var data = {
             first_line: first_line,
             last_line: last_line,
             lines_to_colors: [],
-            main_lines: main_lines
+            main_lines: main_lines,
+            parameter_lines: []
           };
       }
       that.$root.$emit('path-data-ready', data)
@@ -1153,7 +1159,16 @@ Vue.component("code-view", {
         whole_code[data_ready["main_lines"][i]-start].background = "background-color: #cce0ff";
       }
 
-      that.code_lines = whole_code;
+      console.log("highlighting parameters");
+      console.log(data_ready["parameter_lines"]);
+
+      for (var i=0; i<data_ready["parameter_lines"].length; i++) {
+        whole_code[data_ready["parameter_lines"][i]-start].background = "background-color: lightgrey";
+        whole_code[data_ready["parameter_lines"][i]-start].addmenu = true;
+
+      }
+
+      obj2.code_lines = whole_code;
       //$("#path-wrapper").addClass("show");
     })
   }
