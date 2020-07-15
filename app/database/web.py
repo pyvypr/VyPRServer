@@ -1141,9 +1141,9 @@ def get_path_data_between(dict):
         #sign=-1 if verdict value=0 and sign=1 if verdict is true
         sign=-1+2*(element[6])
 
-        parse_trees_obs_value_pairs.append((parse_tree, time_taken, sign*d))
+        parse_trees_obs_value_pairs.append((parse_tree, time_taken, sign*d, element[2]))
 
-    parse_trees, times, severities = zip(*parse_trees_obs_value_pairs)
+    parse_trees, times, severities, x_axis = zip(*parse_trees_obs_value_pairs)
 
     intersection = parse_trees[0].intersect(parse_trees[1:])
 
@@ -1166,6 +1166,7 @@ def get_path_data_between(dict):
 
     parameter_value_indices_to_times = {}
     parameter_value_indices_to_severities = {}
+    parameter_value_indices_to_x_axis = {}
     subpaths = []
 
     if len(path_parameters) > 0:
@@ -1182,9 +1183,11 @@ def get_path_data_between(dict):
           if subpath_index not in parameter_value_indices_to_times:
             parameter_value_indices_to_times[subpath_index] = [times[n]]
             parameter_value_indices_to_severities[subpath_index] = [severities[n]]
+            parameter_value_indices_to_x_axis[subpath_index] = [x_axis[n]]
           else:
             parameter_value_indices_to_times[subpath_index].append(times[n])
             parameter_value_indices_to_severities[subpath_index].append(severities[n])
+            parameter_value_indices_to_x_axis[subpath_index].append(x_axis[n])
 
         lines_by_subpaths = []
         for (i, subpath) in enumerate(subpaths):
@@ -1207,7 +1210,8 @@ def get_path_data_between(dict):
 
             lines_by_subpaths.append({"lines": final_lines,
                                       "observations": parameter_value_indices_to_times[i],
-                                      "severities": parameter_value_indices_to_severities[i]})
+                                      "severities": parameter_value_indices_to_severities[i],
+                                      "x": parameter_value_indices_to_x_axis[i]})
     else:
 
         lines_by_subpaths = []

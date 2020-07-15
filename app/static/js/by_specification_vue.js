@@ -4,6 +4,7 @@ var code_highlight_palette = ["#cae2dc", "#eee3cd", "#cad7f2", "#ded4e7", "#e3e3
 var plot_visible = false;
 var path_visible = false;
 var plot_data = null;
+var path_plot_data = null;
 var selected_binding = undefined;
 var sidebar_scroll_timeout = null;
 var Store = {
@@ -25,7 +26,8 @@ var Store = {
   first_point_selected : false,
   type_of_atom : undefined,
   tests_exist : null,
-  current_tab : null
+  current_tab : null,
+  path_view : false
 };
 
 var start_loading = function() {
@@ -178,6 +180,24 @@ var generate_plot = function(root_obj) {
       start_loading();
     })
   }
+  if (type == "between-path-severity" || type == "between-path-observation") {
+    if(type == "between-path-severity") {
+
+    } else {
+      var myData = [];
+      for (var i=0; i<path_plot_data.length; i++){
+        myData.push({key: "path index: " + i, values: []});
+        for (var j=0; j<path_plot_data[i]["x"].length; j++) {
+          myData[i].values.push({label: new Date(Date.parse(path_plot_data[i]["x"][j])),
+                                 value: path_plot_data[i]["observations"][j]});
+        }
+      }
+    }
+
+    // emit plot data ready event so the plot will be drawn
+    that.$root.$emit("plot-data-ready", myData);
+    start_loading();
+  }
 };
 
 var highlight_paths = function(root_obj) {
@@ -193,6 +213,7 @@ var highlight_paths = function(root_obj) {
   if (type == "between-path"){
     axios.post('/get_path_data_between/', data).then(function(response){
       var resp = response.data.parameters;
+      path_plot_data = resp;
       var main_lines = response.data.main_lines;
       console.log(resp);
       var lines_to_colors = [];
@@ -236,7 +257,7 @@ var highlight_paths = function(root_obj) {
             main_lines: main_lines
           };
       }
-      that.$root.$emit('path-data-ready', data)
+      that.$root.$emit('path-data-ready', data);
     })
   }
 
@@ -835,6 +856,7 @@ Vue.component("code-view", {
         </div>
         <plot></plot>
         <!--<path-code :code="code_lines" :start="start_line"></path-code>-->
+        <path-options v-if="store.path_view"></path-options>
         <div v-if="code_lines" class='code_listing' id="code-listing">
           <alert v-if="calls_are_selected" message="Select a binding in the code listing below." />
           <alert v-if="subatom_is_selected" message="Hover over a critical statement to see analysis options." />
@@ -918,6 +940,7 @@ Vue.component("code-view", {
       this.binding = binding;
       selected_binding = binding;
       this.tree = tree;
+      this.store.path_view = false;
       this.$root.$emit("binding-selected", tree);
     },
     selectOther : function(list){
@@ -1021,6 +1044,8 @@ Vue.component("code-view", {
         whole_code[i].class = "code_listing_line";
         whole_code[i].background = "background-color: transparent";
       }
+      obj2.store.path_view = false;
+
 
       // iterate through the bindings to highlight the lines and separate those paired with
       // a quantifier from those that are of interest because a subatom generates observations there
@@ -1116,6 +1141,7 @@ Vue.component("code-view", {
 
       // clean up any previous dropdowns and reset highlights back to a light colour
       // reset the class of the line back to non-clickable
+      obj2.store.path_view = false;
       for (var i=0; i<whole_code.length; i++){
         if (whole_code[i].color) {
           whole_code[i].background = "background-color: #ebf2ee";
@@ -1153,8 +1179,7 @@ Vue.component("code-view", {
         whole_code[data_ready["main_lines"][i]-start].background = "background-color: #cce0ff";
       }
 
-      that.code_lines = whole_code;
-      //$("#path-wrapper").addClass("show");
+      obj2.store.path_view = true;
     })
   }
 })
@@ -1603,8 +1628,8 @@ Vue.component("plot", {
     is_severity_plot : function() {
       return this.store.plot.type == "severity" || this.store.plot.type == "between-severity" || this.store.plot.type == "mixed-severity";
     },
-    is_mixed_observation_plot : function() {
-      return this.store.plot.type == "mixed-observation"
+    needs_legend : function() {
+      return this.store.plot.type == "mixed-observation" || this.store.plot.type == "between-path-observation";
     }
   },
   mounted(){
@@ -1623,7 +1648,7 @@ Vue.component("plot", {
       $("#plot-wrapper").addClass("show");
       // set height of plot wrapper
       $("#plot-wrapper").height(
-        $(".panel.panel-success.code-view").outerHeight() -
+        $(".panel.panel-success.function-calls").outerHeight() -
         $(".panel.panel-success.code-view").find(".panel-heading").first().outerHeight() -
         $("#specification_listing").outerHeight());
       $("#plot-svg").width($("#code-listing").outerWidth());
@@ -1642,7 +1667,7 @@ Vue.component("plot", {
           .y(function(d) { return d.value })
           .reduceXTicks(true)    //alternatively, use staggering or rotated labels to prevent overlapping
           .showControls(false)   //Allow user to switch between 'Grouped' and 'Stacked' mode.
-          .showLegend(that.is_mixed_observation_plot)
+          .showLegend(that.needs_legend)
           .color(["#2b5fed", "#f5b52c"])
 
         // omitting date from time format - moslty the difference is in seconds
@@ -1776,6 +1801,26 @@ Vue.component("path-code", {
     }
   }
 
+})
+
+
+Vue.component("path-options", {
+  template: `
+    <div id="path-options">
+      <p>{{message}} </p>
+      <a href="#" @click="plot($event, 'observation')">Plot observations grouped by paths taken</a>
+      <a href="#" @click="plot($event, 'severity')">Plot verdict severity by paths</a>
+    </div>`,
+  data(){
+    return {message: "Detected paths: " + path_plot_data.length}
+  },
+  methods: {
+    plot: function(e, type){
+      e.preventDefault();
+      Store.plot.type = "between-path-" + type;
+      generate_plot(this);
+    }
+  }
 })
 
 

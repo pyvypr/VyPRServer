@@ -285,3 +285,9 @@
 .path #path-controls a.close-path:hover {
   opacity: 1.0;
 }
+
+#path-options a {
+  padding: 3px;
+  border-radius: 5px;
+  background-color: #e6e9ed;
+}
