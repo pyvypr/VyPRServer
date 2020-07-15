@@ -1284,15 +1284,15 @@ Vue.component("dropdown", {
           new_list.push(plot_data["other_lines"][i]["id"]);
         }
       }
-      return {options: [{text: "Fix this point as the other one and plot observations",
+      return {options: [{text: "Select this statement and plot observations",
                          data: {action: between_or_mixed + "-observation-plot",
                                 type : between_or_mixed + "-observation",
                                 new_points: new_list}},
-                        {text: "Fix this point as the other one and plot severity",
+                        {text: "Select this statement and plot severity",
                          data: {action: between_or_mixed + "-severity-plot",
                                 type : between_or_mixed + "-severity",
                                 new_points: new_list}},
-                        {text: "Fix this point as the other one and highlight paths by severity",
+                        {text: "Select this statement and highlight paths by severity",
                          data: {action: between_or_mixed + "-path",
                                 type : between_or_mixed + "-path",
                                 new_points: new_list}}]}
@@ -1364,7 +1364,7 @@ Vue.component("dropdown", {
             }
           }
         }
-        option = {text: 'Fix this point and select the other one',
+        option = {text: 'Select this statement and highlight others that can form a pair',
                   data: {action: (atom_type=="timeBetween") ? "between-select" : "mixed-select",
                          type : (atom_type=="timeBetween") ? "between-select" : "mixed-select",
                          other_lines: other_points_list,
