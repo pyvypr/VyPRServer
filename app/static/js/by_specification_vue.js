@@ -645,8 +645,8 @@ Vue.component("function-calls", {
           <div v-if="!message" class="list-group-item">
             <p><a href="#" @click="previous($event)">&lt; Back</a></p>
             <b>From</b> <vue-mask id="filter-from" v-model="filter_from" mask="00/00/0000 00:00:00"
-                         placeholder="DD/MM/YYYY hh:mm:ss" :raw="false"> </vue-mask>
-            <b>To</b> <vue-mask id="filter-to" v-model="filter_to" mask="00/00/0000 00:00:00"
+                         placeholder="DD/MM/YYYY hh:mm:ss" :raw="false"> </vue-mask> <br>
+            <b>To &nbsp;&nbsp;&nbsp; </b> <vue-mask id="filter-to" v-model="filter_to" mask="00/00/0000 00:00:00"
                        placeholder="DD/MM/YYYY hh:mm:ss" :raw="false"> </vue-mask>
             <button @click="select_filtered()"> Filter calls </button>
           </div>
@@ -834,7 +834,7 @@ Vue.component("code-view", {
           <specification :spec="this.specification_code" :change="1" />
         </div>
         <plot></plot>
-        <path-code :code="code_lines" :start="start_line"></path-code>
+        <!--<path-code :code="code_lines" :start="start_line"></path-code>-->
         <div v-if="code_lines" class='code_listing' id="code-listing">
           <alert v-if="calls_are_selected" message="Select a binding in the code listing below." />
           <alert v-if="subatom_is_selected" message="Hover over a critical statement to see analysis options." />
@@ -897,6 +897,9 @@ Vue.component("code-view", {
         line.class = "code_listing_line";
         if (line.color){
           line.background = "background-color: #ebf2ee";
+        }
+        else {
+          whole_code[i].background = "background-color: transparent";
         }
         for (var j=0; j<line.buttons.length; j++){
           if (line.buttons[j].binding == binding){
@@ -1016,6 +1019,7 @@ Vue.component("code-view", {
         whole_code[i].buttons = [];
         whole_code[i].addmenu = false;
         whole_code[i].class = "code_listing_line";
+        whole_code[i].background = "background-color: transparent";
       }
 
       // iterate through the bindings to highlight the lines and separate those paired with
@@ -1118,6 +1122,9 @@ Vue.component("code-view", {
           whole_code[i].addmenu = false;
           whole_code[i].class = "code_listing_line";
         }
+        else {
+          whole_code[i].background = "background-color: transparent";
+        }
       }
 
       // now highlight and add dropdowns to the lines in lines_list
@@ -1128,6 +1135,26 @@ Vue.component("code-view", {
         line.addmenu = true;
         line.class = "code_listing_line code_listing_line-clickable";
       }
+    })
+    this.$root.$on('path-data-ready', function(data_ready){
+      var whole_code = obj2.code_lines;
+      console.log(data_ready);
+      var start = obj2.start_line;
+
+      for (var i=0; i<data_ready["lines_to_colors"].length; i++) {
+        var dict = data_ready["lines_to_colors"][i];
+        for (var j=0; j<dict["lines"].length; j++) {
+          console.log(dict["color"])
+          whole_code[dict["lines"][j]-start].background = "background-color: " + dict["color"];
+        }
+      }
+
+      for (var i=0; i<data_ready["main_lines"].length; i++) {
+        whole_code[data_ready["main_lines"][i]-start].background = "background-color: #cce0ff";
+      }
+
+      that.code_lines = whole_code;
+      //$("#path-wrapper").addClass("show");
     })
   }
 })
