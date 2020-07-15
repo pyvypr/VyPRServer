@@ -1149,6 +1149,7 @@ def get_path_data_between(dict):
 
     main_path = intersection.read_leaves()
     main_lines = []
+    parameter_lines = []
     for element in main_path:
         if type(element) is CFGEdge:
             try:
@@ -1156,8 +1157,19 @@ def get_path_data_between(dict):
                 main_lines.append(line_number)
             except:
                 try:
-                    line_number = element._instruction._structure_obj.lineno
+                    line_number = element._structure_obj.lineno
                     main_lines.append(line_number)
+                except:
+                    pass
+        else:
+
+            try:
+                line_number = element._instruction.lineno
+                parameter_lines.append(line_number)
+            except:
+                try:
+                    line_number = element._structure_obj.lineno
+                    parameter_lines.append(line_number)
                 except:
                     pass
 
@@ -1218,8 +1230,9 @@ def get_path_data_between(dict):
 
 
     return {
-        "parameters": lines_by_subpaths,
-        "main_lines": main_lines
+        "parameter_values": lines_by_subpaths,
+        "main_lines": main_lines,
+        "parameters": parameter_lines
     }
 
 
