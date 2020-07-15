@@ -1168,47 +1168,49 @@ def get_path_data_between(dict):
     parameter_value_indices_to_severities = {}
     subpaths = []
 
-    if len(path_parameters) == 0:
-        path_parameters = [[]]
+    if len(path_parameters) > 0:
 
-    n_of_trees = len(parse_trees)
-    for (n, parse_tree) in enumerate(parse_trees):
-      subtree = parse_tree.get_parameter_subtree(path_parameters[0])
-      subpath = subtree.read_leaves()
-      if subpath in subpaths:
-        subpath_index = subpaths.index(subpath)
-      else:
-        subpaths.append(subpath)
-        subpath_index = len(subpaths)-1
-      if subpath_index not in parameter_value_indices_to_times:
-        parameter_value_indices_to_times[subpath_index] = [times[n]]
-        parameter_value_indices_to_severities[subpath_index] = [severities[n]]
-      else:
-        parameter_value_indices_to_times[subpath_index].append(times[n])
-        parameter_value_indices_to_severities[subpath_index].append(severities[n])
+        n_of_trees = len(parse_trees)
+        for (n, parse_tree) in enumerate(parse_trees):
+          subtree = parse_tree.get_parameter_subtree(path_parameters[0])
+          subpath = subtree.read_leaves()
+          if subpath in subpaths:
+            subpath_index = subpaths.index(subpath)
+          else:
+            subpaths.append(subpath)
+            subpath_index = len(subpaths)-1
+          if subpath_index not in parameter_value_indices_to_times:
+            parameter_value_indices_to_times[subpath_index] = [times[n]]
+            parameter_value_indices_to_severities[subpath_index] = [severities[n]]
+          else:
+            parameter_value_indices_to_times[subpath_index].append(times[n])
+            parameter_value_indices_to_severities[subpath_index].append(severities[n])
 
-    lines_by_subpaths = []
-    for (i, subpath) in enumerate(subpaths):
-        lines = []
-        for element in subpath:
-            try:
-                line_number = element._instruction.lineno
-                lines.append(line_number)
-            except:
+        lines_by_subpaths = []
+        for (i, subpath) in enumerate(subpaths):
+            lines = []
+            for element in subpath:
                 try:
-                    line_number = element._instruction._structure_obj.lineno
+                    line_number = element._instruction.lineno
                     lines.append(line_number)
                 except:
-                    pass
+                    try:
+                        line_number = element._instruction._structure_obj.lineno
+                        lines.append(line_number)
+                    except:
+                        pass
 
-            # fill in gaps in lines
-            final_lines = []
-            for n in range(len(lines)-1):
-                final_lines += [m for m in range(lines[n], lines[n+1]+1)]
+                # fill in gaps in lines
+                final_lines = []
+                for n in range(len(lines)-1):
+                    final_lines += [m for m in range(lines[n], lines[n+1]+1)]
 
-        lines_by_subpaths.append({"lines": final_lines,
-                                  "observations": parameter_value_indices_to_times[i],
-                                  "severities": parameter_value_indices_to_severities[i]})
+            lines_by_subpaths.append({"lines": final_lines,
+                                      "observations": parameter_value_indices_to_times[i],
+                                      "severities": parameter_value_indices_to_severities[i]})
+    else:
+
+        lines_by_subpaths = []
 
 
     return {

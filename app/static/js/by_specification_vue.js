@@ -196,35 +196,45 @@ var highlight_paths = function(root_obj) {
       console.log(resp);
       var lines_to_colors = [];
 
-      var all_severities = resp[0]["severities"];
-      for (var i=1; i<resp.length; i++) {
-        all_severities.concat(resp[i]["severities"]);
-      }
-      var min_sev = Math.min(...all_severities);
-      var max_sev = Math.max(...all_severities);
-      var negative_range = min_sev<0 ? (0 - min_sev) : 0;
-      var positive_range = max_sev>0 ? (max_sev) : 0;
+      if(resp.length > 0) {
 
-      for (var i=0; i<resp.length; i++) {
-        var avg = 0;
-        for (var j=0; j<resp[i]["severities"].length; j++){
-          avg += resp[i]["severities"][j];
-        }
-        avg /= resp[i]["severities"].length;
-        var avg_index
-        if (avg < 0) {
-          avg_index = Math.round((avg - min_sev)/negative_range * 60);
-        } else {
-          avg_index = Math.round(60 + avg/positive_range * 60);
-        }
-        var dict = {lines: resp[i]["lines"],
-                    color: "hsl("+avg_index+", 78%, 90%)"};
-        lines_to_colors.push(dict);
+          var all_severities = resp[0]["severities"];
+          for (var i=1; i<resp.length; i++) {
+            all_severities.concat(resp[i]["severities"]);
+          }
+          var min_sev = Math.min(...all_severities);
+          var max_sev = Math.max(...all_severities);
+          var negative_range = min_sev<0 ? (0 - min_sev) : 0;
+          var positive_range = max_sev>0 ? (max_sev) : 0;
+
+          for (var i=0; i<resp.length; i++) {
+            var avg = 0;
+            for (var j=0; j<resp[i]["severities"].length; j++){
+              avg += resp[i]["severities"][j];
+            }
+            avg /= resp[i]["severities"].length;
+            var avg_index
+            if (avg < 0) {
+              avg_index = Math.round((avg - min_sev)/negative_range * 60);
+            } else {
+              avg_index = Math.round(60 + avg/positive_range * 60);
+            }
+            var dict = {lines: resp[i]["lines"],
+                        color: "hsl("+avg_index+", 78%, 90%)"};
+            lines_to_colors.push(dict);
+          }
+          var data = {first_line: first_line,
+                      last_line: last_line,
+                      lines_to_colors: lines_to_colors,
+                      main_lines: main_lines}
+      } else {
+          var data = {
+            first_line: first_line,
+            last_line: last_line,
+            lines_to_colors: [],
+            main_lines: main_lines
+          };
       }
-      var data = {first_line: first_line,
-                  last_line: last_line,
-                  lines_to_colors: lines_to_colors,
-                  main_lines: main_lines}
       that.$root.$emit('path-data-ready', data)
     })
   }
