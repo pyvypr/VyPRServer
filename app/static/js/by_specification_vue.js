@@ -984,6 +984,10 @@ Vue.component("code-view", {
   },
   mounted(){
     var obj2 = this;
+    $("#code-listing").height(
+      $(".panel.panel-success.function-calls").outerHeight() -
+      $(".panel.panel-success.code-view").find(".panel-heading").first().outerHeight() -
+      $("#specification_listing").outerHeight());
     this.$root.$on('tests-selected', function(tree){
       obj2.message = "Select a function and then one or more calls, first.";
       obj2.specification_code = "";
