@@ -286,8 +286,19 @@
   opacity: 1.0;
 }
 
-#path-options a {
-  padding: 3px;
-  border-radius: 5px;
-  background-color: #e6e9ed;
+#path-filters {
+  color: black;
+}
+
+#path-filters a.filter {
+  color: #337ab7 !important;
+}
+
+#path-filters a.filter.active {
+  opacity: 1;
+}
+
+.code_listing {
+  overflow: hidden auto;
+  max-height: 600px;
 }
