@@ -243,10 +243,11 @@ var highlight_paths = function(root_obj) {
 
           var all_severities = resp[0]["severities"];
           for (var i=1; i<resp.length; i++) {
-            all_severities.concat(resp[i]["severities"]);
+            all_severities = all_severities.concat(resp[i]["severities"]);
           }
           var min_sev = Math.min(...all_severities);
           var max_sev = Math.max(...all_severities);
+          
           var negative_range = min_sev<0 ? (0 - min_sev) : 0;
           var positive_range = max_sev>0 ? (max_sev) : 0;
 
@@ -256,7 +257,7 @@ var highlight_paths = function(root_obj) {
               avg += resp[i]["severities"][j];
             }
             avg /= resp[i]["severities"].length;
-            var avg_index
+            var avg_index;
             if (avg < 0) {
               avg_index = Math.round((avg - min_sev)/negative_range * 60);
             } else {
