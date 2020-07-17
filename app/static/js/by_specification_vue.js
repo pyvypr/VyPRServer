@@ -184,6 +184,7 @@ var generate_plot = function(root_obj) {
   }
   if (type == "between-path-severity" || type == "between-path-observation") {
     var path_index = Store.chosen_path_index;
+    Store.plot.current_hash = response.data.path_hash;
     var myData = [{key: "path index: " + path_index, values: []}];
 
     if(type == "between-path-severity") {
@@ -232,6 +233,7 @@ var highlight_paths = function(root_obj) {
   if (type == "between-path"){
     axios.post('/get_path_data_between/', data).then(function(response){
       var resp = response.data.parameter_values;
+      path_plot_hash = response.data.plot_hash;
       path_plot_data = resp;
 
       var main_lines = response.data.main_lines;
