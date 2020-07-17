@@ -202,6 +202,13 @@ table.function-list-table td {
 	padding: 10px;
 }
 
+#specification_listing .inner-part {
+    padding: 4px;
+    background: lightgrey;
+    margin: 4px;
+	border-radius: 5px 5px 5px 5px;
+}
+
 .list-group-item-text.code {
 	font-family: courier new;
 	padding: 4px;

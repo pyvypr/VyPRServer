@@ -1253,11 +1253,13 @@ Vue.component("specification", {
     <div>
       <p v-for="(v, index) in this.bindvars"><span class="list-group-item-text code" :id="v.id" v-html="v.forall"
           :style="v.background"> </span></p>
-      <p class="list-group-item-text code">Check( </p>
-      <p class="list-group-item-text code" v-html="this.vars"></p>
-      <p class="list-group-item-text code" v-html="this.str"></p>
-      <p class="list-group-item-text code">&nbsp;&nbsp;) </p>
-      <p class="list-group-item-text code">)</p>
+      <div class="inner-part">
+        <p><span class="list-group-item-text code">Check( </span></p>
+        <p><span class="list-group-item-text code" v-html="this.vars"></span></p>
+        <p><span class="list-group-item-text code" v-html="this.str"></span></p>
+        <p><span class="list-group-item-text code">&nbsp;&nbsp;) </span></p>
+        <p><span class="list-group-item-text code">)</span></p>
+      </div>
     </div>`,
   data(){
     var spec_dict = this.spec;
