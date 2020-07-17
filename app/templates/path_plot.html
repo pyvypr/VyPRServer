@@ -1,0 +1,28 @@
+<html>
+
+<head>
+    <title>VyPR Analysis Environment | Plot Window</title>
+
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='css/plot.css') }}" rel="stylesheet" />
+    <link rel="stylesheet" type="text/css" href="https://raw.github.com/novus/nvd3/master/src/nv.d3.css"/>
+
+</head>
+
+<body>
+    <div id="app">
+        <plot hash="{{plot_hash}}" quantity="{{quantity}}"></plot>
+    </div>
+</body>
+
+<script type="text/javascript" src="{{ url_for('static', filename='js/jquery-3.3.1.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script src="https://cdn.rawgit.com/novus/nvd3/v1.8.1/build/nv.d3.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js" integrity="sha256-Kg2zTcFO9LXOc7IwcBx1YeUBJmekycsnTsq2RuFHSZU=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue-jquery-mask"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/path_plotting.js') }}"></script>
+
+</html>
