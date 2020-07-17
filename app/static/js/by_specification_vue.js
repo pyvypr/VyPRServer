@@ -209,9 +209,7 @@ var generate_plot = function(root_obj) {
 
     }
 
-    // emit plot data ready event so the plot will be drawn
-    that.$root.$emit("plot-data-ready", myData);
-    start_loading();
+    window.open("/display_plot/" + path_plot_hash, "plot", "width=1000,height=700");
   }
 };
 
