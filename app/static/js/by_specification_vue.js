@@ -855,8 +855,9 @@ Vue.component("function-calls", {
       } else {
         // add data to plot without displaying code interface
         plot_data.calls = function_call_ids;
-        // trigger plotting
-        generate_plot(this);
+        // trigger plotting - since plots are opened in a separate window, we don't
+        // do this for now
+        //generate_plot(this);
       }
     }
   }
