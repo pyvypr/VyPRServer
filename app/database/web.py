@@ -1066,7 +1066,7 @@ def get_path_data_between(dict):
 
     # first, check if the path data was already calculated
     path_results = get_plot(cursor, dict)
-    if len(plot_results) > 0:
+    if len(path_results) > 0:
         print("existing paths found with hash %s" % path_results[0][0])
         # the plot exists, so use the precomputed data
         final_dictionary = json.loads(path_results[0][2])

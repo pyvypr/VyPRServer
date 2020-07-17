@@ -5,6 +5,7 @@ var plot_visible = false;
 var path_visible = false;
 var plot_data = null;
 var path_plot_data = null;
+var path_plot_hash = null;
 var selected_binding = undefined;
 var sidebar_scroll_timeout = null;
 var path_highlight_mode_on = false;
@@ -184,7 +185,7 @@ var generate_plot = function(root_obj) {
   }
   if (type == "between-path-severity" || type == "between-path-observation") {
     var path_index = Store.chosen_path_index;
-    Store.plot.current_hash = response.data.path_hash;
+    Store.plot.current_hash = path_plot_hash;
     var myData = [{key: "path index: " + path_index, values: []}];
 
     if(type == "between-path-severity") {
@@ -233,7 +234,8 @@ var highlight_paths = function(root_obj) {
   if (type == "between-path"){
     axios.post('/get_path_data_between/', data).then(function(response){
       var resp = response.data.parameter_values;
-      path_plot_hash = response.data.plot_hash;
+      path_plot_hash = response.data.path_hash;
+      console.log(path_plot_hash)
       path_plot_data = resp;
 
       var main_lines = response.data.main_lines;
@@ -1593,6 +1595,7 @@ Vue.component("dropdown", {
       }
       else if (data["action"] == "between-path-plot") {
         Store.plot.type = data["type"];
+        Store.plot.current_hash = path_plot_hash;
         generate_plot(this);
       }
 
