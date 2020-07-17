@@ -247,7 +247,7 @@ var highlight_paths = function(root_obj) {
           }
           var min_sev = Math.min(...all_severities);
           var max_sev = Math.max(...all_severities);
-          
+
           var negative_range = min_sev<0 ? (0 - min_sev) : 0;
           var positive_range = max_sev>0 ? (max_sev) : 0;
 
@@ -1000,6 +1000,7 @@ Vue.component("code-view", {
     })
     this.$root.$on('calls-loaded', function(dict){
       start_loading();
+
       obj2.message = "";
       obj2.specification_code = dict["specification_code"];
       axios.get('/get_source_code/'+dict["selected_function_id"]).then(function(response){
