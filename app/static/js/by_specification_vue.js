@@ -1553,25 +1553,45 @@ Vue.component("dropdown", {
         this.$emit("firstselected", data["other_lines"]);
       }
       else if (data["action"] == "between-observation-plot") {
-        plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        if (plot_data["points"].length == 1) {
+          plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        }
+        if (plot_data["points"].length == 2) {
+          plot_data["points"] = [plot_data["points"][0], data["new_points"][0]];
+        }
         plot_data["type"] = "between-observation";
         Store.plot.type = "between-observation";
         generate_plot(this);
       }
       else if (data["action"] == "between-severity-plot") {
-        plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        if (plot_data["points"].length == 1) {
+          plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        }
+        if (plot_data["points"].length == 2) {
+          plot_data["points"] = [plot_data["points"][0], data["new_points"][0]];
+        }
         plot_data["type"] = "between-severity";
         Store.plot.type = "between-severity";
         generate_plot(this);
       }
       else if (data["action"] == "mixed-observation-plot") {
-        plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        if (plot_data["points"].length == 1) {
+          plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        }
+        if (plot_data["points"].length == 2) {
+          plot_data["points"] = [plot_data["points"][0], data["new_points"][0]];
+        }
         plot_data["type"] = "mixed-observation";
         Store.plot.type = "mixed-observation";
         generate_plot(this);
       }
       else if (data["action"] == "mixed-severity-plot") {
-        plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        if (plot_data["points"].length == 1) {
+          plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        }
+        if (plot_data["points"].length == 2) {
+          plot_data["points"] = [plot_data["points"][0], data["new_points"][0]];
+        }
         plot_data["type"] = "mixed-severity";
         Store.plot.type = "mixed-severity";
         generate_plot(this);
@@ -1579,7 +1599,12 @@ Vue.component("dropdown", {
       // TODO
       if (data["action"] == "simple-path") {}
       else if (data["action"] == "between-path") {
-        plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        if (plot_data["points"].length == 1) {
+          plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        }
+        if (plot_data["points"].length == 2) {
+          plot_data["points"] = [plot_data["points"][0], data["new_points"][0]];
+        }
         plot_data["type"] = "between-path";
         plot_data["selected_line_numbers"].push(this.line);
         Store.plot.type = "between-path";
