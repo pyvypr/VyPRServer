@@ -1,4 +1,4 @@
-var code_highlight_palette = ["#cae2dc", "#eee3cd", "#cad7f2", "#ded4e7", "#e3e3e3", "d6eff0"];
+var code_highlight_palette = ["#89c6d9", "#a1cc87", "#f0ad95", "#ded4e7", "#e3e3e3", "d6eff0"];
 //var code_highlight_palette = ["red", "blue", "green"];
 // global plot data, used for when plot are updated with new data
 var plot_visible = false;
@@ -387,7 +387,7 @@ Vue.component("test-data", {
       <div v-show="showTests" class="list-group" id="test-cases-list">
         <alert message="Select a test to browse performance data related to it." />
         <div class="list-group-item">
-          <input type="text" v-model="filter_string" placeholder="Filter tests..."/>
+          <input type="text" v-model="filter_string" placeholder="Filter tests..." class="form-control" />
         </div>
         <form>
         <div v-for="(b, index) in filtered_buttons" :key="index" class="list-group-item">
@@ -511,7 +511,9 @@ Vue.component("machine-function-property", {
         <transition name="slide-fade">
         <div class="list-group" id="function-list">
           <p v-if="store.tests_exist"/>
-          <p v-if="store.tests_exist"><a href="#" @click="previous($event)" style="padding-left: 15px;">&lt; Back</a></p>
+          <p v-if="store.tests_exist">
+            <a href="#" @click="previous($event)" style="padding-left: 15px;" class="btn btn-primary">&lt; Back</a>
+          </p>
           <div id="function-list-data"></div>
           <div class="tab">
             <button v-for="(value,key) in tree" :class="(key===showTab)? 'tablinks active':'tablinks' "
@@ -695,12 +697,14 @@ Vue.component("function-calls", {
           <div v-if="message" class="please-select"><p>{{message}}</p></div>
           <alert v-if="!message" message="Select one or more calls to load performance data." />
           <div v-if="!message" class="list-group-item">
-            <p><a href="#" @click="previous($event)">&lt; Back</a></p>
+            <p><a href="#" @click="previous($event)" class="btn btn-primary">&lt; Back</a></p>
+            <form class="form-inline" action="">
             <b>From</b> <vue-mask id="filter-from" v-model="filter_from" mask="00/00/0000 00:00:00"
-                         placeholder="DD/MM/YYYY hh:mm:ss" :raw="false"> </vue-mask> <br>
+                         placeholder="DD/MM/YYYY hh:mm:ss" :raw="false" class="form-control"> </vue-mask> <br>
             <b>To &nbsp;&nbsp;&nbsp; </b> <vue-mask id="filter-to" v-model="filter_to" mask="00/00/0000 00:00:00"
-                       placeholder="DD/MM/YYYY hh:mm:ss" :raw="false"> </vue-mask>
-            <button @click="select_filtered()"> Filter calls </button>
+                       placeholder="DD/MM/YYYY hh:mm:ss" :raw="false" class="form-control"> </vue-mask>
+            <button @click="select_filtered($event)" class="btn btn-default"> Filter calls </button>
+            </form>
           </div>
           <button v-if="!message" class="list-group-item">
             <input type='checkbox' id="select-all-calls" @click="select_all_calls()"/><b> Select all </b>
@@ -758,7 +762,8 @@ Vue.component("function-calls", {
       stop_loading();
 
     },
-    select_filtered: function(){
+    select_filtered: function(e){
+      e.preventDefault();
       start_loading();
 
       $("#function-call-list input:checkbox").prop("checked", false);
@@ -885,7 +890,6 @@ Vue.component("code-view", {
         <div v-if="specification_code" id='specification_listing'>
           <specification :spec="this.specification_code" :change="1" />
         </div>
-        <code-view-controls></code-view-controls>
         <plot></plot>
         <!--<path-code :code="code_lines" :start="start_line"></path-code>-->
         <div v-if="code_lines" class='code_listing' id="code-listing">
@@ -894,7 +898,7 @@ Vue.component("code-view", {
           <div v-for="(line,index) in code_lines" :key="index" :class="line.class"
           :id="line.id" :style="line.background" :save-background-color="line.color"
           v-show="show_line(line.show)">
-            <b> {{line.line_number}} </b>
+            <span class="line-number"> {{line.line_number}} </span>
             <span class="language-python" v-html="line.content"> </span>
             <span v-if="line.addmenu"><a href="#" class="badge options" @click="toggle_menu($event)">options</a></span>
             <span class="span-binding" :id="line.spanid">
@@ -1252,8 +1256,8 @@ Vue.component("specification", {
   props: ['spec', 'change'],
   template: `
     <div>
-      <p v-for="(v, index) in this.bindvars" class="list-group-item-text code" :id="v.id" v-html="v.forall"
-          :style="v.background"> </p>
+      <p v-for="(v, index) in this.bindvars"><span class="list-group-item-text code" :id="v.id" v-html="v.forall"
+          :style="v.background"> </span></p>
       <p class="list-group-item-text code">Check( </p>
       <p class="list-group-item-text code" v-html="this.vars"></p>
       <p class="list-group-item-text code" v-html="this.str"></p>

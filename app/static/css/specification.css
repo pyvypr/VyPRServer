@@ -62,6 +62,7 @@
   line-height: 2px;
   font-family: arial;
   border-radius: 10px 10px 10px 10px;
+  margin-left: 5px;
 }
 
 .binding-button:hover{
@@ -73,25 +74,33 @@
 }
 
 #specification_listing .subatom-clickable{
-  border: 2px solid #def1fc;
   background-color: #def1fc;
+  box-shadow: 1px 1px 1px 1px #CCC;
+  padding: 4px;
+  border-radius: 5px 5px 5px 5px;
 }
 
 #specification_listing .subatom-clickable-active{
-  border: 2px solid grey;
   background-color: grey;
+  box-shadow: 1px 1px 1px 1px #CCC;
+  padding: 4px;
+  border-radius: 5px 5px 5px 5px;
   color: white;
 }
 
 #specification_listing .subatom-clickable:hover{
-  text-decoration: underline;
+  background-color: grey;
+  color: white;
   cursor: pointer;
 }
 
 .empty-line{
-  background-color: #f5f5f5;
+  background-color: lightgrey;
   margin: 0 0 0;
-
+  text-align: center;
+  color: black;
+  height: 40px;
+  line-height: 30px;
 }
 
 .badge.options {
@@ -301,4 +310,9 @@
 .code_listing {
   overflow: hidden auto;
   height: 77vh;
+}
+
+.line-number {
+  font-weight: bold;
+  width: 34px;
 }
