@@ -204,8 +204,10 @@ table.function-list-table td {
 
 .list-group-item-text.code {
 	font-family: courier new;
-	padding: 2px;
+	padding: 4px;
 	font-family: 12px;
+	margin: 4px;
+	border-radius: 5px 5px 5px 5px;
 }
 
 .list-group-item .list-group-item-text.code {
