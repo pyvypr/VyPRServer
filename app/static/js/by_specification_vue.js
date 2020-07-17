@@ -5,6 +5,7 @@ var plot_visible = false;
 var path_visible = false;
 var plot_data = null;
 var path_plot_data = null;
+var path_plot_hash = null;
 var selected_binding = undefined;
 var sidebar_scroll_timeout = null;
 var path_highlight_mode_on = false;
@@ -178,6 +179,7 @@ var generate_plot = function(root_obj) {
   }
   if (type == "between-path-severity" || type == "between-path-observation") {
     var path_index = Store.chosen_path_index;
+    Store.plot.current_hash = path_plot_hash;
     var myData = [{key: "path index: " + path_index, values: []}];
 
     if(type == "between-path-severity") {
@@ -207,9 +209,7 @@ var generate_plot = function(root_obj) {
 
     }
 
-    // emit plot data ready event so the plot will be drawn
-    that.$root.$emit("plot-data-ready", myData);
-    start_loading();
+    window.open("/display_plot/" + path_plot_hash, "plot", "width=1000,height=700");
   }
 };
 
@@ -226,6 +226,8 @@ var highlight_paths = function(root_obj) {
   if (type == "between-path"){
     axios.post('/get_path_data_between/', data).then(function(response){
       var resp = response.data.parameter_values;
+      path_plot_hash = response.data.path_hash;
+      console.log(path_plot_hash)
       path_plot_data = resp;
 
       var main_lines = response.data.main_lines;
@@ -238,10 +240,11 @@ var highlight_paths = function(root_obj) {
 
           var all_severities = resp[0]["severities"];
           for (var i=1; i<resp.length; i++) {
-            all_severities.concat(resp[i]["severities"]);
+            all_severities = all_severities.concat(resp[i]["severities"]);
           }
           var min_sev = Math.min(...all_severities);
           var max_sev = Math.max(...all_severities);
+
           var negative_range = min_sev<0 ? (0 - min_sev) : 0;
           var positive_range = max_sev>0 ? (max_sev) : 0;
 
@@ -251,7 +254,7 @@ var highlight_paths = function(root_obj) {
               avg += resp[i]["severities"][j];
             }
             avg /= resp[i]["severities"].length;
-            var avg_index
+            var avg_index;
             if (avg < 0) {
               avg_index = Math.round((avg - min_sev)/negative_range * 60);
             } else {
@@ -994,6 +997,10 @@ Vue.component("code-view", {
   },
   mounted(){
     var obj2 = this;
+    $("#code-listing").height(
+      $(".panel.panel-success.function-calls").outerHeight() -
+      $(".panel.panel-success.code-view").find(".panel-heading").first().outerHeight() -
+      $("#specification_listing").outerHeight());
     this.$root.$on('tests-selected', function(tree){
       obj2.message = "Select a function and then one or more calls, first.";
       obj2.specification_code = "";
@@ -1006,6 +1013,7 @@ Vue.component("code-view", {
     this.$root.$on('calls-loaded', function(dict){
       path_highlight_mode_on = false;
       start_loading();
+
       obj2.message = "";
       obj2.specification_code = dict["specification_code"];
       axios.get('/get_source_code/'+dict["selected_function_id"]).then(function(response){
@@ -1580,6 +1588,7 @@ Vue.component("dropdown", {
       }
       else if (data["action"] == "between-path-plot") {
         Store.plot.type = data["type"];
+        Store.plot.current_hash = path_plot_hash;
         generate_plot(this);
       }
 

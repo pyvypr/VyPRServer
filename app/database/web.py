@@ -1064,6 +1064,15 @@ def get_path_data_between(dict):
     connection = get_connection()
     cursor = connection.cursor()
 
+    # first, check if the path data was already calculated
+    path_results = get_plot(cursor, dict)
+    if len(path_results) > 0:
+        print("existing paths found with hash %s" % path_results[0][0])
+        # the plot exists, so use the precomputed data
+        final_dictionary = json.loads(path_results[0][2])
+        final_dictionary["path_hash"] = path_results[0][0]
+        return final_dictionary
+
     calls_list = dict["calls"]
     binding_index = dict["binding"]
     atom_index = dict["atom"]
@@ -1073,7 +1082,6 @@ def get_path_data_between(dict):
         where id in %s order by id"""%list_to_sql_string(points_list)).fetchall()
     path_length_lhs = lengths[0][0]
     path_length_rhs = lengths[1][0]
-    print(path_length_lhs)
 
     query_string = """select o1.observed_value, o2.observed_value,
                              o1.observation_time, o2.observation_time,
@@ -1202,6 +1210,7 @@ def get_path_data_between(dict):
             parameter_value_indices_to_x_axis[subpath_index].append(x_axis[n])
 
         lines_by_subpaths = []
+
         for (i, subpath) in enumerate(subpaths):
             lines = []
             for element in subpath:
@@ -1220,6 +1229,7 @@ def get_path_data_between(dict):
                 for n in range(len(lines)-1):
                     final_lines += [m for m in range(lines[n], lines[n+1]+1)]
 
+            if len(lines) == 1: final_lines = lines
             lines_by_subpaths.append({"lines": final_lines,
                                       "observations": parameter_value_indices_to_times[i],
                                       "severities": parameter_value_indices_to_severities[i],
@@ -1228,12 +1238,24 @@ def get_path_data_between(dict):
 
         lines_by_subpaths = []
 
-
-    return {
+    return_data = {
         "parameter_values": lines_by_subpaths,
         "main_lines": main_lines,
         "parameters": parameter_lines
     }
+
+    # generate a hash of the data
+    path_hash = hashlib.sha1()
+    path_hash.update(json.dumps(return_data))
+    path_hash.update(json.dumps(dict))
+    path_hash = path_hash.hexdigest()
+    # store the plot
+    store_plot(cursor, path_hash, dict, return_data)
+    connection.commit()
+
+    connection.close()
+    return_data["path_hash"] = path_hash
+    return return_data
 
 
 
