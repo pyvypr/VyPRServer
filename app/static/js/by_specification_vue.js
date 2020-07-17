@@ -200,6 +200,8 @@ var generate_plot = function(root_obj) {
                               color: color});
       }
 
+      window.open("/display_path_plot/" + path_plot_hash + "/severity/", "plot", "width=1000,height=700");
+
     } else {
 
       for (var i=0; i<path_plot_data[path_index]["x"].length; i++) {
@@ -207,9 +209,9 @@ var generate_plot = function(root_obj) {
                                  value: path_plot_data[path_index]["observations"][i]});
       }
 
-    }
+      window.open("/display_path_plot/" + path_plot_hash + "/observation/", "plot", "width=1000,height=700");
 
-    window.open("/display_plot/" + path_plot_hash, "plot", "width=1000,height=700");
+    }
   }
 };
 

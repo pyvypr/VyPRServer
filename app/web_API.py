@@ -134,6 +134,16 @@ def display_plot(plot_hash):
     """
     return render_template("plot.html", plot_hash=plot_hash)
 
+
+@app_object.route("/display_path_plot/<plot_hash>/<quantity>/", methods=["GET"])
+def display_path_plot(plot_hash, quantity):
+    """
+    Given a uniquely identifying path plot hash and a quantity indicating either observation or severity,
+    return the plotting page to the user, which will render the plot in the same way as the inline case.
+    """
+    return render_template("path_plot.html", plot_hash=plot_hash, quantity=quantity)
+
+
 @app_object.route("/download_plot/<plot_hash>/", methods=["GET"])
 def download_plot(plot_hash):
     """
