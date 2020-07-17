@@ -134,7 +134,7 @@ div.please-select {
 
 #function-call-list {
     overflow: hidden scroll;
-    max-height: 90vh;
+    max-height: 95vh;
 }
 
 #function-call-list input[type=checkbox] {

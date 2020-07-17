@@ -7,6 +7,7 @@ var plot_data = null;
 var path_plot_data = null;
 var selected_binding = undefined;
 var sidebar_scroll_timeout = null;
+var path_highlight_mode_on = false;
 var Store = {
   status : {
     loading : false,
@@ -665,6 +666,8 @@ Vue.component("subtreelevel", {
       // switch to the tab showing the list of calls
       this.store.current_tab = 'function-calls';
 
+      path_highlight_mode_on = false;
+
       this.store.selected_property_hash = property_hash;
       this.$root.$emit(
         'function-select',
@@ -880,13 +883,15 @@ Vue.component("code-view", {
         <div v-if="specification_code" id='specification_listing'>
           <specification :spec="this.specification_code" :change="1" />
         </div>
+        <code-view-controls></code-view-controls>
         <plot></plot>
         <!--<path-code :code="code_lines" :start="start_line"></path-code>-->
         <div v-if="code_lines" class='code_listing' id="code-listing">
           <alert v-if="calls_are_selected" message="Select a binding in the code listing below." />
           <alert v-if="subatom_is_selected" message="Hover over a critical statement to see analysis options." />
           <div v-for="(line,index) in code_lines" :key="index" :class="line.class"
-          :id="line.id" :style="line.background" :save-background-color="line.color">
+          :id="line.id" :style="line.background" :save-background-color="line.color"
+          v-show="show_line(line.show)">
             <b> {{line.line_number}} </b>
             <span class="language-python" v-html="line.content"> </span>
             <span v-if="line.addmenu"><a href="#" class="badge options" @click="toggle_menu($event)">options</a></span>
@@ -895,7 +900,7 @@ Vue.component("code-view", {
             class="binding-button" :binding-button="b.binding" :style="b.font"
             @click="selectBinding(b.binding, b.subtree, b.lines)">binding {{b.binding}}</button>
             </span>
-            <!--<p v-show="line.showempty" class="empty-line" :id="line.emptyid"><b> ... </b><br> </p>-->
+            <p v-show="show_empty_line_marker(line.showempty)" class="empty-line" :id="line.emptyid"><b> ... </b><br> </p>
             <dropdown v-if="line.addmenu" :tree="this.tree" :dict="line.dict" :binding="this.binding"
             :line=line.line_number @firstselected="selectOther($event)"> </dropdown>
           </div>
@@ -924,6 +929,12 @@ Vue.component("code-view", {
     }
   },
   methods:{
+    show_line : function(line_show_flag) {
+      return line_show_flag || path_highlight_mode_on;
+    },
+    show_empty_line_marker : function(line_show_flag) {
+      return !path_highlight_mode_on && line_show_flag;
+    },
     toggle_menu : function(e) {
       e.preventDefault();
       $(e.target).parent().parent().find(".dropdown-content").slideToggle();
@@ -999,6 +1010,7 @@ Vue.component("code-view", {
       obj2.store = Store;
     })
     this.$root.$on('calls-loaded', function(dict){
+      path_highlight_mode_on = false;
       start_loading();
 
       obj2.message = "";
@@ -1062,6 +1074,7 @@ Vue.component("code-view", {
     })
     this.$root.$on('calls-selected', function(tree){
       obj2.tree = tree;
+      path_highlight_mode_on = false;
 
       var show_lines = []; //stores all lines that are of interest plus a few around them - we will hide the rest
       var start_line = obj2.start_line;
@@ -1317,6 +1330,7 @@ Vue.component("specification", {
 
     this.$root.$on('binding-selected', function(tree){
       Store.binding_selected = true;
+      path_highlight_mode_on = false;
       // clean up subatom links from previous binding selection
       remove_subatoms = $(".subatom-clickable");
       if (typeof(remove_subatoms) != 'string'){
@@ -1343,6 +1357,7 @@ Vue.component("specification", {
     })
 
     this.$root.$on("subatom-selected", function(dict){
+      path_highlight_mode_on = false;
       // when a subatom is selected, change its class to active - this affects its style
       $($(".subatom-clickable-active")[0]).attr("class", "subatom-clickable");
       var subatom = $(
@@ -1567,6 +1582,7 @@ Vue.component("dropdown", {
         plot_data["type"] = "between-path";
         plot_data["selected_line_numbers"].push(this.line);
         Store.plot.type = "between-path";
+        path_highlight_mode_on = true;
         highlight_paths(this);
       }
       else if (data["action"] == "between-path-plot") {
