@@ -4,6 +4,10 @@ body {
 	font-family: arial;
 }
 
+.container-fluid.plot {
+  padding: 10px;
+}
+
 div.alert {
   margin: 10px;
 }
