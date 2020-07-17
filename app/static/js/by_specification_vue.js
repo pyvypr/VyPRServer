@@ -103,9 +103,7 @@ var generate_plot = function(root_obj) {
                               color: color});
       }
 
-      // emit plot data ready event so the plot will be drawn
-      that.$root.$emit("plot-data-ready", myData);
-      start_loading();
+      window.open("/display_plot/" + response.data.plot_hash, "plot", "width=1000,height=700");
     });
   }
   if (type == "between-severity" || type == "between-observation"){
@@ -136,9 +134,7 @@ var generate_plot = function(root_obj) {
                               color: color});
       }
 
-      // emit plot data ready event so the plot will be drawn
-      that.$root.$emit("plot-data-ready", myData);
-      start_loading();
+      window.open("/display_plot/" + response.data.plot_hash, "plot", "width=1000,height=700");
     })
   }
   if (type == "mixed-severity" || type == "mixed-observation"){
@@ -177,9 +173,7 @@ var generate_plot = function(root_obj) {
         }
       }
 
-      // emit plot data ready event so the plot will be drawn
-      that.$root.$emit("plot-data-ready", myData);
-      start_loading();
+      window.open("/display_plot/" + response.data.plot_hash, "plot", "width=1000,height=700");
     })
   }
   if (type == "between-path-severity" || type == "between-path-observation") {
