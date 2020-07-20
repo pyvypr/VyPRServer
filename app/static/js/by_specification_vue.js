@@ -69,7 +69,7 @@ var generate_plot = function(root_obj) {
   // set global plot data
   // this is used when function calls are selected - if a plot is already being shown,
   // the new data will be merged into the plot
-  plot_visible = true;
+  // plot_visible = true;
   // get global plot data
   var data = plot_data;
 
@@ -937,7 +937,7 @@ Vue.component("code-view", {
       return this.store.subatom_selected;
     }
   },
-  methods:{
+  methods : {
     show_line : function(line_show_flag) {
       return line_show_flag || path_highlight_mode_on;
     },
@@ -1143,7 +1143,7 @@ Vue.component("code-view", {
         var current_line_number = show_lines[i];
         for (var j=1; j<3; j++){
           more_lines.push(current_line_number+j);
-          more_lines.push(current_line_number-j)
+          more_lines.push(current_line_number-j);
         }
       }
       show_lines = show_lines.concat(more_lines);
@@ -1624,7 +1624,7 @@ Vue.component("dropdown", {
       }
       else if (data["action"] == "between-path-plot") {
         // set the plot data globally
-        plot_data = data;
+        //plot_data = data;
         Store.plot.type = data["type"];
         Store.plot.current_hash = path_plot_hash;
         console.log("plot data");
