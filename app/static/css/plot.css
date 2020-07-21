@@ -6,10 +6,6 @@ body {
   min-height: 90%;
 }
 
-.nv-legendWrap{
-  display: none;
-}
-
 .code_listing_line {
     font-family: courier new;
     font-size: 10px;
