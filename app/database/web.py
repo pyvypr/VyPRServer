@@ -1,7 +1,6 @@
 """
 Module to provide functions for the web analysis tool to use.
 
-TODO: add quotes where they should be in the specification, other states?
 """
 from .utils import get_connection
 import json
@@ -452,7 +451,7 @@ def get_code(function_id):
     #check if the monitored service path was given as an argument
     location = app.monitored_service_path
     if (location==None):
-        error_dict = {"error" : "Please parse the monitored service path as an argument (--path)"}
+        error_dict = {"error" : "Please provide the monitored service source code location."}
         return error_dict
 
     if "-" in func[0:func.index(".")]:
@@ -462,7 +461,11 @@ def get_code(function_id):
     func = func[func.rindex(".") + 1:]
     file_name = module.replace(".", "/") + ".py.inst"
     # extract asts from the code in the file
-    code = "".join(open(os.path.join(location, file_name), "r").readlines())
+    try:
+        code = "".join(open(os.path.join(location, file_name), "r").readlines())
+    except:
+        error_dict = {"error" : "Monitored service source code not found at given location."}
+        return error_dict
     asts = ast.parse(code)
     qualifier_subsequence = get_qualifier_subsequence(func)
     func = func.replace(":", ".")
@@ -1257,6 +1260,394 @@ def get_path_data_between(dict):
     return_data["path_hash"] = path_hash
     return return_data
 
+
+def get_path_data_simple(dict):
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    # first, check if the path data was already calculated
+    path_results = get_plot(cursor, dict)
+    if len(path_results) > 0:
+        print("existing paths found with hash %s" % path_results[0][0])
+        # the plot exists, so use the precomputed data
+        final_dictionary = json.loads(path_results[0][2])
+        final_dictionary["path_hash"] = path_results[0][0]
+        return final_dictionary
+
+    calls_list = dict["calls"]
+    binding_index = dict["binding"]
+    atom_index = dict["atom"]
+    points_list = dict["points"]
+    function_id = cursor.execute("""select function.id from function inner join
+        function_call on function.id == function_call.function where function_call.id = ?""",
+        [calls_list[0]]).fetchone()[0]
+
+    path_length = cursor.execute("""select reaching_path_length from instrumentation_point
+        where id in %s order by id"""%list_to_sql_string(points_list)).fetchone()[0]
+
+    query_string = """select observation.observed_value, observation.previous_condition_offset,
+                        verdict.verdict, function_call.path_condition_id_sequence,
+                        observation.observation_time
+                      from (observation inner join verdict on observation.verdict == verdict.id)
+                        inner join function_call on verdict.function_call==function_call.id
+                      where observation.instrumentation_point in %s and observation.atom_index=%s
+                        and function_call.id in %s and verdict.binding = (select id
+                        from binding where function=%s and binding_space_index=%s) """ % (
+            list_to_sql_string(points_list), atom_index, list_to_sql_string(calls_list),
+            function_id, binding_index)
+    result = cursor.execute(query_string).fetchall()
+
+    location = app.monitored_service_path
+    if (location==None):
+        error_dict = {"error" : "Please pass the monitored service path as an argument (--path)"}
+        return error_dict
+
+    # get the scfg of the function called by these calls
+    function = cursor.execute("select fully_qualified_name from function where id = ?",
+        [function_id]).fetchone()
+    func = function[0]
+    scfg = get_scfg(func, location)
+    grammar = scfg.derive_grammar()
+
+    # get the atom from the structure in property to determine the interval
+    prop_hash = cursor.execute("""select distinct property_hash from function_property_pair
+        where function = ?""", [function_id]).fetchone()[0]
+
+    atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
+        and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
+    formula = pickle.loads(base64.b64decode(atom_structure))
+    interval=formula._interval
+    lower=interval[0]
+    upper=interval[1]
+
+    parse_trees_obs_value_pairs = []
+
+    for element in result:
+        subchain = []
+        for condition in json.loads(element[3]):
+            query_string = "select serialised_condition from path_condition_structure where id = %s;" % condition
+            condition_string = cursor.execute(query_string).fetchone()[0]
+            subchain.append(condition_string)
+
+        path_condition_list = subchain[1:(element[1]+1)]
+        path = edges_from_condition_sequence(scfg, path_condition_list, path_length)
+
+        parse_tree = ParseTree(path, grammar, path[0]._source_state)
+        observed_value = json.loads(element[0])
+        #d is the distance from observed value to the nearest interval bound
+        d=min(abs(observed_value-lower),abs(observed_value-upper))
+        #sign=-1 if verdict value=0 and sign=1 if verdict is true
+        sign=-1+2*(element[2])
+
+        parse_trees_obs_value_pairs.append((parse_tree, observed_value, sign*d, element[4]))
+
+    parse_trees, times, severities, x_axis = zip(*parse_trees_obs_value_pairs)
+
+    intersection = parse_trees[0].intersect(parse_trees[1:])
+
+    main_path = intersection.read_leaves()
+    main_lines = []
+    parameter_lines = []
+    for element in main_path:
+        if type(element) is CFGEdge:
+            try:
+                line_number = element._instruction.lineno
+                main_lines.append(line_number)
+            except:
+                try:
+                    line_number = element._structure_obj.lineno
+                    main_lines.append(line_number)
+                except:
+                    pass
+        else:
+
+            try:
+                line_number = element._instruction.lineno
+                parameter_lines.append(line_number)
+            except:
+                try:
+                    line_number = element._structure_obj.lineno
+                    parameter_lines.append(line_number)
+                except:
+                    pass
+
+    path_parameters = []
+    intersection.get_parameter_paths(intersection._root_vertex, [], path_parameters)
+
+    parameter_value_indices_to_times = {}
+    parameter_value_indices_to_severities = {}
+    parameter_value_indices_to_x_axis = {}
+    subpaths = []
+
+    if len(path_parameters) > 0:
+
+        n_of_trees = len(parse_trees)
+        for (n, parse_tree) in enumerate(parse_trees):
+          subtree = parse_tree.get_parameter_subtree(path_parameters[0])
+          subpath = subtree.read_leaves()
+          if subpath in subpaths:
+            subpath_index = subpaths.index(subpath)
+          else:
+            subpaths.append(subpath)
+            subpath_index = len(subpaths)-1
+          if subpath_index not in parameter_value_indices_to_times:
+            parameter_value_indices_to_times[subpath_index] = [times[n]]
+            parameter_value_indices_to_severities[subpath_index] = [severities[n]]
+            parameter_value_indices_to_x_axis[subpath_index] = [x_axis[n]]
+          else:
+            parameter_value_indices_to_times[subpath_index].append(times[n])
+            parameter_value_indices_to_severities[subpath_index].append(severities[n])
+            parameter_value_indices_to_x_axis[subpath_index].append(x_axis[n])
+
+        lines_by_subpaths = []
+
+        for (i, subpath) in enumerate(subpaths):
+            lines = []
+            for element in subpath:
+                try:
+                    line_number = element._instruction.lineno
+                    lines.append(line_number)
+                except:
+                    try:
+                        line_number = element._instruction._structure_obj.lineno
+                        lines.append(line_number)
+                    except:
+                        pass
+
+                # fill in gaps in lines
+                final_lines = []
+                for n in range(len(lines)-1):
+                    final_lines += [m for m in range(lines[n], lines[n+1]+1)]
+
+            if len(lines) == 1: final_lines = lines
+            lines_by_subpaths.append({"lines": final_lines,
+                                      "observations": parameter_value_indices_to_times[i],
+                                      "severities": parameter_value_indices_to_severities[i],
+                                      "x": parameter_value_indices_to_x_axis[i]})
+    else:
+
+        lines_by_subpaths = []
+
+    return_data = {
+        "parameter_values": lines_by_subpaths,
+        "main_lines": main_lines,
+        "parameters": parameter_lines
+    }
+
+    # generate a hash of the data
+    path_hash = hashlib.sha1()
+    path_hash.update(json.dumps(return_data))
+    path_hash.update(json.dumps(dict))
+    path_hash = path_hash.hexdigest()
+    # store the plot
+    store_plot(cursor, path_hash, dict, return_data)
+    connection.commit()
+
+    connection.close()
+    return_data["path_hash"] = path_hash
+    return return_data
+
+
+def get_path_data_mixed(dict):
+    # TODO
+    # add comments and try to optimise the code by not performing path reconstruction for each obs
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    # first, check if the path data was already calculated
+    path_results = get_plot(cursor, dict)
+    if len(path_results) > 0:
+        print("existing paths found with hash %s" % path_results[0][0])
+        # the plot exists, so use the precomputed data
+        final_dictionary = json.loads(path_results[0][2])
+        final_dictionary["path_hash"] = path_results[0][0]
+        return final_dictionary
+
+    calls_list = dict["calls"]
+    binding_index = dict["binding"]
+    atom_index = dict["atom"]
+    points_list = dict["points"]
+
+    lengths = cursor.execute("""select reaching_path_length from instrumentation_point
+        where id in %s order by id"""%list_to_sql_string(points_list)).fetchall()
+    path_length_lhs = lengths[0][0]
+    path_length_rhs = lengths[1][0]
+
+    query_string = """select o1.observed_value, o2.observed_value,
+                             o1.observation_time, o2.observation_time,
+                             o1.previous_condition_offset, o2.previous_condition_offset,
+                             verdict.verdict, function_call.path_condition_id_sequence
+                      from ((function_call inner join verdict on function_call.id == verdict.function_call)
+                      inner join observation o1 on verdict.id==o1.verdict
+                      inner join observation o2) where o1.verdict=o2.verdict
+                      and o1.instrumentation_point<o2.instrumentation_point
+                      and o1.instrumentation_point in %s and o2.instrumentation_point in %s
+                      and o1.verdict in (select verdict.id from verdict inner join binding
+                                         on verdict.binding == binding.id where verdict.function_call in %s and
+                                         binding.binding_space_index=%s)
+                      and o1.atom_index = %s and o2.atom_index = %s;""" % (
+            list_to_sql_string(points_list), list_to_sql_string(points_list),
+            list_to_sql_string(calls_list), binding_index, atom_index, atom_index)
+    result = cursor.execute(query_string).fetchall()
+
+    location = app.monitored_service_path
+    if (location==None):
+        error_dict = {"error" : "Please pass the monitored service path as an argument (--path)"}
+        return error_dict
+
+    # get the scfg of the function called by these calls
+    function = cursor.execute("""select function.fully_qualified_name from function inner join
+        function_call on function.id == function_call.function where function_call.id = ?""",
+        [calls_list[0]]).fetchone()
+    func = function[0]
+    scfg = get_scfg(func, location)
+    grammar = scfg.derive_grammar()
+
+    # get the atom from the structure in property to determine the interval
+    prop_hash = cursor.execute("""select distinct function_property_pair.property_hash from
+        (function_property_pair inner join function_call
+            on function_property_pair.function==function_call.function)
+        where function_call.id = ?""", [calls_list[0]]).fetchone()[0]
+
+    atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
+        and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
+    formula = pickle.loads(base64.b64decode(atom_structure))
+
+    parse_trees_obs_value_pairs = []
+
+    for element in result:
+        subchain = []
+        for condition in json.loads(element[7]):
+            query_string = "select serialised_condition from path_condition_structure where id = %s;" % condition
+            condition_string = cursor.execute(query_string).fetchone()[0]
+            subchain.append(condition_string)
+
+        path_condition_list_lhs = subchain[1:(element[4]+1)]
+        path_condition_list_rhs = subchain[1:(element[5]+1)]
+        lhs_path = edges_from_condition_sequence(scfg, path_condition_list_lhs, path_length_lhs)
+        rhs_path = edges_from_condition_sequence(scfg, path_condition_list_rhs, path_length_rhs)
+        path = rhs_path
+        parse_tree = ParseTree(path, grammar, path[0]._source_state)
+
+        lhs_obs = ast.literal_eval(element[0])
+        rhs_obs = ast.literal_eval(element[1])
+        for key in lhs_obs:
+            lhs_value = lhs_obs[key]
+        for key in rhs_obs:
+            rhs_value = rhs_obs[key]
+        observed_difference = rhs_value - lhs_value
+        #d is the distance from observed value to the nearest interval bound
+        d=abs(observed_difference)
+        #sign=-1 if verdict value=0 and sign=1 if verdict is true
+        sign=-1+2*(element[6])
+
+        parse_trees_obs_value_pairs.append((parse_tree, lhs_value, rhs_value, sign*d, element[2]))
+
+    parse_trees, value1, value2, severities, x_axis = zip(*parse_trees_obs_value_pairs)
+
+    intersection = parse_trees[0].intersect(parse_trees[1:])
+
+    main_path = intersection.read_leaves()
+    main_lines = []
+    parameter_lines = []
+    for element in main_path:
+        if type(element) is CFGEdge:
+            try:
+                line_number = element._instruction.lineno
+                main_lines.append(line_number)
+            except:
+                try:
+                    line_number = element._structure_obj.lineno
+                    main_lines.append(line_number)
+                except:
+                    pass
+        else:
+
+            try:
+                line_number = element._instruction.lineno
+                parameter_lines.append(line_number)
+            except:
+                try:
+                    line_number = element._structure_obj.lineno
+                    parameter_lines.append(line_number)
+                except:
+                    pass
+
+    path_parameters = []
+    intersection.get_parameter_paths(intersection._root_vertex, [], path_parameters)
+
+    parameter_value_indices_to_times = {}
+    parameter_value_indices_to_severities = {}
+    parameter_value_indices_to_x_axis = {}
+    subpaths = []
+
+    if len(path_parameters) > 0:
+
+        n_of_trees = len(parse_trees)
+        for (n, parse_tree) in enumerate(parse_trees):
+          subtree = parse_tree.get_parameter_subtree(path_parameters[0])
+          subpath = subtree.read_leaves()
+          if subpath in subpaths:
+            subpath_index = subpaths.index(subpath)
+          else:
+            subpaths.append(subpath)
+            subpath_index = len(subpaths)-1
+          if subpath_index not in parameter_value_indices_to_times:
+            parameter_value_indices_to_times[subpath_index] = [times[n]]
+            parameter_value_indices_to_severities[subpath_index] = [severities[n]]
+            parameter_value_indices_to_x_axis[subpath_index] = [x_axis[n]]
+          else:
+            parameter_value_indices_to_times[subpath_index].append(times[n])
+            parameter_value_indices_to_severities[subpath_index].append(severities[n])
+            parameter_value_indices_to_x_axis[subpath_index].append(x_axis[n])
+
+        lines_by_subpaths = []
+
+        for (i, subpath) in enumerate(subpaths):
+            lines = []
+            for element in subpath:
+                try:
+                    line_number = element._instruction.lineno
+                    lines.append(line_number)
+                except:
+                    try:
+                        line_number = element._instruction._structure_obj.lineno
+                        lines.append(line_number)
+                    except:
+                        pass
+
+                # fill in gaps in lines
+                final_lines = []
+                for n in range(len(lines)-1):
+                    final_lines += [m for m in range(lines[n], lines[n+1]+1)]
+
+            if len(lines) == 1: final_lines = lines
+            lines_by_subpaths.append({"lines": final_lines,
+                                      "observations": parameter_value_indices_to_times[i],
+                                      "severities": parameter_value_indices_to_severities[i],
+                                      "x": parameter_value_indices_to_x_axis[i]})
+    else:
+
+        lines_by_subpaths = []
+
+    return_data = {
+        "parameter_values": lines_by_subpaths,
+        "main_lines": main_lines,
+        "parameters": parameter_lines
+    }
+
+    # generate a hash of the data
+    path_hash = hashlib.sha1()
+    path_hash.update(json.dumps(return_data))
+    path_hash.update(json.dumps(dict))
+    path_hash = path_hash.hexdigest()
+    # store the plot
+    store_plot(cursor, path_hash, dict, return_data)
+    connection.commit()
+
+    connection.close()
+    return_data["path_hash"] = path_hash
+    return return_data
 
 
 """
