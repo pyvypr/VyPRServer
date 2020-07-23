@@ -492,7 +492,7 @@ def get_code(function_id):
 
     #take the section of code between the line numbers - this is the source code
     #of the function of interest without the rest of the code
-    f_code = lines[start:end]
+    f_code = lines[start:(end+1)]
 
     dict = {"start_line" : start+1,
             "end_line": end+1,
