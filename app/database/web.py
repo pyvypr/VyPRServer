@@ -486,9 +486,17 @@ def get_code(function_id):
 
     #we want to now exact line numbers of these ast objects
     start = function_def.lineno - 1
-    end = function_def.body[-1].lineno - 1
-
+    end = function_def.body[-1].lineno
+    for node in ast.walk(function_def.body[-1]):
+        try:
+            node_line = node.lineno
+            if node_line > end:
+                end = node_line
+        except:
+            pass
+    end = end - 1
     lines = code.split('\n')
+
 
     #take the section of code between the line numbers - this is the source code
     #of the function of interest without the rest of the code
