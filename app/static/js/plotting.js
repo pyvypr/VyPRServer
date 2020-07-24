@@ -221,7 +221,10 @@ Vue.component("plot", {
       return this.store.plot.show_successes;
     },
     is_severity_plot : function() {
-      return this.store.plot.type == "severity" || this.store.plot.type == "between-severity";
+      return this.store.plot.type == "severity" || this.store.plot.type == "between-severity" || this.store.plot.type == "mixed-severity";
+    },
+    is_mixed_observation_plot : function() {
+      return this.store.plot.type == "mixed-observation";
     }
   },
   mounted(){
@@ -241,7 +244,9 @@ Vue.component("plot", {
           .x(function(d) { return d.label })
           .y(function(d) { return d.value })
           .reduceXTicks(true)    //alternatively, use staggering or rotated labels to prevent overlapping
-          .showControls(false);
+          .showControls(false)
+          .showLegend(that.is_mixed_observation_plot)
+          .color(["#2b5fed", "#f5b52c"]);
 
         // omitting date from time format - moslty the difference is in seconds
         var y_label = that.is_severity_plot ? 'Verdict severity' : 'Observation';

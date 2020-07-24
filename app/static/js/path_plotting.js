@@ -119,7 +119,8 @@ Vue.component("plot", {
           .x(function(d) { return d.label })
           .y(function(d) { return d.value })
           .reduceXTicks(true)    //alternatively, use staggering or rotated labels to prevent overlapping
-          .showControls(false);
+          .showControls(false)
+          .showLegend(false);
 
         // omitting date from time format - mostly the difference is in seconds
         var y_label = that.$root.is_severity_plot ? 'Verdict severity' : 'Observation';

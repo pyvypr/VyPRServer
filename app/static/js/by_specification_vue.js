@@ -181,12 +181,14 @@ var generate_plot = function(root_obj) {
       window.open("/display_plot/" + response.data.plot_hash, "plot", "width=1300,height=1000");
     })
   }
-  if (type == "between-path-severity" || type == "between-path-observation") {
+  if (type == "between-path-severity" || type == "between-path-observation" ||
+      type == "simple-path-severity" || type == "simple-path-observation" ||
+      type == "mixed-path-severity" || type == "mixed-path-observation") {
     var path_index = Store.chosen_path_index;
     Store.plot.current_hash = path_plot_hash;
     var myData = [{key: "path index: " + path_index, values: []}];
 
-    if(type == "between-path-severity") {
+    if(type == "simple-path-severity" || type == "between-path-severity" || type == "mixed-path-severity") {
       for (var i=0; i<path_plot_data[path_index]["x"].length; i++) {
         var value = path_plot_data[path_index]["severities"][i]
         // check whether we should plot this based on the filters
@@ -224,73 +226,207 @@ var highlight_paths = function(root_obj) {
   // get the plot type
   var type = Store.plot.type;
   var data = plot_data;
-  var sorted = plot_data["selected_line_numbers"][0] <= plot_data["selected_line_numbers"][1];
-  var first_line = sorted ? plot_data["selected_line_numbers"][0] : plot_data["selected_line_numbers"][1];
-  var last_line = sorted ? plot_data["selected_line_numbers"][1] : plot_data["selected_line_numbers"][0];
-  // the selected option was to highlight the paths by severity
-  console.log("computing path data");
-  console.log(data);
-  if (type == "between-path"){
-    axios.post('/get_path_data_between/', data).then(function(response){
-      var resp = response.data.parameter_values;
+  var resp, main_lines, parameter_lines;
+  if (type == "simple-path"){
+    axios.post('/get_path_data_simple/', data).then(function(response){
+      resp = response.data.parameter_values;
       path_plot_hash = response.data.path_hash;
       console.log(path_plot_hash)
       path_plot_data = resp;
 
-      var main_lines = response.data.main_lines;
-      var parameter_lines = response.data.parameters;
+      main_lines = response.data.main_lines;
+      parameter_lines = response.data.parameters;
       console.log("parameter lines received");
       console.log(parameter_lines);
+
+      // the selected option was to highlight the paths by severity
+      console.log("computing path data");
+      console.log(data);
       var lines_to_colors = [];
 
       if(resp.length > 0) {
 
-          var all_severities = resp[0]["severities"];
-          for (var i=1; i<resp.length; i++) {
-            all_severities = all_severities.concat(resp[i]["severities"]);
-          }
-          var min_sev = Math.min(...all_severities);
-          var max_sev = Math.max(...all_severities);
+        var all_severities = resp[0]["severities"];
+        for (var i=1; i<resp.length; i++) {
+          all_severities = all_severities.concat(resp[i]["severities"]);
+        }
+        var min_sev = Math.min(...all_severities);
+        var max_sev = Math.max(...all_severities);
 
-          var negative_range = min_sev<0 ? (0 - min_sev) : 0;
-          var positive_range = max_sev>0 ? (max_sev) : 0;
+        var negative_range = min_sev<0 ? (0 - min_sev) : 0;
+        var positive_range = max_sev>0 ? (max_sev) : 0;
 
-          for (var i=0; i<resp.length; i++) {
-            var avg = 0;
-            for (var j=0; j<resp[i]["severities"].length; j++){
-              avg += resp[i]["severities"][j];
-            }
-            avg /= resp[i]["severities"].length;
-            var avg_index;
-            if (avg < 0) {
-              avg_index = Math.round((avg - min_sev)/negative_range * 60);
-            } else {
-              avg_index = Math.round(60 + avg/positive_range * 60);
-            }
-            var dict = {lines: resp[i]["lines"],
-                        color: "hsl("+avg_index+", 78%, 90%)"};
-            lines_to_colors.push(dict);
+        for (var i=0; i<resp.length; i++) {
+          var avg = 0;
+          for (var j=0; j<resp[i]["severities"].length; j++){
+            avg += resp[i]["severities"][j];
           }
-          var data = {
-            first_line: first_line,
-            last_line: last_line,
-            lines_to_colors: lines_to_colors,
-            main_lines: main_lines,
-            parameter_lines: parameter_lines
-          };
+          avg /= resp[i]["severities"].length;
+          var avg_index;
+          if (avg < 0) {
+            avg_index = Math.round((avg - min_sev)/negative_range * 60);
+          } else {
+            avg_index = Math.round(60 + avg/positive_range * 60);
+          }
+          var dict = {lines: resp[i]["lines"],
+                      color: "hsl("+avg_index+", 78%, 90%)"};
+          lines_to_colors.push(dict);
+        }
+        var data = {
+          first_line: first_line,
+          last_line: last_line,
+          lines_to_colors: lines_to_colors,
+          main_lines: main_lines,
+          parameter_lines: parameter_lines
+        };
       } else {
-          var data = {
-            first_line: first_line,
-            last_line: last_line,
-            lines_to_colors: [],
-            main_lines: main_lines,
-            parameter_lines: []
-          };
+        var data = {
+          first_line: first_line,
+          last_line: last_line,
+          lines_to_colors: [],
+          main_lines: main_lines,
+          parameter_lines: []
+        };
       }
       that.$root.$emit('path-data-ready', data);
     })
   }
+  if (type == "between-path"){
+    var sorted = plot_data["selected_line_numbers"][0] <= plot_data["selected_line_numbers"][1];
+    var first_line = sorted ? plot_data["selected_line_numbers"][0] : plot_data["selected_line_numbers"][1];
+    var last_line = sorted ? plot_data["selected_line_numbers"][1] : plot_data["selected_line_numbers"][0];
 
+    axios.post('/get_path_data_between/', data).then(function(response){
+      resp = response.data.parameter_values;
+      path_plot_hash = response.data.path_hash;
+      console.log(path_plot_hash)
+      path_plot_data = resp;
+
+      main_lines = response.data.main_lines;
+      parameter_lines = response.data.parameters;
+      console.log("parameter lines received");
+      console.log(parameter_lines);
+
+      // the selected option was to highlight the paths by severity
+      console.log("computing path data");
+      console.log(data);
+      var lines_to_colors = [];
+
+      if(resp.length > 0) {
+
+        var all_severities = resp[0]["severities"];
+        for (var i=1; i<resp.length; i++) {
+          all_severities = all_severities.concat(resp[i]["severities"]);
+        }
+        var min_sev = Math.min(...all_severities);
+        var max_sev = Math.max(...all_severities);
+
+        var negative_range = min_sev<0 ? (0 - min_sev) : 0;
+        var positive_range = max_sev>0 ? (max_sev) : 0;
+
+        for (var i=0; i<resp.length; i++) {
+          var avg = 0;
+          for (var j=0; j<resp[i]["severities"].length; j++){
+            avg += resp[i]["severities"][j];
+          }
+          avg /= resp[i]["severities"].length;
+          var avg_index;
+          if (avg < 0) {
+            avg_index = Math.round((avg - min_sev)/negative_range * 60);
+          } else {
+            avg_index = Math.round(60 + avg/positive_range * 60);
+          }
+          var dict = {lines: resp[i]["lines"],
+                      color: "hsl("+avg_index+", 78%, 90%)"};
+          lines_to_colors.push(dict);
+        }
+        var data = {
+          first_line: first_line,
+          last_line: last_line,
+          lines_to_colors: lines_to_colors,
+          main_lines: main_lines,
+          parameter_lines: parameter_lines
+        };
+      } else {
+        var data = {
+          first_line: first_line,
+          last_line: last_line,
+          lines_to_colors: [],
+          main_lines: main_lines,
+          parameter_lines: []
+        };
+      }
+      that.$root.$emit('path-data-ready', data);
+    })
+  }
+  if (type == "mixed-path"){
+    var sorted = plot_data["selected_line_numbers"][0] <= plot_data["selected_line_numbers"][1];
+    var first_line = sorted ? plot_data["selected_line_numbers"][0] : plot_data["selected_line_numbers"][1];
+    var last_line = sorted ? plot_data["selected_line_numbers"][1] : plot_data["selected_line_numbers"][0];
+
+    axios.post('/get_path_data_mixed/', data).then(function(response){
+      resp = response.data.parameter_values;
+      path_plot_hash = response.data.path_hash;
+      console.log(path_plot_hash)
+      path_plot_data = resp;
+
+      main_lines = response.data.main_lines;
+      parameter_lines = response.data.parameters;
+      console.log("parameter lines received");
+      console.log(parameter_lines);
+
+      // the selected option was to highlight the paths by severity
+      console.log("computing path data");
+      console.log(data);
+      var lines_to_colors = [];
+
+      if(resp.length > 0) {
+
+        var all_severities = resp[0]["severities"];
+        for (var i=1; i<resp.length; i++) {
+          all_severities = all_severities.concat(resp[i]["severities"]);
+        }
+        var min_sev = Math.min(...all_severities);
+        var max_sev = Math.max(...all_severities);
+
+        var negative_range = min_sev<0 ? (0 - min_sev) : 0;
+        var positive_range = max_sev>0 ? (max_sev) : 0;
+
+        for (var i=0; i<resp.length; i++) {
+          var avg = 0;
+          for (var j=0; j<resp[i]["severities"].length; j++){
+            avg += resp[i]["severities"][j];
+          }
+          avg /= resp[i]["severities"].length;
+          var avg_index;
+          if (avg < 0) {
+            avg_index = Math.round((avg - min_sev)/negative_range * 60);
+          } else {
+            avg_index = Math.round(60 + avg/positive_range * 60);
+          }
+          var dict = {lines: resp[i]["lines"],
+                      color: "hsl("+avg_index+", 78%, 90%)"};
+          lines_to_colors.push(dict);
+        }
+        var data = {
+          first_line: first_line,
+          last_line: last_line,
+          lines_to_colors: lines_to_colors,
+          main_lines: main_lines,
+          parameter_lines: parameter_lines
+        };
+      } else {
+        var data = {
+          first_line: first_line,
+          last_line: last_line,
+          lines_to_colors: [],
+          main_lines: main_lines,
+          parameter_lines: []
+        };
+      }
+      that.$root.$emit('path-data-ready', data);
+    })
+  }
 }
 
 Vue.use(VuejQueryMask);
@@ -595,9 +731,10 @@ Vue.component("subtreelevel", {
   template: `
     <div class="panel panel-default" style="inherit">
       <div v-if="keyname" class="panel-heading">
-        <h3 class="panel-title" :id="this.panelid" :style="this.stylepadding"> {{this.keyname}} </h3>
+        <h3 class="panel-title" :id="this.panelid" :style="this.stylepadding" @click=toggleView()>
+          {{this.keyname}} </h3>
       </div>
-      <div class="panel-body">
+      <div :class="this.show ? 'panel-body show' : 'panel-body'">
         <div class="list-group" :id="path">
           <subtreelevel v-for="(level,index) in this.subtreeslist" :key="index" :htmlcontent="level.nextcontent"
           :path="level.nextpath" :panelid="level.panelid" :stylepadding="level.stylepadding"
@@ -636,7 +773,8 @@ Vue.component("subtreelevel", {
       return {
         buttons: buttons,
         subtreeslist:[],
-        store : Store
+        store : Store,
+        show : true
       }
 
     // if this is not the last level, iterate through the keys in the subtree and return the list
@@ -660,7 +798,7 @@ Vue.component("subtreelevel", {
           nextcontent : subtree[key], nextpath : new_path,
           stylepadding : style_padding, panelid : panel_id});
       }
-      return {subtreeslist : dicts_list}
+      return {subtreeslist : dicts_list, show : true}
     }
   },
   methods : {
@@ -683,6 +821,9 @@ Vue.component("subtreelevel", {
           property_hash: property_hash
         }
       );
+    },
+    toggleView: function(){
+      this.show = !this.show;
     }
   }
 })
@@ -896,6 +1037,12 @@ Vue.component("code-view", {
         <plot></plot>
         <!--<path-code :code="code_lines" :start="start_line"></path-code>-->
         <div v-if="code_lines" class='code_listing' id="code-listing">
+          <div v-if="code_error" class="alert alert-danger" role="alert">
+            <strong>Error: </strong>{{code_error}}
+          </div>
+          <div v-if="no_paths" class="alert alert-info" role="alert">
+            {{no_paths}}
+          </div>
           <alert v-if="calls_are_selected" message="Select a binding in the code listing below." />
           <alert v-if="subatom_is_selected" message="Hover over a critical statement to see analysis options." />
           <div v-for="(line,index) in code_lines" :key="index" :class="line.class"
@@ -919,6 +1066,8 @@ Vue.component("code-view", {
   data(){
     return {
       message: "Select a function and then one or more calls, first.",
+      code_error: false,
+      no_paths: false,
       specification_code: "",
       code_lines: [],
       start_line: 0,
@@ -958,6 +1107,7 @@ Vue.component("code-view", {
 
       // reset the background colors of previously highlighted lines
       Store.first_point_selected = false;
+      this.no_paths = false;
       for (var i=0; i<whole_code.length; i++){
         var line = whole_code[i];
         line.addmenu = false;
@@ -1017,6 +1167,7 @@ Vue.component("code-view", {
       obj2.tree = {};
       obj2.binding = undefined;
       obj2.store = Store;
+      obj2.no_paths = false;
     })
     this.$root.$on('calls-loaded', function(dict){
       path_highlight_mode_on = false;
@@ -1024,8 +1175,13 @@ Vue.component("code-view", {
 
       obj2.message = "";
       obj2.specification_code = dict["specification_code"];
+      obj2.no_paths = false;
       axios.get('/get_source_code/'+dict["selected_function_id"]).then(function(response){
         var code_data = response.data;
+        if (code_data["error"]){
+          obj2.code_error = code_data["error"];
+          stop_loading()
+        }
         var code_lines = code_data["code"];
         var current_line = code_data["start_line"];
         obj2.start_line = current_line;
@@ -1097,6 +1253,7 @@ Vue.component("code-view", {
         whole_code[i].background = "background-color: transparent";
       }
       obj2.store.path_view = false;
+      obj2.no_paths = false;
 
 
       // iterate through the bindings to highlight the lines and separate those paired with
@@ -1194,6 +1351,7 @@ Vue.component("code-view", {
       // clean up any previous dropdowns and reset highlights back to a light colour
       // reset the class of the line back to non-clickable
       obj2.store.path_view = false;
+      obj2.no_paths = false;
       for (var i=0; i<whole_code.length; i++){
         if (whole_code[i].color) {
           whole_code[i].background = "background-color: #ebf2ee";
@@ -1219,6 +1377,10 @@ Vue.component("code-view", {
       var whole_code = obj2.code_lines;
       console.log(data_ready);
       var start = obj2.start_line;
+
+      if (data_ready["lines_to_colors"].length == 0) {
+        obj2.no_paths = "All the runs took the same path - analysis by path unavailable."
+      }
 
       for (var i=0; i<data_ready["lines_to_colors"].length; i++) {
         var dict = data_ready["lines_to_colors"][i];
@@ -1400,13 +1562,14 @@ Vue.component("dropdown", {
     // menu generated by branching statement should give options for plotting wrt paths taken
     // this case can be recognised as dict will be "PATH"
     if (this.dict == "PATH") {
+      var atom_type = Store.plot.type.split("-")[0];
       return {options: [{text: "Plot observations with regards to paths taken",
-                         data: {action: "between-path-plot",
-                                type: "between-path-observation"}
+                         data: {action: atom_type + "-path-plot",
+                                type: atom_type + "-path-observation"}
                        },
                         {text: "Plot verdict severity with regards to paths taken",
-                         data: {action: "between-path-plot",
-                                type: "between-path-severity"}}
+                         data: {action: atom_type + "-path-plot",
+                                type: atom_type + "-path-severity"}}
                        ]
              }
     }
@@ -1537,6 +1700,14 @@ Vue.component("dropdown", {
         // plot the data we just set
         generate_plot(this);
       }
+      if (data["action"] == "simple-path") {
+        plot_data = data;
+        plot_data["function_id"] = Store.selected_function_id;
+        plot_data["type"] = "simple-path";
+        Store.plot.type = "simple-path";
+        path_highlight_mode_on = true;
+        highlight_paths(this);
+      }
       if (data["action"] == "between-select" || data["action"] == "mixed-select") {
         plot_data = data;
         Store.first_point_selected = true;
@@ -1606,8 +1777,6 @@ Vue.component("dropdown", {
         Store.plot.type = "mixed-severity";
         generate_plot(this);
       }
-      // TODO
-      if (data["action"] == "simple-path") {}
       else if (data["action"] == "between-path") {
         if (plot_data["points"].length == 1) {
           plot_data["points"] = plot_data["points"].concat(data["new_points"]);
@@ -1622,7 +1791,21 @@ Vue.component("dropdown", {
         path_highlight_mode_on = true;
         highlight_paths(this);
       }
-      else if (data["action"] == "between-path-plot") {
+      else if (data["action"] == "mixed-path") {
+        if (plot_data["points"].length == 1) {
+          plot_data["points"] = plot_data["points"].concat(data["new_points"]);
+        }
+        if (plot_data["points"].length == 2) {
+          plot_data["points"] = [plot_data["points"][0], data["new_points"][0]];
+        }
+        plot_data["type"] = "mixed-path";
+        plot_data["selected_line_numbers"].push(this.line);
+        plot_data["function_id"] = Store.selected_function_id;
+        Store.plot.type = "mixed-path";
+        path_highlight_mode_on = true;
+        highlight_paths(this);
+      }
+      else if (data["action"] == "simple-path-plot" || data["action"] == "between-path-plot" || data["action"] == "mixed-path-plot") {
         // set the plot data globally
         //plot_data = data;
         Store.plot.type = data["type"];

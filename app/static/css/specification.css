@@ -9,6 +9,21 @@
   height: inherit;
 }
 
+#function-list .panel-title:hover {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+#function-list .panel-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.8s;
+  transition-timing-function: ease;
+}
+
+#function-list .panel-body.show {
+  max-height: 700px;
+}
 
 #test-cases-list {
     max-height: 500px !important;
@@ -186,11 +201,11 @@
   border-color: #555 transparent transparent transparent;
 }*/
 
-.plot .show{
+.plot.show{
   display: block;
 }
 
-.path .show{
+.path.show{
   display: block;
 }
 

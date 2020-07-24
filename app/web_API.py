@@ -152,8 +152,23 @@ def download_plot(plot_hash):
     filename = database.write_plot(plot_hash)
     return send_file("../generated_plots/%s" % filename, mimetype='application/pdf', as_attachment=True)
 
+
 @app_object.route("/get_path_data_between/", methods=["GET", "POST"])
 def get_path_data_between():
     result_dict = json.loads(request.data)
     return_data = database.get_path_data_between(result_dict)
+    return json.dumps(return_data)
+
+
+@app_object.route("/get_path_data_simple/", methods=["GET", "POST"])
+def get_path_data_simple():
+    result_dict = json.loads(request.data)
+    return_data = database.get_path_data_simple(result_dict)
+    return json.dumps(return_data)
+
+
+@app_object.route("/get_path_data_mixed/", methods=["GET", "POST"])
+def get_path_data_mixed():
+    result_dict = json.loads(request.data)
+    return_data = database.get_path_data_mixed(result_dict)
     return json.dumps(return_data)
