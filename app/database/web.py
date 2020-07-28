@@ -451,7 +451,7 @@ def get_code(function_id):
     #check if the monitored service path was given as an argument
     location = app.monitored_service_path
     if (location==None):
-        error_dict = {"error" : "Please provide the monitored service source code location."}
+        error_dict = {"error" : "Please provide the monitored service source code location (--path)."}
         return error_dict
 
     if "-" in func[0:func.index(".")]:
