@@ -90,7 +90,7 @@ var generate_plot = function(quantity, root_obj) {
 Vue.component("plot", {
   template : `
   <div class="plot">
-    <svg :id="svgID" v-bind:class="{hidden : !isSelected}"></svg>
+    <svg :id="svgID" v-bind:class="{hidden : !isSelected}" width="590px" height="360px"></svg>
   </div>
   `,
   props : ["index"],
@@ -112,8 +112,8 @@ Vue.component("plot", {
       // set up the graph
       nv.addGraph(function() {
 
-        $("#plot-svg-" + that.index).width($("#plot-column").outerWidth()-50);
-        $("#plot-svg-" + that.index).height($("#plot-column").outerHeight()-10);
+        //$("#plot-svg-" + that.index).width($("#plot-column").outerWidth()-50);
+        //$("#plot-svg-" + that.index).height($("#plot-column").outerHeight()-10);
 
         var chart = nv.models.multiBarChart()
           .x(function(d) { return d.label })
@@ -273,7 +273,16 @@ Vue.component("page", {
   methods:{
     downloadPDF : function(e) {
       e.preventDefault();
-      window.location = "/download_plot/" + this.store.plot.current_hash;
+      var quality = 2;
+      const filename  = 'plot.pdf';
+
+		  html2canvas(document.querySelector('#plot-svg-'+this.store.path_index),
+								{scale: quality}).then(canvas => {
+			  let pdf = new jsPDF('p', 'mm', 'a4');
+			  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 211, 150);
+			  pdf.save(filename);
+		  });
+      //window.location = "/download_plot/" + this.store.plot.current_hash;
     },
     toggleSuccessFilter : function(e) {
       e.preventDefault();
