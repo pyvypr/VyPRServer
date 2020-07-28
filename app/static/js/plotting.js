@@ -12,6 +12,7 @@ var Store = {
     }
 };
 
+
 var generate_plot = function(root_obj) {
     var that = root_obj;
 
@@ -205,7 +206,7 @@ Vue.component("plot", {
     <a href="#" id="successes" class="filter" v-bind:class="{active : successFilterActive}"
       @click="toggleSuccessFilter($event)">Successes</a>
   </div>
-  <svg id="plot-svg"></svg>
+  <svg id="plot-svg" height="800px" width="1250px"></svg>
   </div>`,
   props : ["hash"],
   data() {
@@ -237,8 +238,8 @@ Vue.component("plot", {
     this.$root.$on("plot-data-ready", function(data_array){
       nv.addGraph(function() {
 
-        $("#plot-svg").width($("body").outerWidth()-10);
-        $("#plot-svg").height($("body").outerHeight()-10);
+      //  $("#plot-svg").width($("body").outerWidth()-10);
+      //  $("#plot-svg").height($("body").outerHeight()-10);
 
         var chart = nv.models.multiBarChart()
           .x(function(d) { return d.label })
@@ -274,7 +275,18 @@ Vue.component("plot", {
   methods:{
     downloadPDF : function(e) {
       e.preventDefault();
-      window.location = "/download_plot/" + this.store.plot.current_hash;
+      var quality = 2;
+      const filename  = 'plot.pdf';
+
+		  html2canvas(document.querySelector('#plot-svg'),
+								{scale: quality}).then(canvas => {
+
+			  let pdf = new jsPDF('p', 'mm', 'a4');
+			  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 211, 150);
+			  pdf.save(filename);
+		  });
+
+    //  window.location = "/download_plot/" + this.store.plot.current_hash;
     },
     toggleSuccessFilter : function(e) {
       e.preventDefault();
