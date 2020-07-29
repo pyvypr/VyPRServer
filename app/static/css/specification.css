@@ -5,6 +5,13 @@
   transition-timing-function: ease;
 }
 
+.col-md-3.selection {
+  resize: horizontal;
+  overflow: auto;
+  min-width: 15%;
+  max-width: 35%;
+}
+
 .phase.show {
   height: inherit;
 }
