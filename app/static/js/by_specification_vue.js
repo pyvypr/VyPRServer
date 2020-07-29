@@ -427,9 +427,12 @@ var highlight_paths = function(root_obj) {
       that.$root.$emit('path-data-ready', data);
     })
   }
-}
+};
+
 
 Vue.use(VuejQueryMask);
+Vue.use(VueResize);
+
 
 Vue.component("alert", {
   template : `
@@ -475,6 +478,7 @@ Vue.component("selection-tabs", {
   props : ["tree"],
   template : `
     <div class="selection-phases">
+      <resize-observer @notify="handleResize" />
       <div class="phase" v-bind:class="{show : show_test_data}">
         <test-data></test-data>
       </div>
@@ -509,6 +513,12 @@ Vue.component("selection-tabs", {
             $(".selection-phases").animate({"margin-top": $(window).scrollTop()});
         }, 100);
     });
+  },
+  methods : {
+    handleResize : function({ width, height }) {
+      console.log('resized', width, height)
+      $($(".col-md-9")[0]).width($(window).width()-width);
+    }
   }
 });
 
