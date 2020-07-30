@@ -281,7 +281,7 @@ Vue.component("plot", {
 		  html2canvas(document.querySelector('#plot-svg'),
 								{scale: quality}).then(canvas => {
 
-			  let pdf = new jsPDF('p', 'mm', 'a4');
+			  let pdf = new jsPDF('l', 'mm', [600,450]);
 			  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 211, 150);
 			  pdf.save(filename);
 		  });
