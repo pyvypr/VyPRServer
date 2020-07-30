@@ -1534,7 +1534,7 @@ def get_path_data_mixed(dict):
         path_condition_list_rhs = subchain[1:(element[5]+1)]
         lhs_path = edges_from_condition_sequence(scfg, path_condition_list_lhs, path_length_lhs)
         rhs_path = edges_from_condition_sequence(scfg, path_condition_list_rhs, path_length_rhs)
-        path = rhs_path
+        path = rhs_path if (path_length_lhs < path_length_rhs) else lhs_path
         parse_tree = ParseTree(path, grammar, path[0]._source_state)
 
         lhs_obs = ast.literal_eval(element[0])
@@ -1546,6 +1546,19 @@ def get_path_data_mixed(dict):
         observed_difference = rhs_value - lhs_value
         #d is the distance from observed value to the nearest interval bound
         d=abs(observed_difference)
+        if type(formula) in [StateValueEqualToMixed, StateValueLengthLessThanStateValueLengthMixed]:
+
+            stack_left = formula._lhs._arithmetic_stack
+            stack_right = formula._rhs._arithmetic_stack
+            d = abs(apply_arithmetic_stack(stack_right, rhs_value) -
+                        apply_arithmetic_stack(stack_left, lhs_value))
+
+        if type(formula) in [TransitionDurationLessThanStateValueMixed,
+            TransitionDurationLessThanStateValueLengthMixed]:
+
+            stack_right = formula._rhs._arithmetic_stack
+            d = abs(apply_arithmetic_stack(stack_right, rhs_value) - y1_array[i])
+
         #sign=-1 if verdict value=0 and sign=1 if verdict is true
         sign=-1+2*(element[6])
 
@@ -1584,7 +1597,8 @@ def get_path_data_mixed(dict):
     path_parameters = []
     intersection.get_parameter_paths(intersection._root_vertex, [], path_parameters)
 
-    parameter_value_indices_to_times = {}
+    parameter_value_indices_to_lhs_obs = {}
+    parameter_value_indices_to_rhs_obs = {}
     parameter_value_indices_to_severities = {}
     parameter_value_indices_to_x_axis = {}
     subpaths = []
@@ -1601,11 +1615,13 @@ def get_path_data_mixed(dict):
             subpaths.append(subpath)
             subpath_index = len(subpaths)-1
           if subpath_index not in parameter_value_indices_to_times:
-            parameter_value_indices_to_times[subpath_index] = [times[n]]
+            parameter_value_indices_to_lhs_obs[subpath_index] = [value1[n]]
+            parameter_value_indices_to_rhs_obs[subpath_index] = [value2[n]]
             parameter_value_indices_to_severities[subpath_index] = [severities[n]]
             parameter_value_indices_to_x_axis[subpath_index] = [x_axis[n]]
           else:
-            parameter_value_indices_to_times[subpath_index].append(times[n])
+            parameter_value_indices_to_lhs_obs[subpath_index].append(value1[n])
+            parameter_value_indices_to_rhs_obs[subpath_index].append(value2[n])
             parameter_value_indices_to_severities[subpath_index].append(severities[n])
             parameter_value_indices_to_x_axis[subpath_index].append(x_axis[n])
 
@@ -1631,7 +1647,8 @@ def get_path_data_mixed(dict):
 
             if len(lines) == 1: final_lines = lines
             lines_by_subpaths.append({"lines": final_lines,
-                                      "observations": parameter_value_indices_to_times[i],
+                                      "observations_lhs": parameter_value_indices_to_lhs_obs[i],
+                                      "observations_rhs": parameter_value_indices_to_rhs_obs[i],
                                       "severities": parameter_value_indices_to_severities[i],
                                       "x": parameter_value_indices_to_x_axis[i]})
     else:

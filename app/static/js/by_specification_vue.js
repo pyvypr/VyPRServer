@@ -210,9 +210,23 @@ var generate_plot = function(root_obj) {
 
     } else {
 
-      for (var i=0; i<path_plot_data[path_index]["x"].length; i++) {
+      if (type =="mixed-path-observation"){
+        myData = [{key: 'subatom 0', values: []}, {key: 'subatom 1', values: []}];
+        for (var i=0; i<path_plot_data[path_index]["x"].length; i++){
+          var value1 = path_plot_data[path_index]["observations_lhs"][i];
+          var value2 = path_plot_data[path_index]["observations_rhs"][i]
+
+          myData[0].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
+                                 value: value1});
+          myData[1].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
+                                 value: value2});
+        }
+      } else {
+
+        for (var i=0; i<path_plot_data[path_index]["x"].length; i++) {
           myData[0].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
                                  value: path_plot_data[path_index]["observations"][i]});
+        }
       }
 
       window.open("/display_path_plot/" + path_plot_hash + "/observation/", "plot", "width=1300,height=1000");
