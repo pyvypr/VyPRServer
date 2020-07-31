@@ -290,15 +290,26 @@ Vue.component("page", {
   methods:{
     downloadPDF : function(e) {
       e.preventDefault();
-      var quality = 2;
+      var quality = 3;
       const filename  = 'plot.pdf';
 
-		  html2canvas(document.querySelector('#plot-svg-'+this.store.path_index),
-								{scale: quality}).then(canvas => {
-			  let pdf = new jsPDF('l', 'mm', [600,450]);
-			  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 211, 150);
-			  pdf.save(filename);
-		  });
+      var svg = d3.select('#plot-svg-'+this.store.path_index)[0][0];
+      img = new Image();
+      serializer = new XMLSerializer();
+      svgStr = serializer.serializeToString(svg);
+
+      img.src = 'data:image/svg+xml;base64,'+window.btoa(svgStr);
+      $("#app").append(img);
+      $("img").attr('id', "image-plot");
+
+      html2canvas(document.querySelector('#image-plot'),
+                {scale: quality}).then(canvas => {
+        let pdf = new jsPDF('l', 'mm', [600,450]);
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 211, 150);
+        pdf.save(filename);
+        $("#image-plot").remove();
+      });
+
       //window.location = "/download_plot/" + this.store.plot.current_hash;
     },
     toggleSuccessFilter : function(e) {
