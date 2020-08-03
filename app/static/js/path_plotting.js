@@ -69,9 +69,23 @@ var generate_plot = function(quantity, root_obj) {
 
           } else {
 
-            for (var i=0; i<data[path_index]["x"].length; i++) {
+            if (type =="mixed-path-observation"){
+              myData = [{key: 'subatom 0', values: []}, {key: 'subatom 1', values: []}];
+              for (var i=0; i<data[path_index]["x"].length; i++){
+                var value1 = data[path_index]["observations_lhs"][i];
+                var value2 = data[path_index]["observations_rhs"][i]
+
+                myData[0].values.push({label: new Date(Date.parse(data[path_index]["x"][i])),
+                                       value: value1});
+                myData[1].values.push({label: new Date(Date.parse(data[path_index]["x"][i])),
+                                       value: value2});
+              }
+            } else {
+
+              for (var i=0; i<data[path_index]["x"].length; i++) {
                 myData[0].values.push({label: new Date(Date.parse(data[path_index]["x"][i])),
                                        value: data[path_index]["observations"][i]});
+              }
             }
 
           }
@@ -105,6 +119,9 @@ Vue.component("plot", {
     },
     isSelected : function() {
       return this.store.path_index == this.index;
+    },
+    is_mixed_observation_plot : function() {
+      return this.store.plot.type == "mixed-observation";
     }
   },
   mounted : function() {
@@ -120,7 +137,7 @@ Vue.component("plot", {
           .y(function(d) { return d.value })
           .reduceXTicks(true)    //alternatively, use staggering or rotated labels to prevent overlapping
           .showControls(false)
-          .showLegend(false);
+          .showLegend(that.is_mixed_observation_plot);
 
         // omitting date from time format - mostly the difference is in seconds
         var y_label = that.$root.is_severity_plot ? 'Verdict severity' : 'Observation';
@@ -273,15 +290,26 @@ Vue.component("page", {
   methods:{
     downloadPDF : function(e) {
       e.preventDefault();
-      var quality = 2;
+      var quality = 3;
       const filename  = 'plot.pdf';
 
-		  html2canvas(document.querySelector('#plot-svg-'+this.store.path_index),
-								{scale: quality}).then(canvas => {
-			  let pdf = new jsPDF('p', 'mm', 'a4');
-			  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 211, 150);
-			  pdf.save(filename);
-		  });
+      var svg = d3.select('#plot-svg-'+this.store.path_index)[0][0];
+      img = new Image();
+      serializer = new XMLSerializer();
+      svgStr = serializer.serializeToString(svg);
+
+      img.src = 'data:image/svg+xml;base64,'+window.btoa(svgStr);
+      $("#app").append(img);
+      $("img").attr('id', "image-plot");
+
+      html2canvas(document.querySelector('#image-plot'),
+                {scale: quality}).then(canvas => {
+        let pdf = new jsPDF('l', 'mm', [600,450]);
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 211, 150);
+        pdf.save(filename);
+        $("#image-plot").remove();
+      });
+
       //window.location = "/download_plot/" + this.store.plot.current_hash;
     },
     toggleSuccessFilter : function(e) {

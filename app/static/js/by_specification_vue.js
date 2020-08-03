@@ -210,9 +210,23 @@ var generate_plot = function(root_obj) {
 
     } else {
 
-      for (var i=0; i<path_plot_data[path_index]["x"].length; i++) {
+      if (type =="mixed-path-observation"){
+        myData = [{key: 'subatom 0', values: []}, {key: 'subatom 1', values: []}];
+        for (var i=0; i<path_plot_data[path_index]["x"].length; i++){
+          var value1 = path_plot_data[path_index]["observations_lhs"][i];
+          var value2 = path_plot_data[path_index]["observations_rhs"][i]
+
+          myData[0].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
+                                 value: value1});
+          myData[1].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
+                                 value: value2});
+        }
+      } else {
+
+        for (var i=0; i<path_plot_data[path_index]["x"].length; i++) {
           myData[0].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
                                  value: path_plot_data[path_index]["observations"][i]});
+        }
       }
 
       window.open("/display_path_plot/" + path_plot_hash + "/observation/", "plot", "width=1300,height=1000");
@@ -429,6 +443,27 @@ var highlight_paths = function(root_obj) {
   }
 };
 
+var is_before = function(str1, str2) {
+  var date1 = str1.split(" ")[0].split("/");
+  var date2 = str2.split(" ")[0].split("/");
+  if (parseInt(date1[2]) < parseInt(date2[2])) { return true }
+  if (parseInt(date1[2]) > parseInt(date2[2])) { return false }
+  if (parseInt(date1[1]) < parseInt(date2[1])) { return true }
+  if (parseInt(date1[1]) > parseInt(date2[1])) { return false }
+  if (parseInt(date1[0]) < parseInt(date2[0])) { return true }
+  if (parseInt(date1[0]) > parseInt(date2[0])) { return false }
+
+  var time1 = str1.split(" ")[1].split(":");
+  var time2 = str2.split(" ")[1].split(":");
+  if (parseInt(time1[0]) < parseInt(time2[0])) { return true }
+  if (parseInt(time1[0]) > parseInt(time2[0])) { return false }
+  if (parseInt(time1[1]) < parseInt(time2[1])) { return true }
+  if (parseInt(time1[1]) > parseInt(time2[1])) { return false }
+  if (parseInt(time1[2]) < parseInt(time2[2])) { return true }
+  if (parseInt(time1[2]) > parseInt(time2[2])) { return false }
+  return false
+}
+
 
 Vue.use(VuejQueryMask);
 Vue.use(VueResize);
@@ -516,7 +551,6 @@ Vue.component("selection-tabs", {
   },
   methods : {
     handleResize : function({ width, height }) {
-      console.log('resized', width, height)
       $($(".col-md-9")[0]).width($(window).width()-width);
     }
   }
@@ -846,7 +880,7 @@ Vue.component("function-calls", {
         <h3 class="panel-title" id="function-call-title">Function Calls</h3>
       </div>
       <div class="panel-body">
-        <div class="list-group" id="function-call-list">
+        <div class="list-group" id="function-call-list" @click="date_input_error=false">
           <div v-if="message" class="please-select"><p>{{message}}</p></div>
           <alert v-if="!message" message="Select one or more calls to load performance data." />
           <div v-if="!message" class="list-group-item">
@@ -856,6 +890,7 @@ Vue.component("function-calls", {
                          placeholder="DD/MM/YYYY hh:mm:ss" :raw="false" class="form-control"> </vue-mask> <br>
             <b>To &nbsp;&nbsp;&nbsp; </b> <vue-mask id="filter-to" v-model="filter_to" mask="00/00/0000 00:00:00"
                        placeholder="DD/MM/YYYY hh:mm:ss" :raw="false" class="form-control"> </vue-mask>
+            <div class="tooltip-alert" v-show="date_input_error"> Wrong datetime input.</div>
             <button @click="select_filtered($event)" class="btn btn-default"> Filter calls </button>
             </form>
           </div>
@@ -880,6 +915,7 @@ Vue.component("function-calls", {
       filter_from: "",
       filter_to: "",
       func_id: 0,
+      date_input_error: false,
       store : Store}
   },
   computed : {
@@ -917,6 +953,12 @@ Vue.component("function-calls", {
     },
     select_filtered: function(e){
       e.preventDefault();
+
+      if(is_before(this.filter_to, this.filter_from)) {
+        console.log("wrong datetime input")
+        this.date_input_error = true;
+      }
+
       start_loading();
 
       $("#function-call-list input:checkbox").prop("checked", false);
@@ -939,6 +981,7 @@ Vue.component("function-calls", {
         }
       })
       stop_loading();
+      e.stopPropagation();
     }
   },
   mounted(){

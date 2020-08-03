@@ -275,19 +275,26 @@ Vue.component("plot", {
   methods:{
     downloadPDF : function(e) {
       e.preventDefault();
-      var quality = 2;
+      var quality = 3;
       const filename  = 'plot.pdf';
 
-		  html2canvas(document.querySelector('#plot-svg'),
-								{scale: quality}).then(canvas => {
+      var svg = d3.select("svg")[0][0],
+      img = new Image(),
+      serializer = new XMLSerializer(),
+      svgStr = serializer.serializeToString(svg);
 
-			  let pdf = new jsPDF('p', 'mm', 'a4');
+      img.src = 'data:image/svg+xml;base64,'+window.btoa(svgStr);
+      $("#app").append(img);
+      $("img").attr('id', "image-plot");
+
+      html2canvas(document.querySelector('#image-plot'),
+								{scale: quality}).then(canvas => {
+			  let pdf = new jsPDF('l', 'mm', [600,450]);
 			  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 211, 150);
 			  pdf.save(filename);
-		  });
-
-    //  window.location = "/download_plot/" + this.store.plot.current_hash;
-    },
+        $("#image-plot").remove();
+      });
+  },
     toggleSuccessFilter : function(e) {
       e.preventDefault();
       this.store.plot.show_successes = !this.store.plot.show_successes;

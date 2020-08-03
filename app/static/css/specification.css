@@ -5,6 +5,10 @@
   transition-timing-function: ease;
 }
 
+.phase.show {
+  height: inherit;
+}
+
 .col-md-3.selection {
   resize: horizontal;
   overflow: auto;
@@ -12,8 +16,9 @@
   max-width: 35%;
 }
 
-.phase.show {
-  height: inherit;
+::-webkit-resizer {
+  display:none;
+  height:100%;
 }
 
 #function-list .panel-title:hover {
@@ -337,4 +342,32 @@
 .line-number {
   font-weight: bold;
   width: 34px;
+}
+
+.tooltip-alert {
+  width: 120px;
+  color: #a94442;
+  background-color: #f2dede;
+  border-color: #ebccd1;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 1;
+  margin-left: 50px;
+  margin-top: 5px;
+  -webkit-box-shadow: 6px 6px 13px 0px rgba(169,68,66,1);
+  -moz-box-shadow: 6px 6px 13px 0px rgba(169,68,66,1);
+  box-shadow: 6px 6px 13px 0px rgba(169,68,66,1);
+}
+
+.tooltip-alert::after {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent #f2dede transparent;
 }
