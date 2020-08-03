@@ -290,13 +290,13 @@ Vue.component("page", {
   methods:{
     downloadPDF : function(e) {
       e.preventDefault();
-      var quality = 3;
+      var quality = 4;
       const filename  = 'plot.pdf';
 
       var svg = d3.select('#plot-svg-'+this.store.path_index)[0][0];
-      img = new Image();
-      serializer = new XMLSerializer();
-      svgStr = serializer.serializeToString(svg);
+      var img = new Image();
+      var serializer = new XMLSerializer();
+      var svgStr = serializer.serializeToString(svg);
 
       img.src = 'data:image/svg+xml;base64,'+window.btoa(svgStr);
       $("#app").append(img);

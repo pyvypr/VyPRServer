@@ -278,10 +278,10 @@ Vue.component("plot", {
       var quality = 3;
       const filename  = 'plot.pdf';
 
-      var svg = d3.select("svg")[0][0],
-      img = new Image(),
-      serializer = new XMLSerializer(),
-      svgStr = serializer.serializeToString(svg);
+      var svg = d3.select("svg")[0][0];
+      var img = new Image();
+      var serializer = new XMLSerializer();
+      var svgStr = serializer.serializeToString(svg);
 
       img.src = 'data:image/svg+xml;base64,'+window.btoa(svgStr);
       $("#app").append(img);
