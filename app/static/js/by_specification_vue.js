@@ -894,11 +894,13 @@ Vue.component("function-calls", {
             <button @click="select_filtered($event)" class="btn btn-default"> Filter calls </button>
             </form>
           </div>
-          <button v-if="!message" class="list-group-item">
+          <button v-if="!message" class="list-group-item" @click="toggleSelection(-1,-1)">
             <input type='checkbox' id="select-all-calls" @click="select_all_calls()"/><b> Select all </b>
           </button>
-          <button v-for="(b, index) in this.buttons" :key="index" class="list-group-item">
-            <input type='checkbox' :function-call-id="b.callid" :value="b.callid" v-model="checkedCalls"/>
+          <button v-for="(b, index) in this.buttons" :key="index" class="list-group-item"
+                  @click="toggleSelection(index, b.callid)">
+            <input type='checkbox' :function-call-id="b.callid" :value="b.callid" v-model="checkedCalls"
+            @click="($event).stopPropagation()"/>
             {{b.callstart}}
             <span v-if="tests_exist" class="badge" v-bind:class="b.testresult">unit test</span>
             <span class="badge" v-bind:class="translate_verdict(b.verdict)">query</span>
@@ -974,6 +976,7 @@ Vue.component("function-calls", {
           if (that.buttons[i].callid == ids_list[0]){
             for (var j=i; j<i+ids_list.length; j++){
               that.checkedCalls.push(that.buttons[j].callid);
+              // select all is the first input:checkbox in the f-call-list, hence j+1
               $(calls_list[j+1]).prop("checked", true);
             }
             break
@@ -982,6 +985,22 @@ Vue.component("function-calls", {
       })
       stop_loading();
       e.stopPropagation();
+    },
+    toggleSelection: function(n, call_id) {
+      var input_box = $("#function-call-list input:checkbox")[n+1];
+      var selected = $(input_box).prop("checked");
+      $(input_box).prop("checked", !selected);
+      if (call_id == -1) {
+        this.select_all_calls();
+      }
+      else {
+        if (selected) {
+          this.checkedCalls.splice(this.checkedCalls.indexOf(call_id), 1);
+        }
+        else{
+          this.checkedCalls.push(call_id);
+        }
+      }
     }
   },
   mounted(){
