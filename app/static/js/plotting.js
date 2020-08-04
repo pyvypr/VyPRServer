@@ -238,9 +238,6 @@ Vue.component("plot", {
     this.$root.$on("plot-data-ready", function(data_array){
       nv.addGraph(function() {
 
-      //  $("#plot-svg").width($("body").outerWidth()-10);
-      //  $("#plot-svg").height($("body").outerHeight()-10);
-
         var chart = nv.models.multiBarChart()
           .x(function(d) { return d.label })
           .y(function(d) { return d.value })
@@ -275,18 +272,21 @@ Vue.component("plot", {
   methods:{
     downloadPDF : function(e) {
       e.preventDefault();
-      var quality = 3;
+      var quality = 3; // can be improved but we don't want the pdf to take up too much memory
       const filename  = 'plot.pdf';
 
+      // converting the svg to img to prevent the labels from doubling when converting to canvas
       var svg = d3.select("svg")[0][0];
       var img = new Image();
       var serializer = new XMLSerializer();
       var svgStr = serializer.serializeToString(svg);
 
+      // adding the image to the dom so it can be copied to canvas (works kind of like a screenshot)
       img.src = 'data:image/svg+xml;base64,'+window.btoa(svgStr);
       $("#app").append(img);
       $("img").attr('id', "image-plot");
 
+      // draw image on canvas and add the canvas to pdf (couldn't be done directly with svg)
       html2canvas(document.querySelector('#image-plot'),
 								{scale: quality}).then(canvas => {
 			  let pdf = new jsPDF('l', 'mm', [600,450]);
