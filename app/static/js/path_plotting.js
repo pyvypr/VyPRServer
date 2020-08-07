@@ -290,7 +290,7 @@ Vue.component("page", {
   methods:{
     downloadPDF : function(e) {
       e.preventDefault();
-      var quality = 4;
+      var quality = 5;
       const filename  = 'plot.pdf';
 
       var svg = d3.select('#plot-svg-'+this.store.path_index)[0][0];

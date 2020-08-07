@@ -81,32 +81,6 @@ var generate_plot = function(root_obj) {
     axios.post('/get_plot_data_simple/', data).then(function(response){
       var data = response.data.plot_data;
       Store.plot.current_hash = response.data.plot_hash;
-      // perform necessary processing on data before plotting
-      //console.log(JSON.stringify(data));
-
-      var myData = [{key: 'group 1', values: []}];
-      for (var i=0; i<data["x"].length; i++){
-        var value = data[type][i];
-
-        if(type == "severity") {
-          // check whether we should plot this based on the filters
-          if(value >= 0) {
-            if(!Store.plot.show_successes) continue;
-          } else {
-            if(!Store.plot.show_violations) continue;
-          }
-          // negative verdict severity represents violation - colour these bars red
-          var color = "#cc0000";
-          // other columns in the plot are green since they show non-violating observations
-          if (value >= 0) {color = "#00802b"}
-        } else {
-          color = "blue";
-        }
-        //value = ( value >= 0 )? value : -Math.abs(Math.log(-value));
-        myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
-                              value: value,
-                              color: color});
-      }
 
       window.open("/display_plot/" + response.data.plot_hash, "plot", "width=1300,height=1000");
     });
@@ -116,29 +90,6 @@ var generate_plot = function(root_obj) {
       var data = response.data.plot_data;
       Store.plot.current_hash = response.data.plot_hash;
 
-      var myData = [{key: 'group 1', values: []}];
-      for (var i=0; i<data["x"].length; i++){
-        var value = data[type][i];
-
-        if(type == "between-severity") {
-          // check whether we should plot this based on the filters
-          if(value >= 0) {
-            if(!Store.plot.show_successes) continue;
-          } else {
-            if(!Store.plot.show_violations) continue;
-          }
-          // negative verdict severity represents violation - colour these bars red
-          var color = "#cc0000";
-          // other columns in the plot are green since they show non-violating observations
-          if (value >= 0) {color = "#00802b"}
-        } else {
-          color = "blue";
-        }
-        myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
-                              value: value,
-                              color: color});
-      }
-
       window.open("/display_plot/" + response.data.plot_hash, "plot", "width=1300,height=1000");
     })
   }
@@ -146,37 +97,6 @@ var generate_plot = function(root_obj) {
     axios.post('/get_plot_data_mixed/', data).then(function(response){
       var data = response.data.plot_data;
       Store.plot.current_hash = response.data.plot_hash;
-
-      if(type == "mixed-severity") {
-        var myData = [{key: 'group 1', values: []}];
-        for (var i=0; i<data["x1"].length; i++){
-          var value = data[type][i];
-          // check whether we should plot this based on the filters
-          if(value >= 0) {
-            if(!Store.plot.show_successes) continue;
-          } else {
-            if(!Store.plot.show_violations) continue;
-          }
-          // negative verdict severity represents violation - colour these bars red
-          var color = "#cc0000";
-          // other columns in the plot are green since they show non-violating observations
-          if (value >= 0) {color = "#00802b"}
-          myData[0].values.push({label: new Date(Date.parse(data["x1"][i])),
-                                value: value,
-                                color: color});
-        }
-      } else {
-        var myData = [{key: 'subatom 0', values: []}, {key: 'subatom 1', values: []}];
-        for (var i=0; i<data["x1"].length; i++){
-          var value1 = data[type+"-1"][i];
-          var value2 = data[type+"-2"][i]
-
-          myData[0].values.push({label: new Date(Date.parse(data["x1"][i])),
-                                 value: value1});
-          myData[1].values.push({label: new Date(Date.parse(data["x1"][i])),
-                                 value: value2});
-        }
-      }
 
       window.open("/display_plot/" + response.data.plot_hash, "plot", "width=1300,height=1000");
     })
@@ -186,48 +106,12 @@ var generate_plot = function(root_obj) {
       type == "mixed-path-severity" || type == "mixed-path-observation") {
     var path_index = Store.chosen_path_index;
     Store.plot.current_hash = path_plot_hash;
-    var myData = [{key: "path index: " + path_index, values: []}];
 
     if(type == "simple-path-severity" || type == "between-path-severity" || type == "mixed-path-severity") {
-      for (var i=0; i<path_plot_data[path_index]["x"].length; i++) {
-        var value = path_plot_data[path_index]["severities"][i]
-        // check whether we should plot this based on the filters
-        if(value >= 0) {
-          if(!Store.plot.show_successes) continue;
-        } else {
-          if(!Store.plot.show_violations) continue;
-        }
-        // negative verdict severity represents violation - colour these bars red
-        var color = "#cc0000";
-        // other columns in the plot are green since they show non-violating observations
-        if (value >= 0) {color = "#00802b"}
-        myData[0].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
-                              value: value,
-                              color: color});
-      }
 
       window.open("/display_path_plot/" + path_plot_hash + "/severity/", "plot", "width=1300,height=1000");
 
     } else {
-
-      if (type =="mixed-path-observation"){
-        myData = [{key: 'subatom 0', values: []}, {key: 'subatom 1', values: []}];
-        for (var i=0; i<path_plot_data[path_index]["x"].length; i++){
-          var value1 = path_plot_data[path_index]["observations_lhs"][i];
-          var value2 = path_plot_data[path_index]["observations_rhs"][i]
-
-          myData[0].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
-                                 value: value1});
-          myData[1].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
-                                 value: value2});
-        }
-      } else {
-
-        for (var i=0; i<path_plot_data[path_index]["x"].length; i++) {
-          myData[0].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
-                                 value: path_plot_data[path_index]["observations"][i]});
-        }
-      }
 
       window.open("/display_path_plot/" + path_plot_hash + "/observation/", "plot", "width=1300,height=1000");
 

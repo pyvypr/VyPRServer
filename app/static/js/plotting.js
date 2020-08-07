@@ -28,12 +28,13 @@ var generate_plot = function(root_obj) {
 
       console.log(response.data);
 
-      if (type == "severity" || type == "observation"){
+      if (type == "severity" || type == "observation" || type=="between-severity" ||
+          type == "between-observation"){
           var myData = [{key: 'group 1', values: []}];
           for (var i=0; i<data["x"].length; i++){
             var value = data[type][i];
 
-            if(type == "severity") {
+            if(type == "severity" || type == "between-severity") {
               // check whether we should plot this based on the filters
               if(value >= 0) {
                 if(!Store.plot.show_successes) continue;
@@ -52,32 +53,6 @@ var generate_plot = function(root_obj) {
                                   value: value,
                                   color: color});
           }
-      }
-      if (type == "between-severity" || type == "between-observation"){
-
-          var myData = [{key: 'group 1', values: []}];
-          for (var i=0; i<data["x"].length; i++){
-            var value = data[type][i];
-
-            if(type == "between-severity") {
-              // check whether we should plot this based on the filters
-              if(value >= 0) {
-                if(!Store.plot.show_successes) continue;
-              } else {
-                if(!Store.plot.show_violations) continue;
-              }
-              // negative verdict severity represents violation - colour these bars red
-              var color = "#cc0000";
-              // other columns in the plot are green since they show non-violating observations
-              if (value >= 0) {color = "#00802b"}
-            } else {
-              color = "blue";
-            }
-            myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
-                                  value: value,
-                                  color: color});
-          }
-
       }
       if (type == "mixed-severity" || type == "mixed-observation"){
           if(type == "mixed-severity") {
@@ -110,86 +85,7 @@ var generate_plot = function(root_obj) {
                                      value: value2});
             }
           }
-
       }
-      if (type == "between-path-severity" || type == "between-path-observation") {
-        var myData = [{key: "path index: " + path_index, values: []}];
-
-        if(type == "between-path-severity") {
-          for (var i=0; i<path_plot_data[path_index]["x"].length; i++) {
-            var value = path_plot_data[path_index]["severities"][i]
-            // check whether we should plot this based on the filters
-            if(value >= 0) {
-              if(!Store.plot.show_successes) continue;
-            } else {
-              if(!Store.plot.show_violations) continue;
-            }
-            // negative verdict severity represents violation - colour these bars red
-            var color = "#cc0000";
-            // other columns in the plot are green since they show non-violating observations
-            if (value >= 0) {color = "#00802b"}
-            myData[0].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
-                                  value: value,
-                                  color: color});
-          }
-
-        } else {
-
-          for (var i=0; i<path_plot_data[path_index]["x"].length; i++) {
-              myData[0].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
-                                     value: path_plot_data[path_index]["observations"][i]});
-          }
-
-        }
-      }
-
-//      if(type == "observation" || type == "severity") {
-//        var myData = [{key: 'group 1', values: []}];
-//        for (var i=0; i<data["x"].length; i++){
-//          var value = data[type][i];
-//          // check whether we should plot this based on the filters
-//          if(value >= 0) {
-//            if(!Store.plot.show_successes) continue;
-//          } else {
-//            if(!Store.plot.show_violations) continue;
-//          }
-//          if(type == "severity") {
-//            // negative verdict severity represents violation - colour these bars red
-//            var color = "#cc0000";
-//            // other columns in the plot are green since they show non-violating observations
-//            if (value >= 0) {color = "#00802b"}
-//          } else {
-//            color = "blue";
-//          }
-//          myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
-//                                value: value,
-//                                color: color});
-//        }
-//      } else if(type == "between-severity" || type == "between-observation") {
-//        var myData = [{key: 'group 1', values: []}];
-//        for (var i=0; i<data["x"].length; i++){
-//          var value = data[type][i];
-//          // check whether we should plot this based on the filters
-//          if(value >= 0) {
-//            if(!Store.plot.show_successes) continue;
-//          } else {
-//            if(!Store.plot.show_violations) continue;
-//          }
-//          if(type == "between-severity") {
-//            // negative verdict severity represents violation - colour these bars red
-//            var color = "#cc0000";
-//            // other columns in the plot are green since they show non-violating observations
-//            if (value >= 0) {color = "#00802b"}
-//          } else {
-//            color = "blue";
-//          }
-//          myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
-//                                value: value,
-//                                color: color});
-//        }
-//      }
-//
-//      console.log(myData);
 
       that.$root.$emit("plot-data-ready", myData);
 
