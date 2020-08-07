@@ -351,7 +351,8 @@ Vue.component("test-data", {
           <input type="text" v-model="filter_string" placeholder="Filter tests..." class="form-control" />
         </div>
         <form>
-        <div v-for="(b, index) in filtered_buttons" :key="index" class="list-group-item">
+        <div v-for="(b, index) in filtered_buttons" :key="index" class="list-group-item"
+        @click="click_test(b.testname)">
           <input type='radio' :test-id="b.testname" :value="b.testname" v-model="checked_test"
             @click="select_test($event)"/>
           {{b.testname}}
@@ -364,7 +365,6 @@ Vue.component("test-data", {
   data() {
     return {
       showTests : true,
-      chosen: '',
       all_names:[],
       filter_string: "",
       all_buttons : [],
@@ -405,6 +405,11 @@ Vue.component("test-data", {
       Store.selected_tests = [test_name];
       that.store.current_tab = "machine-function-property";
     },
+    click_test : function (name) {
+      // in case user clicks anywhere inside the div containing the test
+      // we want that test to be selected so we generate a click on the radio input element
+      $("[test-id="+name+"]").click();
+    },
     select_all_tests: function(){
       var is_checked = $("#select-all-tests").prop("checked");
       $("#test-cases-list input:checkbox").prop("checked", is_checked);
@@ -443,17 +448,6 @@ Vue.component("test-data", {
       that.all_buttons = buttons;
       that.all_names = names;
     })
-  },
-  watch: {
-    chosen: function(value) {
-      if (value==''){
-        this.filterTests("");
-      }
-    }
-  },
-  mounted(){
-    var that = this;
-    //this.$root.$on("function-select", function(id){that.showTests = false;})
   }
 })
 
