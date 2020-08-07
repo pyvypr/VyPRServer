@@ -731,7 +731,6 @@ Vue.component("function-calls", {
       e.preventDefault();
 
       if(is_before(this.filter_to, this.filter_from)) {
-        console.log("wrong datetime input")
         this.date_input_error = true;
       }
 
@@ -1244,7 +1243,6 @@ Vue.component("code-view", {
       for (var i=0; i<data_ready["lines_to_colors"].length; i++) {
         var dict = data_ready["lines_to_colors"][i];
         for (var j=0; j<dict["lines"].length; j++) {
-          console.log(dict["color"])
           whole_code[dict["lines"][j]-start].background = "background-color: " + dict["color"];
         }
       }
