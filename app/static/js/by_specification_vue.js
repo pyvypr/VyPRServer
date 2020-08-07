@@ -782,35 +782,35 @@ Vue.component("function-calls", {
     }
   },
   mounted(){
-    var obj = this;
+    var that = this;
     this.$root.$on('tests-selected', function(tree){
-      obj.message = "Select a function first.";
-      obj.buttons = [];
-      obj.checkedCalls = [];
-      obj.filter_from = "";
-      obj.filter_to = "";
-      obj.func_id = 0;
-      obj.store = Store;
+      that.message = "Select a function first.";
+      that.buttons = [];
+      that.checkedCalls = [];
+      that.filter_from = "";
+      that.filter_to = "";
+      that.func_id = 0;
+      that.store = Store;
     })
     this.$root.$on('function-select', function(dict){
       // when a specification is selected, get the calls list from server
       // while it's loading, display a temporary message
       // since each call has an input checkbox, we need to catch any changes in the selection
 
-      obj.message = "Loading function calls.  This can take some time if there are many.";
-      obj.buttons = [];
-      obj.checkedCalls = [];
-      obj.func_id = dict["selected_function_id"];
+      that.message = "Loading function calls.  This can take some time if there are many.";
+      that.buttons = [];
+      that.checkedCalls = [];
+      that.func_id = dict["selected_function_id"];
 
       axios.post(
         '/list_function_calls/',
         {
-          function: obj.func_id,
+          function: that.func_id,
           tests: Store.selected_tests
         }
       ).then(function(response){
         var data = response.data["data"];
-        obj.message = "";
+        that.message = "";
         var buttons_list = [];
         var i;
         for(i=0; i<data.length; i++) {
@@ -819,15 +819,15 @@ Vue.component("function-calls", {
             callstart: data[i][2],
             callduration: data[i][6],
             verdict: data[i][7],
-            testresult: obj.store.tests_exist ? data[i][8] : null
+            testresult: that.store.tests_exist ? data[i][8] : null
           }
           buttons_list.push(button)
         }
-        obj.buttons = buttons_list;
-        obj.filter_from = buttons_list[0].callstart;
-        obj.filter_to = buttons_list[i-1].callstart;
+        that.buttons = buttons_list;
+        that.filter_from = buttons_list[0].callstart;
+        that.filter_to = buttons_list[i-1].callstart;
 
-        obj.$root.$emit('calls-loaded', dict);
+        that.$root.$emit('calls-loaded', dict);
       })
     })
   },
@@ -1007,20 +1007,20 @@ Vue.component("code-view", {
     }
   },
   mounted(){
-    var obj2 = this;
+    var that = this;
     $("#code-listing").height(
       $(".panel.panel-success.function-calls").outerHeight() -
       $(".panel.panel-success.code-view").find(".panel-heading").first().outerHeight() -
       $("#specification_listing").outerHeight());
     this.$root.$on('tests-selected', function(tree){
-      obj2.message = "Select a function and then one or more calls, first.";
-      obj2.specification_code = "";
-      obj2.code_lines = [];
-      obj2.start_line = 0;
-      obj2.tree = {};
-      obj2.binding = undefined;
-      obj2.store = Store;
-      obj2.no_paths = false;
+      that.message = "Select a function and then one or more calls, first.";
+      that.specification_code = "";
+      that.code_lines = [];
+      that.start_line = 0;
+      that.tree = {};
+      that.binding = undefined;
+      that.store = Store;
+      that.no_paths = false;
     })
     this.$root.$on('calls-loaded', function(dict){
 
@@ -1028,19 +1028,19 @@ Vue.component("code-view", {
 
       // reset values
       path_highlight_mode_on = false;
-      obj2.message = "";
-      obj2.specification_code = dict["specification_code"];
-      obj2.no_paths = false;
+      that.message = "";
+      that.specification_code = dict["specification_code"];
+      that.no_paths = false;
 
       axios.get('/get_source_code/'+dict["selected_function_id"]).then(function(response){
         var code_data = response.data;
         if (code_data["error"]){
-          obj2.code_error = code_data["error"];
+          that.code_error = code_data["error"];
           stop_loading()
         }
         var code_lines = code_data["code"];
         var current_line = code_data["start_line"];
-        obj2.start_line = current_line;
+        that.start_line = current_line;
 
         // we also want to display binding reference at the end of each line
         // first, go through bindings and collect all line numbers they refer to
@@ -1068,12 +1068,12 @@ Vue.component("code-view", {
           current_line++;
         }
 
-        obj2.code_lines = lines_list;
+        that.code_lines = lines_list;
 
 
         // we want to highlight the quantification in the specification code
         // with the same color as the line of code it refers to
-        var quantification_ids = obj2.specification_code["vars"].split(", ");
+        var quantification_ids = that.specification_code["vars"].split(", ");
 
         // for each binding line go through the specification to find the quantification
         // that refers to that line and highlight it the same color as the line in the code
@@ -1094,12 +1094,12 @@ Vue.component("code-view", {
       })
     })
     this.$root.$on('calls-selected', function(tree){
-      obj2.tree = tree;
+      that.tree = tree;
       path_highlight_mode_on = false;
 
       var show_lines = []; //stores all lines that are of interest plus a few around them - we will hide the rest
-      var start_line = obj2.start_line;
-      var whole_code = obj2.code_lines;
+      var start_line = that.start_line;
+      var whole_code = that.code_lines;
 
       //clean up the binding buttons and dropdown menus from previous selection
       for (var i=0; i<whole_code.length; i++){
@@ -1108,8 +1108,8 @@ Vue.component("code-view", {
         whole_code[i].class = "code_listing_line";
         whole_code[i].background = "background-color: transparent";
       }
-      obj2.store.path_view = false;
-      obj2.no_paths = false;
+      that.store.path_view = false;
+      that.no_paths = false;
 
 
       // iterate through the bindings to highlight the lines and separate those paired with
@@ -1133,7 +1133,7 @@ Vue.component("code-view", {
         }
         show_lines = show_lines.concat(line_numbers);
         for (var i=0; i<line_numbers.length; i++){
-          var no = line_numbers[i] - obj2.start_line;
+          var no = line_numbers[i] - that.start_line;
           whole_code[no].background = "background-color: #ebf2ee"
           color = whole_code[no].color;
           if (!(color)){
@@ -1151,7 +1151,7 @@ Vue.component("code-view", {
 
       //in addition to the lines stored in leaves, we want to display the first line
       // and in this case, three lines around each instrumentation point
-      var more_lines = [obj2.start_line];
+      var more_lines = [that.start_line];
       for (var i=0; i<show_lines.length; i++){
         var current_line_number = show_lines[i];
         for (var j=1; j<3; j++){
@@ -1177,10 +1177,10 @@ Vue.component("code-view", {
 
       for (var i=0; i<show_lines.length; i++){
         if (show_lines[i] < (show_lines[i+1] - 1)){
-          whole_code[show_lines[i]-obj2.start_line].showempty = true;
+          whole_code[show_lines[i]-that.start_line].showempty = true;
         }
         else{
-          whole_code[show_lines[i]-obj2.start_line].showempty = false;
+          whole_code[show_lines[i]-that.start_line].showempty = false;
         }
       }
     })
@@ -1194,8 +1194,8 @@ Vue.component("code-view", {
       */
       var atom_index = dict["atom"];
       var sub_index = dict["subatom"];
-      var inst_points_list = obj2.tree[atom_index][sub_index];
-      var whole_code = obj2.code_lines;
+      var inst_points_list = that.tree[atom_index][sub_index];
+      var whole_code = that.code_lines;
 
       var lines_list = [];
       for (var i=0; i<inst_points_list.length; i++){
@@ -1206,8 +1206,8 @@ Vue.component("code-view", {
 
       // clean up any previous dropdowns and reset highlights back to a light colour
       // reset the class of the line back to non-clickable
-      obj2.store.path_view = false;
-      obj2.no_paths = false;
+      that.store.path_view = false;
+      that.no_paths = false;
       for (var i=0; i<whole_code.length; i++){
         if (whole_code[i].color) {
           whole_code[i].background = "background-color: #ebf2ee";
@@ -1222,7 +1222,7 @@ Vue.component("code-view", {
 
       // now highlight and add dropdowns to the lines in lines_list
       for (var i=0; i<lines_list.length; i++){
-        var line = whole_code[lines_list[i]-obj2.start_line]
+        var line = whole_code[lines_list[i]-that.start_line]
         line.background = "background-color: " + line.color;
         line.dict = dict;
         line.addmenu = true;
@@ -1232,12 +1232,12 @@ Vue.component("code-view", {
     this.$root.$on('path-data-ready', function(data_ready){
       // use data prepared by highlight_paths function to edit the code
 
-      var whole_code = obj2.code_lines;
+      var whole_code = that.code_lines;
       console.log(data_ready);
-      var start = obj2.start_line;
+      var start = that.start_line;
 
       if (data_ready["lines_to_colors"].length == 0) {
-        obj2.no_paths = "All the runs took the same path - analysis by path unavailable."
+        that.no_paths = "All the runs took the same path - analysis by path unavailable."
       }
 
       // path differences - colours by severity
@@ -1255,7 +1255,7 @@ Vue.component("code-view", {
       }
 
 
-      obj2.store.path_view = true;
+      that.store.path_view = true;
 
       console.log("highlighting parameters");
       console.log(data_ready["parameter_lines"]);
@@ -1268,7 +1268,7 @@ Vue.component("code-view", {
 
       }
 
-      obj2.code_lines = whole_code;
+      that.code_lines = whole_code;
       //$("#path-wrapper").addClass("show");
 
     })
