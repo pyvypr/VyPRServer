@@ -81,32 +81,6 @@ var generate_plot = function(root_obj) {
     axios.post('/get_plot_data_simple/', data).then(function(response){
       var data = response.data.plot_data;
       Store.plot.current_hash = response.data.plot_hash;
-      // perform necessary processing on data before plotting
-      //console.log(JSON.stringify(data));
-
-      var myData = [{key: 'group 1', values: []}];
-      for (var i=0; i<data["x"].length; i++){
-        var value = data[type][i];
-
-        if(type == "severity") {
-          // check whether we should plot this based on the filters
-          if(value >= 0) {
-            if(!Store.plot.show_successes) continue;
-          } else {
-            if(!Store.plot.show_violations) continue;
-          }
-          // negative verdict severity represents violation - colour these bars red
-          var color = "#cc0000";
-          // other columns in the plot are green since they show non-violating observations
-          if (value >= 0) {color = "#00802b"}
-        } else {
-          color = "blue";
-        }
-        //value = ( value >= 0 )? value : -Math.abs(Math.log(-value));
-        myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
-                              value: value,
-                              color: color});
-      }
 
       window.open("/display_plot/" + response.data.plot_hash, "plot", "width=1300,height=1000");
     });
@@ -116,29 +90,6 @@ var generate_plot = function(root_obj) {
       var data = response.data.plot_data;
       Store.plot.current_hash = response.data.plot_hash;
 
-      var myData = [{key: 'group 1', values: []}];
-      for (var i=0; i<data["x"].length; i++){
-        var value = data[type][i];
-
-        if(type == "between-severity") {
-          // check whether we should plot this based on the filters
-          if(value >= 0) {
-            if(!Store.plot.show_successes) continue;
-          } else {
-            if(!Store.plot.show_violations) continue;
-          }
-          // negative verdict severity represents violation - colour these bars red
-          var color = "#cc0000";
-          // other columns in the plot are green since they show non-violating observations
-          if (value >= 0) {color = "#00802b"}
-        } else {
-          color = "blue";
-        }
-        myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
-                              value: value,
-                              color: color});
-      }
-
       window.open("/display_plot/" + response.data.plot_hash, "plot", "width=1300,height=1000");
     })
   }
@@ -146,37 +97,6 @@ var generate_plot = function(root_obj) {
     axios.post('/get_plot_data_mixed/', data).then(function(response){
       var data = response.data.plot_data;
       Store.plot.current_hash = response.data.plot_hash;
-
-      if(type == "mixed-severity") {
-        var myData = [{key: 'group 1', values: []}];
-        for (var i=0; i<data["x1"].length; i++){
-          var value = data[type][i];
-          // check whether we should plot this based on the filters
-          if(value >= 0) {
-            if(!Store.plot.show_successes) continue;
-          } else {
-            if(!Store.plot.show_violations) continue;
-          }
-          // negative verdict severity represents violation - colour these bars red
-          var color = "#cc0000";
-          // other columns in the plot are green since they show non-violating observations
-          if (value >= 0) {color = "#00802b"}
-          myData[0].values.push({label: new Date(Date.parse(data["x1"][i])),
-                                value: value,
-                                color: color});
-        }
-      } else {
-        var myData = [{key: 'subatom 0', values: []}, {key: 'subatom 1', values: []}];
-        for (var i=0; i<data["x1"].length; i++){
-          var value1 = data[type+"-1"][i];
-          var value2 = data[type+"-2"][i]
-
-          myData[0].values.push({label: new Date(Date.parse(data["x1"][i])),
-                                 value: value1});
-          myData[1].values.push({label: new Date(Date.parse(data["x1"][i])),
-                                 value: value2});
-        }
-      }
 
       window.open("/display_plot/" + response.data.plot_hash, "plot", "width=1300,height=1000");
     })
@@ -186,48 +106,12 @@ var generate_plot = function(root_obj) {
       type == "mixed-path-severity" || type == "mixed-path-observation") {
     var path_index = Store.chosen_path_index;
     Store.plot.current_hash = path_plot_hash;
-    var myData = [{key: "path index: " + path_index, values: []}];
 
     if(type == "simple-path-severity" || type == "between-path-severity" || type == "mixed-path-severity") {
-      for (var i=0; i<path_plot_data[path_index]["x"].length; i++) {
-        var value = path_plot_data[path_index]["severities"][i]
-        // check whether we should plot this based on the filters
-        if(value >= 0) {
-          if(!Store.plot.show_successes) continue;
-        } else {
-          if(!Store.plot.show_violations) continue;
-        }
-        // negative verdict severity represents violation - colour these bars red
-        var color = "#cc0000";
-        // other columns in the plot are green since they show non-violating observations
-        if (value >= 0) {color = "#00802b"}
-        myData[0].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
-                              value: value,
-                              color: color});
-      }
 
       window.open("/display_path_plot/" + path_plot_hash + "/severity/", "plot", "width=1300,height=1000");
 
     } else {
-
-      if (type =="mixed-path-observation"){
-        myData = [{key: 'subatom 0', values: []}, {key: 'subatom 1', values: []}];
-        for (var i=0; i<path_plot_data[path_index]["x"].length; i++){
-          var value1 = path_plot_data[path_index]["observations_lhs"][i];
-          var value2 = path_plot_data[path_index]["observations_rhs"][i]
-
-          myData[0].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
-                                 value: value1});
-          myData[1].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
-                                 value: value2});
-        }
-      } else {
-
-        for (var i=0; i<path_plot_data[path_index]["x"].length; i++) {
-          myData[0].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
-                                 value: path_plot_data[path_index]["observations"][i]});
-        }
-      }
 
       window.open("/display_path_plot/" + path_plot_hash + "/observation/", "plot", "width=1300,height=1000");
 
@@ -240,229 +124,124 @@ var highlight_paths = function(root_obj) {
   // get the plot type
   var type = Store.plot.type;
   var data = plot_data;
-  var resp, main_lines, parameter_lines;
+  var resp, main_lines, parameter_lines, url;
   if (type == "simple-path"){
-    axios.post('/get_path_data_simple/', data).then(function(response){
-      resp = response.data.parameter_values;
-      path_plot_hash = response.data.path_hash;
-      console.log(path_plot_hash)
-      path_plot_data = resp;
-
-      main_lines = response.data.main_lines;
-      parameter_lines = response.data.parameters;
-      console.log("parameter lines received");
-      console.log(parameter_lines);
-
-      // the selected option was to highlight the paths by severity
-      console.log("computing path data");
-      console.log(data);
-      var lines_to_colors = [];
-
-      if(resp.length > 0) {
-
-        var all_severities = resp[0]["severities"];
-        for (var i=1; i<resp.length; i++) {
-          all_severities = all_severities.concat(resp[i]["severities"]);
-        }
-        var min_sev = Math.min(...all_severities);
-        var max_sev = Math.max(...all_severities);
-
-        var negative_range = min_sev<0 ? (0 - min_sev) : 0;
-        var positive_range = max_sev>0 ? (max_sev) : 0;
-
-        for (var i=0; i<resp.length; i++) {
-          var avg = 0;
-          for (var j=0; j<resp[i]["severities"].length; j++){
-            avg += resp[i]["severities"][j];
-          }
-          avg /= resp[i]["severities"].length;
-          var avg_index;
-          if (avg < 0) {
-            avg_index = Math.round((avg - min_sev)/negative_range * 60);
-          } else {
-            avg_index = Math.round(60 + avg/positive_range * 60);
-          }
-          var dict = {lines: resp[i]["lines"],
-                      color: "hsl("+avg_index+", 78%, 90%)"};
-          lines_to_colors.push(dict);
-        }
-        var data = {
-          first_line: first_line,
-          last_line: last_line,
-          lines_to_colors: lines_to_colors,
-          main_lines: main_lines,
-          parameter_lines: parameter_lines
-        };
-      } else {
-        var data = {
-          first_line: first_line,
-          last_line: last_line,
-          lines_to_colors: [],
-          main_lines: main_lines,
-          parameter_lines: []
-        };
-      }
-      that.$root.$emit('path-data-ready', data);
-    })
+    url = '/get_path_data_simple/';
   }
-  if (type == "between-path"){
+  else if (type == "between-path"){
     var sorted = plot_data["selected_line_numbers"][0] <= plot_data["selected_line_numbers"][1];
     var first_line = sorted ? plot_data["selected_line_numbers"][0] : plot_data["selected_line_numbers"][1];
     var last_line = sorted ? plot_data["selected_line_numbers"][1] : plot_data["selected_line_numbers"][0];
-
-    axios.post('/get_path_data_between/', data).then(function(response){
-      resp = response.data.parameter_values;
-      path_plot_hash = response.data.path_hash;
-      console.log(path_plot_hash)
-      path_plot_data = resp;
-
-      main_lines = response.data.main_lines;
-      parameter_lines = response.data.parameters;
-      console.log("parameter lines received");
-      console.log(parameter_lines);
-
-      // the selected option was to highlight the paths by severity
-      console.log("computing path data");
-      console.log(data);
-      var lines_to_colors = [];
-
-      if(resp.length > 0) {
-
-        var all_severities = resp[0]["severities"];
-        for (var i=1; i<resp.length; i++) {
-          all_severities = all_severities.concat(resp[i]["severities"]);
-        }
-        var min_sev = Math.min(...all_severities);
-        var max_sev = Math.max(...all_severities);
-
-        var negative_range = min_sev<0 ? (0 - min_sev) : 0;
-        var positive_range = max_sev>0 ? (max_sev) : 0;
-
-        for (var i=0; i<resp.length; i++) {
-          var avg = 0;
-          for (var j=0; j<resp[i]["severities"].length; j++){
-            avg += resp[i]["severities"][j];
-          }
-          avg /= resp[i]["severities"].length;
-          var avg_index;
-          if (avg < 0) {
-            avg_index = Math.round((avg - min_sev)/negative_range * 60);
-          } else {
-            avg_index = Math.round(60 + avg/positive_range * 60);
-          }
-          var dict = {lines: resp[i]["lines"],
-                      color: "hsl("+avg_index+", 78%, 90%)"};
-          lines_to_colors.push(dict);
-        }
-        var data = {
-          first_line: first_line,
-          last_line: last_line,
-          lines_to_colors: lines_to_colors,
-          main_lines: main_lines,
-          parameter_lines: parameter_lines
-        };
-      } else {
-        var data = {
-          first_line: first_line,
-          last_line: last_line,
-          lines_to_colors: [],
-          main_lines: main_lines,
-          parameter_lines: []
-        };
-      }
-      that.$root.$emit('path-data-ready', data);
-    })
+    url = '/get_path_data_between/';
   }
-  if (type == "mixed-path"){
+  else if (type == "mixed-path"){
     var sorted = plot_data["selected_line_numbers"][0] <= plot_data["selected_line_numbers"][1];
     var first_line = sorted ? plot_data["selected_line_numbers"][0] : plot_data["selected_line_numbers"][1];
     var last_line = sorted ? plot_data["selected_line_numbers"][1] : plot_data["selected_line_numbers"][0];
-
-    axios.post('/get_path_data_mixed/', data).then(function(response){
-      resp = response.data.parameter_values;
-      path_plot_hash = response.data.path_hash;
-      console.log(path_plot_hash)
-      path_plot_data = resp;
-
-      main_lines = response.data.main_lines;
-      parameter_lines = response.data.parameters;
-      console.log("parameter lines received");
-      console.log(parameter_lines);
-
-      // the selected option was to highlight the paths by severity
-      console.log("computing path data");
-      console.log(data);
-      var lines_to_colors = [];
-
-      if(resp.length > 0) {
-
-        var all_severities = resp[0]["severities"];
-        for (var i=1; i<resp.length; i++) {
-          all_severities = all_severities.concat(resp[i]["severities"]);
-        }
-        var min_sev = Math.min(...all_severities);
-        var max_sev = Math.max(...all_severities);
-
-        var negative_range = min_sev<0 ? (0 - min_sev) : 0;
-        var positive_range = max_sev>0 ? (max_sev) : 0;
-
-        for (var i=0; i<resp.length; i++) {
-          var avg = 0;
-          for (var j=0; j<resp[i]["severities"].length; j++){
-            avg += resp[i]["severities"][j];
-          }
-          avg /= resp[i]["severities"].length;
-          var avg_index;
-          if (avg < 0) {
-            avg_index = Math.round((avg - min_sev)/negative_range * 60);
-          } else {
-            avg_index = Math.round(60 + avg/positive_range * 60);
-          }
-          var dict = {lines: resp[i]["lines"],
-                      color: "hsl("+avg_index+", 78%, 90%)"};
-          lines_to_colors.push(dict);
-        }
-        var data = {
-          first_line: first_line,
-          last_line: last_line,
-          lines_to_colors: lines_to_colors,
-          main_lines: main_lines,
-          parameter_lines: parameter_lines
-        };
-      } else {
-        var data = {
-          first_line: first_line,
-          last_line: last_line,
-          lines_to_colors: [],
-          main_lines: main_lines,
-          parameter_lines: []
-        };
-      }
-      that.$root.$emit('path-data-ready', data);
-    })
+    url = '/get_path_data_mixed/';
   }
+
+  axios.post(url, data).then(function(response){
+    resp = response.data.parameter_values;
+    path_plot_hash = response.data.path_hash;
+    console.log(path_plot_hash)
+    path_plot_data = resp;
+
+    main_lines = response.data.main_lines;
+    parameter_lines = response.data.parameters;
+    console.log("parameter lines received");
+    console.log(parameter_lines);
+
+    // the selected option was to highlight the paths by severity
+    console.log("computing path data");
+    var lines_to_colors = []; // this list will contain pairs of line numbers and their colours
+
+    if(resp.length > 0) {
+
+      // severities observed along any path
+      var all_severities = resp[0]["severities"];
+      for (var i=1; i<resp.length; i++) {
+        all_severities = all_severities.concat(resp[i]["severities"]);
+      }
+
+      // min and max severity value observed along any path - we need range
+      var min_sev = Math.min(...all_severities);
+      var max_sev = Math.max(...all_severities);
+
+      // 0 is fixed halfway between green and red, we want to place the average value
+      // with red being the worst violation and green the success with largest margin
+      // in case all obsrvations were successes, the scale will only go from yellow to green
+      // we know all averages are also positive in this case so no worries about div by zero
+      var negative_range = min_sev<0 ? (0 - min_sev) : 0;
+      var positive_range = max_sev>0 ? (max_sev) : 0;
+
+      for (var i=0; i<resp.length; i++) {
+        var avg = 0;
+        for (var j=0; j<resp[i]["severities"].length; j++){
+          avg += resp[i]["severities"][j];
+        }
+        avg /= resp[i]["severities"].length;
+        var avg_index;
+        if (avg < 0) {
+          avg_index = Math.round((avg - min_sev)/negative_range * 60);
+        } else {
+          avg_index = Math.round(60 + avg/positive_range * 60);
+        }
+        var dict = {lines: resp[i]["lines"],
+                    color: "hsl("+avg_index+", 78%, 90%)"};
+        lines_to_colors.push(dict);
+      }
+      var data = {
+        first_line: first_line,
+        last_line: last_line,
+        lines_to_colors: lines_to_colors,
+        main_lines: main_lines,
+        parameter_lines: parameter_lines
+      };
+    } else {
+      var data = {
+        first_line: first_line,
+        last_line: last_line,
+        lines_to_colors: [],
+        main_lines: main_lines,
+        parameter_lines: []
+      };
+    }
+    that.$root.$emit('path-data-ready', data);
+  })
+
 };
 
 var is_before = function(str1, str2) {
+  // determining if datetime in str1 shows a time earlier then the one in str2
+  // format DD/MM/YYYY hh:mm:ss
   var date1 = str1.split(" ")[0].split("/");
   var date2 = str2.split(" ")[0].split("/");
+
+  // year
   if (parseInt(date1[2]) < parseInt(date2[2])) { return true }
   if (parseInt(date1[2]) > parseInt(date2[2])) { return false }
+  // month
   if (parseInt(date1[1]) < parseInt(date2[1])) { return true }
   if (parseInt(date1[1]) > parseInt(date2[1])) { return false }
+  // day
   if (parseInt(date1[0]) < parseInt(date2[0])) { return true }
   if (parseInt(date1[0]) > parseInt(date2[0])) { return false }
 
   var time1 = str1.split(" ")[1].split(":");
   var time2 = str2.split(" ")[1].split(":");
+
+  // hours
   if (parseInt(time1[0]) < parseInt(time2[0])) { return true }
   if (parseInt(time1[0]) > parseInt(time2[0])) { return false }
+  // minutes
   if (parseInt(time1[1]) < parseInt(time2[1])) { return true }
   if (parseInt(time1[1]) > parseInt(time2[1])) { return false }
+  // seconds
   if (parseInt(time1[2]) < parseInt(time2[2])) { return true }
   if (parseInt(time1[2]) > parseInt(time2[2])) { return false }
   return false
-}
+};
 
 
 Vue.use(VuejQueryMask);
@@ -571,7 +350,8 @@ Vue.component("test-data", {
           <input type="text" v-model="filter_string" placeholder="Filter tests..." class="form-control" />
         </div>
         <form>
-        <div v-for="(b, index) in filtered_buttons" :key="index" class="list-group-item">
+        <div v-for="(b, index) in filtered_buttons" :key="index" class="list-group-item"
+        @click="click_test(b.testname)">
           <input type='radio' :test-id="b.testname" :value="b.testname" v-model="checked_test"
             @click="select_test($event)"/>
           {{b.testname}}
@@ -584,7 +364,6 @@ Vue.component("test-data", {
   data() {
     return {
       showTests : true,
-      chosen: '',
       all_names:[],
       filter_string: "",
       all_buttons : [],
@@ -625,6 +404,11 @@ Vue.component("test-data", {
       Store.selected_tests = [test_name];
       that.store.current_tab = "machine-function-property";
     },
+    click_test : function (name) {
+      // in case user clicks anywhere inside the div containing the test
+      // we want that test to be selected so we generate a click on the radio input element
+      $("[test-id="+name+"]").click();
+    },
     select_all_tests: function(){
       var is_checked = $("#select-all-tests").prop("checked");
       $("#test-cases-list input:checkbox").prop("checked", is_checked);
@@ -663,17 +447,6 @@ Vue.component("test-data", {
       that.all_buttons = buttons;
       that.all_names = names;
     })
-  },
-  watch: {
-    chosen: function(value) {
-      if (value==''){
-        this.filterTests("");
-      }
-    }
-  },
-  mounted(){
-    var that = this;
-    //this.$root.$on("function-select", function(id){that.showTests = false;})
   }
 })
 
@@ -894,11 +667,13 @@ Vue.component("function-calls", {
             <button @click="select_filtered($event)" class="btn btn-default"> Filter calls </button>
             </form>
           </div>
-          <button v-if="!message" class="list-group-item">
+          <button v-if="!message" class="list-group-item" @click="toggleSelection(-1,-1)">
             <input type='checkbox' id="select-all-calls" @click="select_all_calls()"/><b> Select all </b>
           </button>
-          <button v-for="(b, index) in this.buttons" :key="index" class="list-group-item">
-            <input type='checkbox' :function-call-id="b.callid" :value="b.callid" v-model="checkedCalls"/>
+          <button v-for="(b, index) in this.buttons" :key="index" class="list-group-item"
+                  @click="toggleSelection(index, b.callid)">
+            <input type='checkbox' :function-call-id="b.callid" :value="b.callid" v-model="checkedCalls"
+            @click="($event).stopPropagation()"/>
             {{b.callstart}}
             <span v-if="tests_exist" class="badge" v-bind:class="b.testresult">unit test</span>
             <span class="badge" v-bind:class="translate_verdict(b.verdict)">query</span>
@@ -955,7 +730,6 @@ Vue.component("function-calls", {
       e.preventDefault();
 
       if(is_before(this.filter_to, this.filter_from)) {
-        console.log("wrong datetime input")
         this.date_input_error = true;
       }
 
@@ -974,6 +748,7 @@ Vue.component("function-calls", {
           if (that.buttons[i].callid == ids_list[0]){
             for (var j=i; j<i+ids_list.length; j++){
               that.checkedCalls.push(that.buttons[j].callid);
+              // select all is the first input:checkbox in the f-call-list, hence j+1
               $(calls_list[j+1]).prop("checked", true);
             }
             break
@@ -982,38 +757,58 @@ Vue.component("function-calls", {
       })
       stop_loading();
       e.stopPropagation();
+      // prevents closing the error message when clicking 'filter calls'
+      // - this is the button that makes the error appear, so it would cancel the effect
+    },
+    toggleSelection: function(n, call_id) {
+      // in case click happened outside the checkbox, but within a call button
+      var input_box = $("#function-call-list input:checkbox")[n+1];
+      var selected = $(input_box).prop("checked");
+      $(input_box).prop("checked", !selected);
+      if (call_id == -1) {
+        //indicator argument which tells us method was called by select all button
+        this.select_all_calls();
+      }
+      else {
+        if (selected) {
+          this.checkedCalls.splice(this.checkedCalls.indexOf(call_id), 1);
+        }
+        else{
+          this.checkedCalls.push(call_id);
+        }
+      }
     }
   },
   mounted(){
-    var obj = this;
+    var that = this;
     this.$root.$on('tests-selected', function(tree){
-      obj.message = "Select a function first.";
-      obj.buttons = [];
-      obj.checkedCalls = [];
-      obj.filter_from = "";
-      obj.filter_to = "";
-      obj.func_id = 0;
-      obj.store = Store;
+      that.message = "Select a function first.";
+      that.buttons = [];
+      that.checkedCalls = [];
+      that.filter_from = "";
+      that.filter_to = "";
+      that.func_id = 0;
+      that.store = Store;
     })
     this.$root.$on('function-select', function(dict){
       // when a specification is selected, get the calls list from server
       // while it's loading, display a temporary message
       // since each call has an input checkbox, we need to catch any changes in the selection
 
-      obj.message = "Loading function calls.  This can take some time if there are many.";
-      obj.buttons = [];
-      obj.checkedCalls = [];
-      obj.func_id = dict["selected_function_id"];
+      that.message = "Loading function calls.  This can take some time if there are many.";
+      that.buttons = [];
+      that.checkedCalls = [];
+      that.func_id = dict["selected_function_id"];
 
       axios.post(
         '/list_function_calls/',
         {
-          function: obj.func_id,
+          function: that.func_id,
           tests: Store.selected_tests
         }
       ).then(function(response){
         var data = response.data["data"];
-        obj.message = "";
+        that.message = "";
         var buttons_list = [];
         var i;
         for(i=0; i<data.length; i++) {
@@ -1022,15 +817,15 @@ Vue.component("function-calls", {
             callstart: data[i][2],
             callduration: data[i][6],
             verdict: data[i][7],
-            testresult: obj.store.tests_exist ? data[i][8] : null
+            testresult: that.store.tests_exist ? data[i][8] : null
           }
           buttons_list.push(button)
         }
-        obj.buttons = buttons_list;
-        obj.filter_from = buttons_list[0].callstart;
-        obj.filter_to = buttons_list[i-1].callstart;
+        that.buttons = buttons_list;
+        that.filter_from = buttons_list[0].callstart;
+        that.filter_to = buttons_list[i-1].callstart;
 
-        obj.$root.$emit('calls-loaded', dict);
+        that.$root.$emit('calls-loaded', dict);
       })
     })
   },
@@ -1087,8 +882,6 @@ Vue.component("code-view", {
         <div v-if="specification_code" id='specification_listing'>
           <specification :spec="this.specification_code" :change="1" />
         </div>
-        <plot></plot>
-        <!--<path-code :code="code_lines" :start="start_line"></path-code>-->
         <div v-if="code_lines" class='code_listing' id="code-listing">
           <div v-if="code_error" class="alert alert-danger" role="alert">
             <strong>Error: </strong>{{code_error}}
@@ -1158,9 +951,11 @@ Vue.component("code-view", {
       var whole_code = this.code_lines;
       var start_line = this.start_line;
 
-      // reset the background colors of previously highlighted lines
+      // reset the first point selection that affects the dropdown menu
       Store.first_point_selected = false;
+      // remove alert-info about just one path
       this.no_paths = false;
+      // reset the background colors of previously highlighted lines
       for (var i=0; i<whole_code.length; i++){
         var line = whole_code[i];
         line.addmenu = false;
@@ -1192,10 +987,13 @@ Vue.component("code-view", {
       this.$root.$emit("binding-selected", tree);
     },
     selectOther : function(list){
+      // called when the second point in a pair is selected (mixed atoms)
+      // remove previous menus
       for (var i=0; i<this.code_lines.length; i++){
         this.code_lines[i].addmenu = false;
       }
 
+      // add menus to the points in the given list - options handled in dropdown component
       for (var i=0; i<list.length; i++){
         var index = list[i]["line"]-this.start_line;
         var line = this.code_lines[index];
@@ -1207,37 +1005,40 @@ Vue.component("code-view", {
     }
   },
   mounted(){
-    var obj2 = this;
+    var that = this;
     $("#code-listing").height(
       $(".panel.panel-success.function-calls").outerHeight() -
       $(".panel.panel-success.code-view").find(".panel-heading").first().outerHeight() -
       $("#specification_listing").outerHeight());
     this.$root.$on('tests-selected', function(tree){
-      obj2.message = "Select a function and then one or more calls, first.";
-      obj2.specification_code = "";
-      obj2.code_lines = [];
-      obj2.start_line = 0;
-      obj2.tree = {};
-      obj2.binding = undefined;
-      obj2.store = Store;
-      obj2.no_paths = false;
+      that.message = "Select a function and then one or more calls, first.";
+      that.specification_code = "";
+      that.code_lines = [];
+      that.start_line = 0;
+      that.tree = {};
+      that.binding = undefined;
+      that.store = Store;
+      that.no_paths = false;
     })
     this.$root.$on('calls-loaded', function(dict){
-      path_highlight_mode_on = false;
+
       start_loading();
 
-      obj2.message = "";
-      obj2.specification_code = dict["specification_code"];
-      obj2.no_paths = false;
+      // reset values
+      path_highlight_mode_on = false;
+      that.message = "";
+      that.specification_code = dict["specification_code"];
+      that.no_paths = false;
+
       axios.get('/get_source_code/'+dict["selected_function_id"]).then(function(response){
         var code_data = response.data;
         if (code_data["error"]){
-          obj2.code_error = code_data["error"];
+          that.code_error = code_data["error"];
           stop_loading()
         }
         var code_lines = code_data["code"];
         var current_line = code_data["start_line"];
-        obj2.start_line = current_line;
+        that.start_line = current_line;
 
         // we also want to display binding reference at the end of each line
         // first, go through bindings and collect all line numbers they refer to
@@ -1265,12 +1066,12 @@ Vue.component("code-view", {
           current_line++;
         }
 
-        obj2.code_lines = lines_list;
+        that.code_lines = lines_list;
 
 
         // we want to highlight the quantification in the specification code
         // with the same color as the line of code it refers to
-        var quantification_ids = obj2.specification_code["vars"].split(", ");
+        var quantification_ids = that.specification_code["vars"].split(", ");
 
         // for each binding line go through the specification to find the quantification
         // that refers to that line and highlight it the same color as the line in the code
@@ -1291,12 +1092,12 @@ Vue.component("code-view", {
       })
     })
     this.$root.$on('calls-selected', function(tree){
-      obj2.tree = tree;
+      that.tree = tree;
       path_highlight_mode_on = false;
 
       var show_lines = []; //stores all lines that are of interest plus a few around them - we will hide the rest
-      var start_line = obj2.start_line;
-      var whole_code = obj2.code_lines;
+      var start_line = that.start_line;
+      var whole_code = that.code_lines;
 
       //clean up the binding buttons and dropdown menus from previous selection
       for (var i=0; i<whole_code.length; i++){
@@ -1305,8 +1106,8 @@ Vue.component("code-view", {
         whole_code[i].class = "code_listing_line";
         whole_code[i].background = "background-color: transparent";
       }
-      obj2.store.path_view = false;
-      obj2.no_paths = false;
+      that.store.path_view = false;
+      that.no_paths = false;
 
 
       // iterate through the bindings to highlight the lines and separate those paired with
@@ -1330,7 +1131,7 @@ Vue.component("code-view", {
         }
         show_lines = show_lines.concat(line_numbers);
         for (var i=0; i<line_numbers.length; i++){
-          var no = line_numbers[i] - obj2.start_line;
+          var no = line_numbers[i] - that.start_line;
           whole_code[no].background = "background-color: #ebf2ee"
           color = whole_code[no].color;
           if (!(color)){
@@ -1348,7 +1149,7 @@ Vue.component("code-view", {
 
       //in addition to the lines stored in leaves, we want to display the first line
       // and in this case, three lines around each instrumentation point
-      var more_lines = [obj2.start_line];
+      var more_lines = [that.start_line];
       for (var i=0; i<show_lines.length; i++){
         var current_line_number = show_lines[i];
         for (var j=1; j<3; j++){
@@ -1374,10 +1175,10 @@ Vue.component("code-view", {
 
       for (var i=0; i<show_lines.length; i++){
         if (show_lines[i] < (show_lines[i+1] - 1)){
-          whole_code[show_lines[i]-obj2.start_line].showempty = true;
+          whole_code[show_lines[i]-that.start_line].showempty = true;
         }
         else{
-          whole_code[show_lines[i]-obj2.start_line].showempty = false;
+          whole_code[show_lines[i]-that.start_line].showempty = false;
         }
       }
     })
@@ -1391,8 +1192,8 @@ Vue.component("code-view", {
       */
       var atom_index = dict["atom"];
       var sub_index = dict["subatom"];
-      var inst_points_list = obj2.tree[atom_index][sub_index];
-      var whole_code = obj2.code_lines;
+      var inst_points_list = that.tree[atom_index][sub_index];
+      var whole_code = that.code_lines;
 
       var lines_list = [];
       for (var i=0; i<inst_points_list.length; i++){
@@ -1403,8 +1204,8 @@ Vue.component("code-view", {
 
       // clean up any previous dropdowns and reset highlights back to a light colour
       // reset the class of the line back to non-clickable
-      obj2.store.path_view = false;
-      obj2.no_paths = false;
+      that.store.path_view = false;
+      that.no_paths = false;
       for (var i=0; i<whole_code.length; i++){
         if (whole_code[i].color) {
           whole_code[i].background = "background-color: #ebf2ee";
@@ -1419,7 +1220,7 @@ Vue.component("code-view", {
 
       // now highlight and add dropdowns to the lines in lines_list
       for (var i=0; i<lines_list.length; i++){
-        var line = whole_code[lines_list[i]-obj2.start_line]
+        var line = whole_code[lines_list[i]-that.start_line]
         line.background = "background-color: " + line.color;
         line.dict = dict;
         line.addmenu = true;
@@ -1427,32 +1228,36 @@ Vue.component("code-view", {
       }
     })
     this.$root.$on('path-data-ready', function(data_ready){
-      var whole_code = obj2.code_lines;
+      // use data prepared by highlight_paths function to edit the code
+
+      var whole_code = that.code_lines;
       console.log(data_ready);
-      var start = obj2.start_line;
+      var start = that.start_line;
 
       if (data_ready["lines_to_colors"].length == 0) {
-        obj2.no_paths = "All the runs took the same path - analysis by path unavailable."
+        that.no_paths = "All the runs took the same path - analysis by path unavailable."
       }
 
+      // path differences - colours by severity
       for (var i=0; i<data_ready["lines_to_colors"].length; i++) {
         var dict = data_ready["lines_to_colors"][i];
         for (var j=0; j<dict["lines"].length; j++) {
-          console.log(dict["color"])
           whole_code[dict["lines"][j]-start].background = "background-color: " + dict["color"];
         }
       }
 
+      // path intersection - highlight but without indicating severity
       for (var i=0; i<data_ready["main_lines"].length; i++) {
         whole_code[data_ready["main_lines"][i]-start].background = "background-color: #cce0ff";
       }
 
 
-      obj2.store.path_view = true;
+      that.store.path_view = true;
 
       console.log("highlighting parameters");
       console.log(data_ready["parameter_lines"]);
 
+      // add menu to e.g. a branching point that offers analysis by path options
       for (var i=0; i<data_ready["parameter_lines"].length; i++) {
         whole_code[data_ready["parameter_lines"][i]-start].background = "background-color: lightgrey";
         whole_code[data_ready["parameter_lines"][i]-start].dict = "PATH";
@@ -1460,7 +1265,7 @@ Vue.component("code-view", {
 
       }
 
-      obj2.code_lines = whole_code;
+      that.code_lines = whole_code;
       //$("#path-wrapper").addClass("show");
 
     })
@@ -1874,6 +1679,7 @@ Vue.component("dropdown", {
   mounted(){
     var that = this;
     this.$root.$on("subatom-selected", function(dict){
+      // resetting dropdown options upon subatom reselection
       if (Store.type_of_atom){
       var options = [];
       var atom_index = dict["atom"];
@@ -1945,239 +1751,6 @@ Vue.component("dropdown", {
     })
 
   }
-})
-
-
-Vue.component("plot", {
-  template: `<div id="plot-wrapper" class="plot">
-  <div id="plot-controls"><a href="#" @click="hidePlot($event)" class="close-plot">close</a></div>
-  <div id="plot-new-window">
-    <p><a href="#" @click="newPlotWindow($event)">Move to new window</a></p>
-    <p><a href="#" @click="downloadPDF($event)">Download PDF</a></p>
-  </div>
-  <div id="plot-description" v-html="this.description"></div>
-  <div id="path-filters" v-if="is_by_path_plot">Select path:
-    <a v-for="(path, index) in paths" href="#"
-      :class = "(index == store.chosen_path_index) ? 'filter active' : 'filter'"
-      @click="choosePath($event, index)">Path Index {{index}}</a>
-  </div>
-  <p></p>
-  <div id="plot-filters" v-if="is_severity_plot">Filters:
-    <a href="#" id="violations" class="filter" v-bind:class="{active : violationFilterActive}"
-      @click="toggleViolationFilter($event)">Violations</a>
-    <a href="#" id="successes" class="filter" v-bind:class="{active : successFilterActive}"
-      @click="toggleSuccessFilter($event)">Successes</a>
-  </div>
-  <p></p>
-  <svg id="plot-svg"></svg>
-  </div>`,
-  data() {
-    return {
-      store : Store
-    }
-  },
-  computed : {
-    description : function() {
-      if(this.store.plot.type == "severity" || this.store.plot.type == "between-severity" || this.store.plot.type == "mixed-severity") {
-        return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span> severity";
-      } else {
-        return 'Plot of <span class="constraint">' + this.store.plot.constraint_html + "</span>";
-      }
-    },
-    violationFilterActive : function() {
-      return this.store.plot.show_violations;
-    },
-    successFilterActive : function() {
-      return this.store.plot.show_successes;
-    },
-    is_severity_plot : function() {
-      return this.store.plot.type == "severity" || this.store.plot.type == "between-severity" ||
-             this.store.plot.type == "mixed-severity" || this.store.plot.type == "between-path-severity";
-    },
-    is_mixed_observation_plot : function() {
-      return this.store.plot.type == "mixed-observation";
-    },
-    is_by_path_plot : function() {
-      return this.store.plot.type == "between-path-severity" || this.store.plot.type == "between-path-observation";
-    },
-    paths : function() {
-      return path_plot_data;
-    }
-  },
-  mounted(){
-    var that = this;
-    this.$root.$on("calls-loaded", function(dict){
-      if (!(plot_visible)) return
-      // empty plot
-      $("#plot-svg").empty();
-      // toggle visibility
-      $("#plot-wrapper").removeClass("show");
-      // set the global flag
-      plot_visible = false;
-    })
-    this.$root.$on("plot-data-ready", function(data_array){
-      // display the plot
-      $("#plot-wrapper").addClass("show");
-      // set height of plot wrapper
-      $("#plot-wrapper").height(
-        $(".panel.panel-success.function-calls").outerHeight() -
-        $(".panel.panel-success.code-view").find(".panel-heading").first().outerHeight() -
-        $("#specification_listing").outerHeight());
-      $("#plot-svg").width($("#code-listing").outerWidth());
-      if(that.store.plot.type == "severity") {
-          $("#plot-svg").height($("#plot-wrapper").outerHeight() - $("#plot-controls").outerHeight()
-                                - $("#plot-description").outerHeight()
-                                - $("#plot-filters").outerHeight());
-      } else {
-          $("#plot-svg").height($("#plot-wrapper").outerHeight() - $("#plot-controls").outerHeight()
-                                - $("#plot-description").outerHeight());
-      }
-      //var data_array = data["array"];
-      nv.addGraph(function() {
-        var chart = nv.models.multiBarChart()
-          .x(function(d) { return d.label })
-          .y(function(d) { return d.value })
-          .reduceXTicks(true)    //alternatively, use staggering or rotated labels to prevent overlapping
-          .showControls(false)   //Allow user to switch between 'Grouped' and 'Stacked' mode.
-          .showLegend(that.is_mixed_observation_plot)
-          .color(["#2b5fed", "#f5b52c"])
-
-        // omitting date from time format - moslty the difference is in seconds
-        var y_label = that.is_severity_plot ? 'Verdict severity' : 'Observation';
-        chart.xAxis
-          .axisLabel('Time of observation')
-          .tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)); });
-        chart.yAxis
-          .axisLabel(y_label)
-          .tickFormat(d3.format('.02f'))
-          .showMaxMin(true);
-
-        chart.tooltip(function(key, x, y, e, graph) {
-          return x + " -> " + y;
-        });
-
-        d3.select('#plot-svg')
-          .datum(data_array)
-          .call(chart);
-
-        nv.utils.windowResize(chart.update);
-
-        // set initial size
-        chart.update();
-
-        stop_loading();
-
-        return chart;
-      });
-    })
-  },
-  methods:{
-    hidePlot: function(e){
-      // prevent navigation that would normally take place when a link is clicked
-      e.preventDefault();
-      // empty plot
-      $("#plot-svg").empty();
-      // toggle visibility
-      $("#plot-wrapper").toggleClass("show");
-      // set the global flag
-      plot_visible = false;
-    },
-    newPlotWindow : function(e) {
-      e.preventDefault();
-      $("#plot-svg").empty();
-      $("#plot-wrapper").toggleClass("show");
-      plot_visible = false;
-      window.open("/display_plot/" + this.store.plot.current_hash, "plot", "height=500,width=900");
-    },
-    downloadPDF : function(e) {
-      e.preventDefault();
-      window.location = "/download_plot/" + this.store.plot.current_hash;
-    },
-    toggleSuccessFilter : function(e) {
-      e.preventDefault();
-      this.store.plot.show_successes = !this.store.plot.show_successes;
-      generate_plot(this);
-
-    },
-    toggleViolationFilter : function(e) {
-      e.preventDefault();
-      this.store.plot.show_violations = !this.store.plot.show_violations;
-      generate_plot(this);
-    },
-    choosePath : function(e, index) {
-      e.preventDefault();
-      this.store.chosen_path_index = index;
-      generate_plot(this);
-    }
-  }
-
-})
-
-
-Vue.component("path-code", {
-  props: ["code", "start"],
-  template: `<div id="path-wrapper" class="path">
-  <div id="path-controls"><a href="#" @click="hidePath($event)" class="close-path">close</a></div>
-    <div v-if="code_lines" class='code_listing'>
-      <div v-for="(line,index) in code_lines" :key="index" :class="line.class"
-      :id="line.id" :style="line.background" :save-background-color="line.color"
-      v-show="line.show">
-        <b> {{line.line_number}} </b>
-        <span class="language-python" v-html="line.content"> </span>
-      </div>
-    </div>
-  </div>`,
-  data() {
-    return {
-      store : Store,
-      code_lines: this.code,
-      start_line: this.start
-    }
-  },
-  mounted(){
-    var that = this;
-    this.$root.$on('path-data-ready', function(data_ready){
-      var whole_code = JSON.parse(JSON.stringify(that.code));
-      for (var i=0; i<whole_code.length; i++) {
-        if ((that.start + i) >= data_ready["first_line"] &&
-            (that.start + i) <= data_ready["last_line"]) {
-          whole_code[i].show = true;
-        } else {
-          whole_code[i].show = false;
-        }
-      }
-
-      console.log(data_ready);
-
-      for (var i=0; i<data_ready["lines_to_colors"].length; i++) {
-        var dict = data_ready["lines_to_colors"][i];
-        for (var j=0; j<dict["lines"].length; j++) {
-          console.log(dict["color"])
-          whole_code[dict["lines"][j]-that.start].background = "background-color: " + dict["color"];
-        }
-      }
-
-      for (var i=0; i<data_ready["main_lines"].length; i++) {
-        whole_code[data_ready["main_lines"][i]-that.start].background = "background-color: #cce0ff";
-      }
-
-      that.code_lines = whole_code;
-      $("#path-wrapper").addClass("show");
-    })
-
-
-  },
-  methods:{
-    hidePath: function(e){
-      // prevent navigation that would normally take place when a link is clicked
-      e.preventDefault();
-      // toggle visibility
-      $("#path-wrapper").toggleClass("show");
-      // set the global flag
-      path_visible = false;
-    }
-  }
-
 })
 
 

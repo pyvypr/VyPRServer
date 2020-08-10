@@ -28,12 +28,13 @@ var generate_plot = function(root_obj) {
 
       console.log(response.data);
 
-      if (type == "severity" || type == "observation"){
+      if (type == "severity" || type == "observation" || type=="between-severity" ||
+          type == "between-observation"){
           var myData = [{key: 'group 1', values: []}];
           for (var i=0; i<data["x"].length; i++){
             var value = data[type][i];
 
-            if(type == "severity") {
+            if(type == "severity" || type == "between-severity") {
               // check whether we should plot this based on the filters
               if(value >= 0) {
                 if(!Store.plot.show_successes) continue;
@@ -52,32 +53,6 @@ var generate_plot = function(root_obj) {
                                   value: value,
                                   color: color});
           }
-      }
-      if (type == "between-severity" || type == "between-observation"){
-
-          var myData = [{key: 'group 1', values: []}];
-          for (var i=0; i<data["x"].length; i++){
-            var value = data[type][i];
-
-            if(type == "between-severity") {
-              // check whether we should plot this based on the filters
-              if(value >= 0) {
-                if(!Store.plot.show_successes) continue;
-              } else {
-                if(!Store.plot.show_violations) continue;
-              }
-              // negative verdict severity represents violation - colour these bars red
-              var color = "#cc0000";
-              // other columns in the plot are green since they show non-violating observations
-              if (value >= 0) {color = "#00802b"}
-            } else {
-              color = "blue";
-            }
-            myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
-                                  value: value,
-                                  color: color});
-          }
-
       }
       if (type == "mixed-severity" || type == "mixed-observation"){
           if(type == "mixed-severity") {
@@ -110,86 +85,7 @@ var generate_plot = function(root_obj) {
                                      value: value2});
             }
           }
-
       }
-      if (type == "between-path-severity" || type == "between-path-observation") {
-        var myData = [{key: "path index: " + path_index, values: []}];
-
-        if(type == "between-path-severity") {
-          for (var i=0; i<path_plot_data[path_index]["x"].length; i++) {
-            var value = path_plot_data[path_index]["severities"][i]
-            // check whether we should plot this based on the filters
-            if(value >= 0) {
-              if(!Store.plot.show_successes) continue;
-            } else {
-              if(!Store.plot.show_violations) continue;
-            }
-            // negative verdict severity represents violation - colour these bars red
-            var color = "#cc0000";
-            // other columns in the plot are green since they show non-violating observations
-            if (value >= 0) {color = "#00802b"}
-            myData[0].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
-                                  value: value,
-                                  color: color});
-          }
-
-        } else {
-
-          for (var i=0; i<path_plot_data[path_index]["x"].length; i++) {
-              myData[0].values.push({label: new Date(Date.parse(path_plot_data[path_index]["x"][i])),
-                                     value: path_plot_data[path_index]["observations"][i]});
-          }
-
-        }
-      }
-
-//      if(type == "observation" || type == "severity") {
-//        var myData = [{key: 'group 1', values: []}];
-//        for (var i=0; i<data["x"].length; i++){
-//          var value = data[type][i];
-//          // check whether we should plot this based on the filters
-//          if(value >= 0) {
-//            if(!Store.plot.show_successes) continue;
-//          } else {
-//            if(!Store.plot.show_violations) continue;
-//          }
-//          if(type == "severity") {
-//            // negative verdict severity represents violation - colour these bars red
-//            var color = "#cc0000";
-//            // other columns in the plot are green since they show non-violating observations
-//            if (value >= 0) {color = "#00802b"}
-//          } else {
-//            color = "blue";
-//          }
-//          myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
-//                                value: value,
-//                                color: color});
-//        }
-//      } else if(type == "between-severity" || type == "between-observation") {
-//        var myData = [{key: 'group 1', values: []}];
-//        for (var i=0; i<data["x"].length; i++){
-//          var value = data[type][i];
-//          // check whether we should plot this based on the filters
-//          if(value >= 0) {
-//            if(!Store.plot.show_successes) continue;
-//          } else {
-//            if(!Store.plot.show_violations) continue;
-//          }
-//          if(type == "between-severity") {
-//            // negative verdict severity represents violation - colour these bars red
-//            var color = "#cc0000";
-//            // other columns in the plot are green since they show non-violating observations
-//            if (value >= 0) {color = "#00802b"}
-//          } else {
-//            color = "blue";
-//          }
-//          myData[0].values.push({label: new Date(Date.parse(data["x"][i])),
-//                                value: value,
-//                                color: color});
-//        }
-//      }
-//
-//      console.log(myData);
 
       that.$root.$emit("plot-data-ready", myData);
 
@@ -238,9 +134,6 @@ Vue.component("plot", {
     this.$root.$on("plot-data-ready", function(data_array){
       nv.addGraph(function() {
 
-      //  $("#plot-svg").width($("body").outerWidth()-10);
-      //  $("#plot-svg").height($("body").outerHeight()-10);
-
         var chart = nv.models.multiBarChart()
           .x(function(d) { return d.label })
           .y(function(d) { return d.value })
@@ -275,18 +168,21 @@ Vue.component("plot", {
   methods:{
     downloadPDF : function(e) {
       e.preventDefault();
-      var quality = 3;
+      var quality = 3; // can be improved but we don't want the pdf to take up too much memory
       const filename  = 'plot.pdf';
 
-      var svg = d3.select("svg")[0][0],
-      img = new Image(),
-      serializer = new XMLSerializer(),
-      svgStr = serializer.serializeToString(svg);
+      // converting the svg to img to prevent the labels from doubling when converting to canvas
+      var svg = d3.select("svg")[0][0];
+      var img = new Image();
+      var serializer = new XMLSerializer();
+      var svgStr = serializer.serializeToString(svg);
 
+      // adding the image to the dom so it can be copied to canvas (works kind of like a screenshot)
       img.src = 'data:image/svg+xml;base64,'+window.btoa(svgStr);
       $("#app").append(img);
       $("img").attr('id', "image-plot");
 
+      // draw image on canvas and add the canvas to pdf (couldn't be done directly with svg)
       html2canvas(document.querySelector('#image-plot'),
 								{scale: quality}).then(canvas => {
 			  let pdf = new jsPDF('l', 'mm', [600,450]);

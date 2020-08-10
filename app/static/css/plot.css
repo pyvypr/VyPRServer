@@ -58,3 +58,7 @@ svg.hidden {
 .plot a.filter#successes {
   background: green;
 }
+
+#image-plot {
+  margin-top: 1000px;
+}
