@@ -201,18 +201,6 @@
   z-index: 1;
 }
 
-/* Popup arrow
-.plot::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  margin-left: -5px;
-  border-width: 5px;
-  border-style: solid;
-  border-color: #555 transparent transparent transparent;
-}*/
-
 .plot.show{
   display: block;
 }
@@ -303,35 +291,6 @@
 .zero line{
 	stroke: black !important;
 	opacity: 1;
-}
-
-
-.path #path-controls a.close-path {
-  color: black;
-  background: red;
-  padding: 5px;
-  text-decoration: none;
-  width: 100%;
-  font-size: 10px;
-  display: block;
-  opacity: 0.6;
-  text-align: center;
-}
-
-.path #path-controls a.close-path:hover {
-  opacity: 1.0;
-}
-
-#path-filters {
-  color: black;
-}
-
-#path-filters a.filter {
-  color: #337ab7 !important;
-}
-
-#path-filters a.filter.active {
-  opacity: 1;
 }
 
 .code_listing {
