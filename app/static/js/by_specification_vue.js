@@ -154,7 +154,6 @@ var highlight_paths = function(root_obj) {
 
     // the selected option was to highlight the paths by severity
     console.log("computing path data");
-    console.log(data);
     var lines_to_colors = []; // this list will contain pairs of line numbers and their colours
 
     if(resp.length > 0) {
