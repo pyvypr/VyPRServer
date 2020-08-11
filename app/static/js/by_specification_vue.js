@@ -668,7 +668,7 @@ Vue.component("function-calls", {
             </form>
           </div>
           <button v-if="!message" class="list-group-item" @click="toggleSelection(-1,-1)">
-            <input type='checkbox' id="select-all-calls" @click="select_all_calls()"/><b> Select all </b>
+            <input type='checkbox' id="select-all-calls" @click="select_all_calls($event)"/><b> Select all </b>
           </button>
           <button v-for="(b, index) in this.buttons" :key="index" class="list-group-item"
                   @click="toggleSelection(index, b.callid)">
@@ -707,7 +707,7 @@ Vue.component("function-calls", {
       if(v == 1) return "Success";
       else return "Violation";
     },
-    select_all_calls: function(){
+    select_all_calls: function(e = null){
       start_loading();
       var is_checked = $("#select-all-calls").prop("checked");
       $("#function-call-list input:checkbox").prop("checked", is_checked);
@@ -724,6 +724,7 @@ Vue.component("function-calls", {
       Store.subatom_selected = false;
 
       stop_loading();
+      if (e) {e.stopPropagation();}
 
     },
     select_filtered: function(e){
