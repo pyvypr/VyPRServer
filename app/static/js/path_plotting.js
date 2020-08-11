@@ -5,8 +5,6 @@ var Store = {
     plot : {
         constraint_html : "",
         type : null,
-        show_violations : true,
-        show_successes : true,
         current_hash : null,
         plot_description : null
     },
@@ -52,12 +50,7 @@ var generate_plot = function(quantity, root_obj) {
           if(quantity == "severity") {
             for (var i=0; i<data[path_index]["x"].length; i++) {
               var value = data[path_index]["severities"][i]
-              // check whether we should plot this based on the filters
-              if(value >= 0) {
-                if(!Store.plot.show_successes) continue;
-              } else {
-                if(!Store.plot.show_violations) continue;
-              }
+
               // negative verdict severity represents violation - colour these bars red
               var color = "#cc0000";
               // other columns in the plot are green since they show non-violating observations
@@ -107,7 +100,7 @@ Vue.component("plot", {
     <svg :id="svgID" v-bind:class="{hidden : !isSelected}" width="590px" height="360px"></svg>
   </div>
   `,
-  props : ["index"],
+  props : ["index", "quantity"],
   data : function() {
     return {
       store : Store
@@ -122,6 +115,9 @@ Vue.component("plot", {
     },
     is_mixed_observation_plot : function() {
       return this.store.plot.type == "mixed-observation";
+    },
+    is_severity_plot : function() {
+      return this.quantity == "severity";
     }
   },
   mounted : function() {
@@ -140,7 +136,7 @@ Vue.component("plot", {
           .showLegend(that.is_mixed_observation_plot);
 
         // omitting date from time format - mostly the difference is in seconds
-        var y_label = that.$root.is_severity_plot ? 'Verdict severity' : 'Observation';
+        var y_label = that.is_severity_plot ? 'Verdict severity' : 'Observation';
         chart.xAxis
           .axisLabel('Time of observation')
           .tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)); });
@@ -178,13 +174,8 @@ Vue.component("page", {
             <div class="panel-body">
               <div id="plot-wrapper" class="plot">
                   <!--<div id="plot-description" v-html="this.description"></div>-->
-                  <div id="plot-filters" v-if="is_severity_plot">Filters:
-                    <a href="#" id="violations" class="filter" v-bind:class="{active : violationFilterActive}"
-                      @click="toggleViolationFilter($event)">Violations</a>
-                    <a href="#" id="successes" class="filter" v-bind:class="{active : successFilterActive}"
-                      @click="toggleSuccessFilter($event)">Successes</a>
-                  </div>
-                  <plot v-for="(data, index) in store.data_per_path" :index="index"></plot>
+                  <plot v-for="(data, index) in store.data_per_path" :index="index" :quantity="quantity">
+                  </plot>
               </div>
             </div>
           </div>
@@ -237,7 +228,7 @@ Vue.component("page", {
       return this.store.plot.show_successes;
     },
     is_severity_plot : function() {
-      return this.store.plot.type == "severity" || this.store.plot.type == "between-severity";
+      return this.quantity == "severity";
     }
   },
   mounted(){
@@ -306,7 +297,7 @@ Vue.component("page", {
       $("img").attr('style', 'width: 1200px;');
 
       html2canvas(document.querySelector('#image-plot'),
-                {scale: quality}).then(canvas => {          
+                {scale: quality}).then(canvas => {
         $("#image-plot").remove();
         let pdf = new jsPDF('l', 'mm', [600,450]);
         pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 211, 150);
@@ -314,17 +305,6 @@ Vue.component("page", {
       });
 
       //window.location = "/download_plot/" + this.store.plot.current_hash;
-    },
-    toggleSuccessFilter : function(e) {
-      e.preventDefault();
-      this.store.plot.show_successes = !this.store.plot.show_successes;
-      generate_plot(this);
-
-    },
-    toggleViolationFilter : function(e) {
-      e.preventDefault();
-      this.store.plot.show_violations = !this.store.plot.show_violations;
-      generate_plot(this);
     },
     selectParameter : function(index) {
       this.store.path_index = index;
