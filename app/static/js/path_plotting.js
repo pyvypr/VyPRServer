@@ -285,11 +285,13 @@ Vue.component("page", {
       const filename  = 'plot.pdf';
 
       var svg = d3.select('#plot-svg-'+this.store.path_index)[0][0];
+      // the font appears too large in the downloaded plot - resize in the img version
       $('#plot-svg-'+this.store.path_index).css({"font-size":"8px"});
       var img = new Image();
       var serializer = new XMLSerializer();
       var svgStr = serializer.serializeToString(svg);
-      $('#plot-svg-'+this.store.path_index).css({"font-size":"12px"});
+      // set the font size back to normal in the main plot now that the img has been generated
+      $('#plot-svg-'+this.store.path_index).css({"font-size":"14px"});
 
       img.src = 'data:image/svg+xml;base64,'+window.btoa(svgStr);
       $("#app").append(img);
