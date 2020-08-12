@@ -919,8 +919,6 @@ def get_plot_data_mixed(dict):
 
 
 def get_path_data_between(dict):
-    # TODO
-    # add comments and try to optimise the code by not performing path reconstruction for each obs
     connection = get_connection()
     cursor = connection.cursor()
 
@@ -938,6 +936,7 @@ def get_path_data_between(dict):
     atom_index = dict["atom"]
     points_list = dict["points"]
 
+    # points_list contains a pair of points - we need the length of path up to each one
     lengths = cursor.execute("""select reaching_path_length from instrumentation_point
         where id in %s order by id"""%list_to_sql_string(points_list)).fetchall()
     path_length_lhs = lengths[0][0]
@@ -999,7 +998,10 @@ def get_path_data_between(dict):
         path_condition_list_rhs = subchain[1:(element[5]+1)]
         lhs_path = edges_from_condition_sequence(scfg, path_condition_list_lhs, path_length_lhs)
         rhs_path = edges_from_condition_sequence(scfg, path_condition_list_rhs, path_length_rhs)
-        path_difference = rhs_path[len(lhs_path):]
+        if len(lhs_path) <= len(rhs_path):
+            path_difference = rhs_path[len(lhs_path):]
+        else:
+            path_difference = lhs_path[len(rhs_path):]
         parse_tree = ParseTree(path_difference, grammar, path_difference[0]._source_state)
         lhs_time = isoparse(ast.literal_eval(element[0])["time"])
         rhs_time = isoparse(ast.literal_eval(element[1])["time"])
@@ -1135,12 +1137,14 @@ def get_path_data_simple(dict):
     binding_index = dict["binding"]
     atom_index = dict["atom"]
     points_list = dict["points"]
+    # all calls belong to the same function - find its ID
     function_id = cursor.execute("""select function.id from function inner join
         function_call on function.id == function_call.function where function_call.id = ?""",
         [calls_list[0]]).fetchone()[0]
 
+    # inst point should be unique - in case it's not, takes one
     path_length = cursor.execute("""select reaching_path_length from instrumentation_point
-        where id in %s order by id"""%list_to_sql_string(points_list)).fetchone()[0]
+        where id in %s"""%list_to_sql_string(points_list)).fetchone()[0]
 
     query_string = """select observation.observed_value, observation.previous_condition_offset,
                         verdict.verdict, function_call.path_condition_id_sequence,
@@ -1170,12 +1174,20 @@ def get_path_data_simple(dict):
     prop_hash = cursor.execute("""select distinct property_hash from function_property_pair
         where function = ?""", [function_id]).fetchone()[0]
 
+    # in order to determine the verdict severity, we need the condition set by the specification
     atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
         and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
     formula = pickle.loads(base64.b64decode(atom_structure))
-    interval=formula._interval
-    lower=interval[0]
-    upper=interval[1]
+    try:
+        # in case the formula requires the value to be in interval
+        interval = formula._interval
+        lower = interval[0]
+        upper = interval[1]
+    except:
+        # in case the formula sets an equality
+        value = formula._value
+        lower = value
+        upper = value
 
     parse_trees_obs_value_pairs = []
 
@@ -1192,6 +1204,7 @@ def get_path_data_simple(dict):
         parse_tree = ParseTree(path, grammar, path[0]._source_state)
         observed_value = json.loads(element[0])
         #d is the distance from observed value to the nearest interval bound
+        # interval being [x, x] if condition is "observed_value = x"
         d=min(abs(observed_value-lower),abs(observed_value-upper))
         #sign=-1 if verdict value=0 and sign=1 if verdict is true
         sign=-1+2*(element[2])
@@ -1306,8 +1319,6 @@ def get_path_data_simple(dict):
 
 
 def get_path_data_mixed(dict):
-    # TODO
-    # add comments and try to optimise the code by not performing path reconstruction for each obs
     connection = get_connection()
     cursor = connection.cursor()
 
