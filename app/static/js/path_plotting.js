@@ -301,8 +301,8 @@ Vue.component("page", {
       html2canvas(document.querySelector('#image-plot'),
                 {scale: quality}).then(canvas => {
         $("#image-plot").remove();
-        let pdf = new jsPDF('l', 'mm', [600,450]);
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 211, 150);
+        let pdf = new jsPDF('l', 'mm', [550,360]);
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 190, 120);
         pdf.save(filename);
       });
 
