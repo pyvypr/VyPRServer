@@ -331,8 +331,6 @@ Vue.component("selection-tabs", {
   methods : {
     handleResize : function({ width, height }) {
       var window_width = $(window).width();
-      console.log(window_width)
-      console.log(width)
       if (window_width <= 991){
         $($(".col-md-9")[0]).width(991);
       }
