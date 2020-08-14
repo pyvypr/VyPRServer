@@ -321,16 +321,29 @@ Vue.component("selection-tabs", {
     }
   },
   mounted : function() {
-    $(window).scroll(function() {
+    /*$(window).scroll(function() {
         clearTimeout(sidebar_scroll_timeout);
         sidebar_scroll_timeout = setTimeout(function() {
             $(".selection-phases").animate({"margin-top": $(window).scrollTop()});
         }, 100);
-    });
+    });*/
   },
   methods : {
     handleResize : function({ width, height }) {
-      $($(".col-md-9")[0]).width($(window).width()-width);
+      var window_width = $(window).width();
+      console.log(window_width)
+      console.log(width)
+      if (window_width <= 991){
+        $($(".col-md-9")[0]).width(991);
+      }
+      else {
+        $($(".col-md-9")[0]).width(window_width-width-1);
+        $("#code-listing").height(
+          $(".panel.panel-success.function-calls").outerHeight() -
+          $(".panel.panel-success.code-view").find(".panel-heading").first().outerHeight() -
+          $("#specification_listing").outerHeight() - 0.05 * $(".panel.panel-success.function-calls").outerHeight());
+
+      }
     }
   }
 });

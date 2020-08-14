@@ -11,9 +11,14 @@
 
 .col-md-3.selection {
   resize: horizontal;
-  overflow: auto;
+  overflow: hidden;
   min-width: 15%;
   max-width: 35%;
+  display: inline;
+}
+
+.col-md-9.selection {
+  max-width: 100%;
 }
 
 ::-webkit-resizer {
