@@ -22,69 +22,6 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure, locator_params
 
-HTML_ON = False
-
-
-def list_verdicts(function_name):
-    """
-    Given a function name, for each transaction, for each function call, list the verdicts.
-    """
-    connection = get_connection()
-    cursor = connection.cursor()
-
-    function_id = \
-        cursor.execute("select id from function where fully_qualified_name = ?", [function_name]).fetchall()[0][0]
-
-    bindings = cursor.execute("select * from binding where function = ?", [function_id]).fetchall()
-
-    transactions = cursor.execute("select * from trans").fetchall()
-    request_to_verdicts = {}
-    for result in transactions:
-        request_to_verdicts[result[1]] = {}
-        # find the function calls of function_name for this transaction
-        calls = cursor.execute("select * from function_call where trans = ?", [result[0]]).fetchall()
-        for call in calls:
-            request_to_verdicts[result[1]][call[2]] = {}
-            for binding in bindings:
-                verdicts = cursor.execute("select * from verdict where binding = ? and function_call = ?",
-                                          [binding[0], call[0]]).fetchall()
-                request_to_verdicts[result[1]][call[2]][binding[0]] = verdicts
-                truth_map = {1: True, 0: False}
-                request_to_verdicts[result[1]][call[2]][binding[0]] = map(list, request_to_verdicts[result[1]][call[2]][
-                    binding[0]])
-                for n in range(len(request_to_verdicts[result[1]][call[2]][binding[0]])):
-                    request_to_verdicts[result[1]][call[2]][binding[0]][n][1] = truth_map[
-                        request_to_verdicts[result[1]][call[2]][binding[0]][n][1]]
-
-    connection.close()
-
-    return request_to_verdicts
-
-
-def list_transactions(function_id):
-    """
-    Return a list of all transactions - we may eventually want do to this with a time interval bound.
-    """
-    connection = get_connection()
-    cursor = connection.cursor()
-
-    transactions = cursor.execute("select * from trans").fetchall()
-
-    print("getting transactions with function id %s" % function_id)
-
-    # list only the requests for which there is a call to the function with function_id
-    final_requests = []
-    for request in transactions:
-        calls_with_function_id = cursor.execute("select * from function_call where function = ? and trans = ?",
-                                                [function_id, request[0]]).fetchall()
-        if len(calls_with_function_id) > 0:
-            final_requests.append(request)
-
-    connection.close()
-    print(final_requests)
-
-    return final_requests
-
 
 def list_calls_from_id(function_id, tests = None):
     """
@@ -143,22 +80,6 @@ def list_calls_from_id(function_id, tests = None):
     return modified_calls
 
 
-def list_calls_during_request(transaction_id, function_name):
-    """
-    Given an transaction id, list the function calls of the given function during that request.
-    """
-    connection = get_connection()
-    cursor = connection.cursor()
-
-    print("getting calls")
-    function_calls = cursor.execute("select * from function_call where trans = ? and function = ?",
-                                    [transaction_id, function_name]).fetchall()
-
-    connection.close()
-
-    return function_calls
-
-
 def list_calls_in_interval(start, end, function_id, test_names = None):
     """start and end are strings in dd/mm/yyyy hh:mm:ss format"""
     connection = get_connection()
@@ -185,22 +106,6 @@ def list_calls_in_interval(start, end, function_id, test_names = None):
 
     connection.close()
     return function_calls
-
-
-def list_verdicts_from_function_call(function_call_id):
-    """
-    Given a function call id, return all the verdicts reached during this function call.
-    """
-    connection = get_connection()
-    cursor = connection.cursor()
-
-    verdicts = cursor.execute("select binding.binding_statement_lines, verdict.verdict, verdict.time_obtained from " + \
-                              "(verdict inner join binding on verdict.binding=binding.id) where verdict.function_call = ?",
-                              [function_call_id]).fetchall()
-
-    connection.close()
-
-    return verdicts
 
 
 def web_list_tests():
@@ -318,6 +223,10 @@ def web_list_functions(tests = None):
         atoms_list = []
         property_to_atoms_list(prop)
 
+
+        #return specification as dict with data based on which the front end will build the HTML
+        HTML_ON = False
+
         if HTML_ON:
             atom_str = prop.HTMLrepr()
             spec = ''
@@ -377,67 +286,6 @@ def web_list_functions(tests = None):
     return dictionary_tree_structure
 
 
-def get_transaction_function_call_pairs(verdict, path):
-    """
-    For the given verdict and path pair, find all the function calls inside that path that
-    result in a verdict matching the one given.
-
-    To do this, we first find all the functions that match the path given.
-    """
-    connection = get_connection()
-    cursor = connection.cursor()
-
-    path = "%s%%" % path
-
-    truth_map = {"violating": 0, "not-violating": 1}
-
-    final_map = {}
-
-    # note that a function is unique wrt a property - so each row returned here is coupled with a single property
-    functions = cursor.execute("select * from function where fully_qualified_name like ?", [path]).fetchall()
-
-    # Now, get all the calls to these functions and, for each call, find all the verdicts and organise them by binding
-
-    final_map["functions"] = {}
-    for function in functions:
-        final_map["functions"][function[0]] = {"calls": {}, "property": {}, "fully_qualified_name": function[1]}
-        data_found_for_function = False
-
-        # get the property string representation
-        property_id = function[2]
-        property_info = json.loads(
-            cursor.execute("select * from property where hash = ?", [property_id]).fetchall()[0][1])
-        final_map["functions"][function[0]]["property"] = property_info
-
-        # get the calls
-        calls = cursor.execute("select * from function_call where function = ?", [function[0]]).fetchall()
-        for call in calls:
-            data_found_for_call = False
-            final_map["functions"][function[0]]["calls"][call[0]] = {"bindings": {}, "time": call[2]}
-            bindings = cursor.execute("select * from binding where function = ?", [function[0]]).fetchall()
-            for binding in bindings:
-                verdicts = cursor.execute(
-                    "select * from verdict where binding = ? and function_call = ? and verdict = ?",
-                    [binding[0], call[0], truth_map[verdict]]).fetchall()
-                verdict_tuples = map(lambda row: (row[2], row[3]), verdicts)
-                if len(verdict_tuples) > 0:
-                    final_map["functions"][function[0]]["calls"][call[0]]["bindings"][binding[0]] = {"verdicts": [],
-                                                                                                     "lines": binding[
-                                                                                                         3]}
-                    final_map["functions"][function[0]]["calls"][call[0]]["bindings"][binding[0]][
-                        "verdicts"] = verdict_tuples
-                    data_found_for_call = True
-                    data_found_for_function = True
-
-            if not (data_found_for_call):
-                del final_map["functions"][function[0]]["calls"][call[0]]
-
-        if not (data_found_for_function):
-            del final_map["functions"][function[0]]
-
-    return final_map
-
-
 def get_code(function_id):
 
     connection = get_connection()
@@ -487,6 +335,7 @@ def get_code(function_id):
     #we want to now exact line numbers of these ast objects
     start = function_def.lineno - 1
     end = function_def.body[-1].lineno
+    #in case last element spans over multiple lines, find the last line number
     for node in ast.walk(function_def.body[-1]):
         try:
             node_line = node.lineno
@@ -660,6 +509,10 @@ def get_calls_data(ids_list, property_hash):
 
         tree[elem[0]][elem[1]][elem[2]].append(dict)
 
+    # in addition to lines at which instrumenation points are, we also need to know
+    # which lines are of interest due to being refered to by the quantifiers
+    # as they are not paired with atoms, we store them within the corresponding binding,
+    # but set the atom and subatom indices to -1 
     for binding_key in tree.keys():
         print(binding_key)
         subtree = tree[binding_key]
@@ -1070,8 +923,6 @@ def get_plot_data_mixed(dict):
 
 
 def get_path_data_between(dict):
-    # TODO
-    # add comments and try to optimise the code by not performing path reconstruction for each obs
     connection = get_connection()
     cursor = connection.cursor()
 
@@ -1089,6 +940,7 @@ def get_path_data_between(dict):
     atom_index = dict["atom"]
     points_list = dict["points"]
 
+    # points_list contains a pair of points - we need the length of path up to each one
     lengths = cursor.execute("""select reaching_path_length from instrumentation_point
         where id in %s order by id"""%list_to_sql_string(points_list)).fetchall()
     path_length_lhs = lengths[0][0]
@@ -1150,7 +1002,10 @@ def get_path_data_between(dict):
         path_condition_list_rhs = subchain[1:(element[5]+1)]
         lhs_path = edges_from_condition_sequence(scfg, path_condition_list_lhs, path_length_lhs)
         rhs_path = edges_from_condition_sequence(scfg, path_condition_list_rhs, path_length_rhs)
-        path_difference = rhs_path[len(lhs_path):]
+        if len(lhs_path) <= len(rhs_path):
+            path_difference = rhs_path[len(lhs_path):]
+        else:
+            path_difference = lhs_path[len(rhs_path):]
         parse_tree = ParseTree(path_difference, grammar, path_difference[0]._source_state)
         lhs_time = isoparse(ast.literal_eval(element[0])["time"])
         rhs_time = isoparse(ast.literal_eval(element[1])["time"])
@@ -1286,12 +1141,14 @@ def get_path_data_simple(dict):
     binding_index = dict["binding"]
     atom_index = dict["atom"]
     points_list = dict["points"]
+    # all calls belong to the same function - find its ID
     function_id = cursor.execute("""select function.id from function inner join
         function_call on function.id == function_call.function where function_call.id = ?""",
         [calls_list[0]]).fetchone()[0]
 
+    # inst point should be unique - in case it's not, takes one
     path_length = cursor.execute("""select reaching_path_length from instrumentation_point
-        where id in %s order by id"""%list_to_sql_string(points_list)).fetchone()[0]
+        where id in %s"""%list_to_sql_string(points_list)).fetchone()[0]
 
     query_string = """select observation.observed_value, observation.previous_condition_offset,
                         verdict.verdict, function_call.path_condition_id_sequence,
@@ -1321,12 +1178,20 @@ def get_path_data_simple(dict):
     prop_hash = cursor.execute("""select distinct property_hash from function_property_pair
         where function = ?""", [function_id]).fetchone()[0]
 
+    # in order to determine the verdict severity, we need the condition set by the specification
     atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
         and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
     formula = pickle.loads(base64.b64decode(atom_structure))
-    interval=formula._interval
-    lower=interval[0]
-    upper=interval[1]
+    try:
+        # in case the formula requires the value to be in interval
+        interval = formula._interval
+        lower = interval[0]
+        upper = interval[1]
+    except:
+        # in case the formula sets an equality
+        value = formula._value
+        lower = value
+        upper = value
 
     parse_trees_obs_value_pairs = []
 
@@ -1343,6 +1208,7 @@ def get_path_data_simple(dict):
         parse_tree = ParseTree(path, grammar, path[0]._source_state)
         observed_value = json.loads(element[0])
         #d is the distance from observed value to the nearest interval bound
+        # interval being [x, x] if condition is "observed_value = x"
         d=min(abs(observed_value-lower),abs(observed_value-upper))
         #sign=-1 if verdict value=0 and sign=1 if verdict is true
         sign=-1+2*(element[2])
@@ -1457,8 +1323,6 @@ def get_path_data_simple(dict):
 
 
 def get_path_data_mixed(dict):
-    # TODO
-    # add comments and try to optimise the code by not performing path reconstruction for each obs
     connection = get_connection()
     cursor = connection.cursor()
 

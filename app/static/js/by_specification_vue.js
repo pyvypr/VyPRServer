@@ -321,16 +321,27 @@ Vue.component("selection-tabs", {
     }
   },
   mounted : function() {
-    $(window).scroll(function() {
+    /*$(window).scroll(function() {
         clearTimeout(sidebar_scroll_timeout);
         sidebar_scroll_timeout = setTimeout(function() {
             $(".selection-phases").animate({"margin-top": $(window).scrollTop()});
         }, 100);
-    });
+    });*/
   },
   methods : {
     handleResize : function({ width, height }) {
-      $($(".col-md-9")[0]).width($(window).width()-width);
+      var window_width = $(window).width();
+      if (window_width <= 991){
+        $($(".col-md-9")[0]).width(991);
+      }
+      else {
+        $($(".col-md-9")[0]).width(window_width-width-1);
+        $("#code-listing").height(
+          $(".panel.panel-success.function-calls").outerHeight() -
+          $(".panel.panel-success.code-view").find(".panel-heading").first().outerHeight() -
+          $("#specification_listing").outerHeight() - 0.05 * $(".panel.panel-success.function-calls").outerHeight());
+
+      }
     }
   }
 });
@@ -668,7 +679,7 @@ Vue.component("function-calls", {
             </form>
           </div>
           <button v-if="!message" class="list-group-item" @click="toggleSelection(-1,-1)">
-            <input type='checkbox' id="select-all-calls" @click="select_all_calls()"/><b> Select all </b>
+            <input type='checkbox' id="select-all-calls" @click="select_all_calls($event)"/><b> Select all </b>
           </button>
           <button v-for="(b, index) in this.buttons" :key="index" class="list-group-item"
                   @click="toggleSelection(index, b.callid)">
@@ -707,7 +718,7 @@ Vue.component("function-calls", {
       if(v == 1) return "Success";
       else return "Violation";
     },
-    select_all_calls: function(){
+    select_all_calls: function(e = null){
       start_loading();
       var is_checked = $("#select-all-calls").prop("checked");
       $("#function-call-list input:checkbox").prop("checked", is_checked);
@@ -724,6 +735,7 @@ Vue.component("function-calls", {
       Store.subatom_selected = false;
 
       stop_loading();
+      if (e) {e.stopPropagation();}
 
     },
     select_filtered: function(e){
