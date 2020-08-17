@@ -509,6 +509,10 @@ def get_calls_data(ids_list, property_hash):
 
         tree[elem[0]][elem[1]][elem[2]].append(dict)
 
+    # in addition to lines at which instrumenation points are, we also need to know
+    # which lines are of interest due to being refered to by the quantifiers
+    # as they are not paired with atoms, we store them within the corresponding binding,
+    # but set the atom and subatom indices to -1 
     for binding_key in tree.keys():
         print(binding_key)
         subtree = tree[binding_key]
