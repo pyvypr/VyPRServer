@@ -512,7 +512,7 @@ def get_calls_data(ids_list, property_hash):
     # in addition to lines at which instrumenation points are, we also need to know
     # which lines are of interest due to being refered to by the quantifiers
     # as they are not paired with atoms, we store them within the corresponding binding,
-    # but set the atom and subatom indices to -1 
+    # but set the atom and subatom indices to -1
     for binding_key in tree.keys():
         print(binding_key)
         subtree = tree[binding_key]
@@ -551,9 +551,13 @@ def get_atom_type(atom_index, inst_point_id):
 
     connection.close()
 
-    if type(atom_deserialised) in [StateValueEqualToMixed, StateValueLengthLessThanStateValueLengthMixed,
-        TransitionDurationLessThanTransitionDurationMixed, TransitionDurationLessThanStateValueMixed,
-        TransitionDurationLessThanStateValueLengthMixed]:
+    if type(atom_deserialised) in [StateValueEqualToMixed, StateValueLessThanStateValueMixed,
+        StateValueLessThanEqualStateValueMixed, StateValueLengthLessThanStateValueLengthMixed,
+        StateValueLengthLessThanEqualStateValueLengthMixed,
+        TransitionDurationLessThanTransitionDurationMixed,
+        TransitionDurationLessThanEqualTransitionDurationMixed,
+        TransitionDurationLessThanStateValueMixed, TransitionDurationLessThanEqualStateValueMixed,
+        TransitionDurationLessThanStateValueLengthMixed, TransitionDurationLessThanEqualStateValueLengthMixed]:
         return 'mixed'
 
     elif type(atom_deserialised) in [TimeBetweenInInterval, TimeBetweenInOpenInterval]:
@@ -876,30 +880,17 @@ def get_plot_data_mixed(dict):
             y2_array.append(elem1)
 
             sign = -1 + 2*element[4]
-            d = abs(elem1 - elem0)
+            try:
+                stack_left = formula._lhs._arithmetic_stack
+            except:
+                stack_left = []
+            try:
+                stack_right = formula._rhs._arithmetic_stack
+            except:
+                stack_right = []
+            d = abs(apply_arithmetic_stack(stack_right, elem1) -
+                    apply_arithmetic_stack(stack_left, elem0))
             severity_array.append(sign*d)
-
-        if type(formula) in [StateValueEqualToMixed, StateValueLengthLessThanStateValueLengthMixed]:
-            severity_array = []
-            stack_left = formula._lhs._arithmetic_stack
-            stack_right = formula._rhs._arithmetic_stack
-            for i in range(len(y1_array)):
-                verdict = result[i][4]
-                sign = -1 + 2*verdict
-                d = abs(apply_arithmetic_stack(stack_right, y2_array[i]) -
-                        apply_arithmetic_stack(stack_left, y1_array[i]))
-                severity_array.append(sign*d)
-
-        if type(formula) in [TransitionDurationLessThanStateValueMixed,
-            TransitionDurationLessThanStateValueLengthMixed]:
-            severity_array = []
-            stack_right = formula._rhs._arithmetic_stack
-            for i in range(len(y1_array)):
-                verdict = result[i][4]
-                sign = -1 + 2*verdict
-                d = abs(apply_arithmetic_stack(stack_right, y2_array[i]) - y1_array[i])
-                severity_array.append(sign*d)
-
 
         # build the final plot data
         plot_data = {"x1" : x1_array, "mixed-observation-1" : y1_array,
@@ -1408,20 +1399,18 @@ def get_path_data_mixed(dict):
         for key in rhs_obs:
             rhs_value = rhs_obs[key]
         observed_difference = rhs_value - lhs_value
-        #d is the distance from observed value to the nearest interval bound
-        d=abs(observed_difference)
-        if type(formula) in [StateValueEqualToMixed, StateValueLengthLessThanStateValueLengthMixed]:
 
+        try:
             stack_left = formula._lhs._arithmetic_stack
+        except:
+            stack_left = []
+        try:
             stack_right = formula._rhs._arithmetic_stack
-            d = abs(apply_arithmetic_stack(stack_right, rhs_value) -
-                        apply_arithmetic_stack(stack_left, lhs_value))
+        except:
+            stack_right = []
 
-        if type(formula) in [TransitionDurationLessThanStateValueMixed,
-            TransitionDurationLessThanStateValueLengthMixed]:
-
-            stack_right = formula._rhs._arithmetic_stack
-            d = abs(apply_arithmetic_stack(stack_right, rhs_value) - y1_array[i])
+        d = abs(apply_arithmetic_stack(stack_right, rhs_value) -
+                apply_arithmetic_stack(stack_left, lhs_value))
 
         #sign=-1 if verdict value=0 and sign=1 if verdict is true
         sign=-1+2*(element[6])
@@ -1812,59 +1801,62 @@ used, if not, __repr__ methods is used for representation
 """
 
 StateValueInInterval.__repr__ = \
-    lambda Atom: "%s(%s)._in(%s)" % (Atom._state, Atom._name, Atom._interval)
+    lambda Atom: "%s('%s')._in(%s)" % (Atom._state, Atom._name, Atom._interval)
 
 StateValueInOpenInterval.__repr__ = \
-    lambda Atom: "%s(%s)._in(%s)" % (Atom._state, Atom._name, Atom._interval)
+    lambda Atom: "%s('%s')._in(%s)" % (Atom._state, Atom._name, Atom._interval)
 
 StateValueEqualTo.__repr__ = \
-    lambda Atom: "%s(%s).equals(%s)" % (Atom._state, Atom._name, Atom._value)
+    lambda Atom: "%s('%s').equals(%s)" % (Atom._state, Atom._name, Atom._value)
 
 StateValueTypeEqualTo.__repr__ = \
-    lambda Atom: "%s(%s).type().equals(%s)" % (Atom._state, Atom._name, Atom._value)
+    lambda Atom: "%s('%s').type().equals(%s)" % (Atom._state, Atom._name, Atom._value)
 
 StateValueEqualToMixed.__repr__ = \
-    lambda Atom: "%s(%s).equals(%s(%s))" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
-"""
+    lambda Atom: "%s('%s').equals(%s('%s'))" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
 StateValueLessThanStateValueMixed.__repr__ = \
-    lambda Atom: "%s(%s) < %s(%s)" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+    lambda Atom: "%s('%s') < %s('%s')" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
 
 StateValueLessThanEqualStateValueMixed.__repr__ = \
-    lambda Atom: "%s(%s) <= %s(%s)" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
-"""
+    lambda Atom: "%s('%s') <= %s('%s')" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
 StateValueLengthLessThanStateValueLengthMixed.__repr__ = \
     lambda Atom: "%s('%s').length() < %s('%s').length()" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
-"""
+
 StateValueLengthLessThanEqualStateValueLengthMixed.__repr__ = \
-    lambda Atom: "%s(%s).length() <= %s(%s).length()" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
-"""
+    lambda Atom: "%s('%s').length() <= %s('%s').length()" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+
 StateValueLengthInInterval.__repr__ = \
-    lambda Atom: "%s(%s).length()._in(%s)" % (Atom._state, Atom._name, Atom._interval)
+    lambda Atom: "%s('%s').length()._in(%s)" % (Atom._state, Atom._name, Atom._interval)
+
+StateValueLengthInOpenInterval.__repr__ = \
+    lambda Atom: "%s('%s').length()._in(%s)" % (Atom._state, Atom._name, Atom._interval)
 
 TransitionDurationInInterval.__repr__=\
     lambda Atom: "%s.duration()._in(%s)" % (Atom._transition, Atom._interval)
-"""
+
 TransitionDurationInOpenInterval.__repr__=\
     lambda Atom: "%s.duration()._in(%s)" % (Atom._transition, Atom._interval)
-"""
+
 TransitionDurationLessThanTransitionDurationMixed.__repr__=\
     lambda Atom: "%s.duration() < %s.duration()" % (Atom._lhs, Atom._rhs)
-"""
+
 TransitionDurationLessThanEqualTransitionDurationMixed.__repr__=\
     lambda Atom: "%s.duration() <= %s.duration()" % (Atom._lhs, Atom._rhs)
-"""
+
 TransitionDurationLessThanStateValueMixed.__repr__ = \
-    lambda Atom: "%s.duration() < %s(%s)" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
-"""
+    lambda Atom: "%s.duration() < %s('%s')" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
+
 TransitionDurationLessThanEqualStateValueMixed.__repr__ = \
-    lambda Atom: "%s.duration() <= %s(%s)" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
-"""
+    lambda Atom: "%s.duration() <= %s('%s')" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
+
 TransitionDurationLessThanStateValueLengthMixed.__repr__ = \
-    lambda Atom: "%s.duration() < %s(%s).length()" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
-"""
+    lambda Atom: "%s.duration() < %s('%s').length()" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
+
 TransitionDurationLessThanEqualStateValueLengthMixed.__repr__ = \
-    lambda Atom: "%s.duration() <= %s(%s).length()" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
-"""
+    lambda Atom: "%s.duration() <= %s('%s').length()" % (Atom._lhs, Atom._rhs, Atom._rhs_name)
+
 TimeBetweenInInterval.__repr__ = \
     lambda Atom: "timeBetween(%s, %s)._in(%s)" % (Atom._lhs, Atom._rhs, Atom._interval)
 
@@ -1875,7 +1867,7 @@ LogicalAnd.__repr__= \
     lambda object: 'land(%s)' % logical_repr(object.operands, HTML = False)
 
 LogicalOr.__repr__= \
-    lambda object: 'lor(%s' % logical_repr(object.operands, HTML = False)
+    lambda object: 'lor(%s)' % logical_repr(object.operands, HTML = False)
 
 LogicalNot.__repr__ = \
     lambda object: 'lnot(%s)' % object.operand
@@ -1910,21 +1902,21 @@ StateValueEqualToMixed.HTMLrepr = \
             Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
             Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
-#StateValueLessThanStateValueMixed.HTMLrepr = \
-#    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="subatom" subatom-index="0">%s('%s') %s</span> <
-#        <span class="subatom" subatom-index="1">%s('%s') %s</span>
-#        </span>""" % (atoms_list.index(Atom),
-#           Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
-#           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
+StateValueLessThanStateValueMixed.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s('%s') %s</span> <
+        <span class="subatom" subatom-index="1">%s('%s') %s</span>
+        </span>""" % (atoms_list.index(Atom),
+           Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
+           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
-#StateValueLessThanEqualStateValueMixed.HTMLrepr = \
-#    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="subatom" subatom-index="0">%s('%s') %s</span> <=
-#        <span class="subatom" subatom-index="1">%s('%s') %s</span>
-#        </span>""" % (atoms_list.index(Atom),
-#           Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
-#           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
+StateValueLessThanEqualStateValueMixed.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s('%s') %s</span> <=
+        <span class="subatom" subatom-index="1">%s('%s') %s</span>
+        </span>""" % (atoms_list.index(Atom),
+           Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
+           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 StateValueLengthLessThanStateValueLengthMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
@@ -1934,33 +1926,33 @@ StateValueLengthLessThanStateValueLengthMixed.HTMLrepr = \
             Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
             Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
-#StateValueLengthLessThanEqualStateValueLengthMixed.HTMLrepr = \
-#    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="subatom" subatom-index="0">%s('%s')</span>.length() %s <=
-#        <span class="subatom" subatom-index="1">%s('%s')</span>.length() %s
-#        </span>""" % (atoms_list.index(Atom),
-#           Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
-#           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
+StateValueLengthLessThanEqualStateValueLengthMixed.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s('%s')</span>.length() %s <=
+        <span class="subatom" subatom-index="1">%s('%s')</span>.length() %s
+        </span>""" % (atoms_list.index(Atom),
+           Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
+           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 StateValueLengthInInterval.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
         <span class="subatom" subatom-index="0">%s('%s')</span>.length()._in(%s)
         </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
 
-#StateValueLengthInOpenInterval.HTMLrepr = \
-#    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="subatom" subatom-index="0">%s('%s')</span>.length()._in(%s)
-#        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
+StateValueLengthInOpenInterval.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="subatom" subatom-index="0">%s('%s')</span>.length()._in(%s)
+        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
 
 TransitionDurationInInterval.HTMLrepr=\
     lambda Atom: """<span class="atom" atom-index="%i">
         <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span>._in(%s)
         </span>""" % (atoms_list.index(Atom), Atom._transition, Atom._interval)
 
-#TransitionDurationInOpenInterval.HTMLrepr=\
-#    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span>._in(%s)
-#        </span>""" % (atoms_list.index(Atom), Atom._transition, str(Atom._interval))
+TransitionDurationInOpenInterval.HTMLrepr=\
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span>._in(%s)
+        </span>""" % (atoms_list.index(Atom), Atom._transition, str(Atom._interval))
 
 TransitionDurationLessThanTransitionDurationMixed.HTMLrepr=\
     lambda Atom: """<span class="atom" atom-index="%i">
@@ -1968,11 +1960,11 @@ TransitionDurationLessThanTransitionDurationMixed.HTMLrepr=\
         <span class="duration"><span class="subatom" subatom-index="1">%s</span>.duration()</span>
         </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs)
 
-#TransitionDurationLessThanEqualTransitionDurationMixed.HTMLrepr=\
-#    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
-#        <span class="duration"><span class="subatom" subatom-index="1">%s</span>.duration()</span>
-#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs)
+TransitionDurationLessThanEqualTransitionDurationMixed.HTMLrepr=\
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
+        <span class="duration"><span class="subatom" subatom-index="1">%s</span>.duration()</span>
+        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs)
 
 TransitionDurationLessThanStateValueMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
@@ -1981,12 +1973,12 @@ TransitionDurationLessThanStateValueMixed.HTMLrepr = \
         </span>""" % (atoms_list.index(Atom), Atom._lhs,
             Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
-#TransitionDurationLessThanEqualStateValueMixed.HTMLrepr = \
-#    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
-#        <span class="subatom" subatom-index="1">%s('%s') %s </span>
-#        </span>""" % (atoms_list.index(Atom), Atom._lhs,
-#           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
+TransitionDurationLessThanEqualStateValueMixed.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
+        <span class="subatom" subatom-index="1">%s('%s') %s </span>
+        </span>""" % (atoms_list.index(Atom), Atom._lhs,
+           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 TransitionDurationLessThanStateValueLengthMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
@@ -1995,12 +1987,12 @@ TransitionDurationLessThanStateValueLengthMixed.HTMLrepr = \
         </span>""" % (atoms_list.index(Atom), Atom._lhs,
             Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
-#TransitionDurationLessThanEqualStateValueLengthMixed.HTMLrepr = \
-#    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
-#        <span class="subatom" subatom-index="1">%s('%s')</span>.length() %s
-#        </span>""" % (atoms_list.index(Atom), Atom._lhs,
-#           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
+TransitionDurationLessThanEqualStateValueLengthMixed.HTMLrepr = \
+    lambda Atom: """<span class="atom" atom-index="%i">
+        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
+        <span class="subatom" subatom-index="1">%s('%s')</span>.length() %s
+        </span>""" % (atoms_list.index(Atom), Atom._lhs,
+           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 TimeBetweenInInterval.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">timeBetween(
