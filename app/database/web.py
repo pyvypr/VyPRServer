@@ -888,6 +888,7 @@ def get_plot_data_mixed(dict):
                 stack_right = formula._rhs._arithmetic_stack
             except:
                 stack_right = []
+                
             d = abs(apply_arithmetic_stack(stack_right, elem1) -
                     apply_arithmetic_stack(stack_left, elem0))
             severity_array.append(sign*d)
