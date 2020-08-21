@@ -680,10 +680,8 @@ def get_plot_data_simple(dict):
             lower = interval[0]
             upper = interval[1]
         except:
-            #TODO
             #right now, for simple atoms are either observation in interval or obs = value
             #hence, inequalities are not covered here
-            #what about non numeric data?
             value = formula._value
             lower = value
             upper = value
@@ -695,8 +693,15 @@ def get_plot_data_simple(dict):
         for element in result:
             x_array.append(element[1])
             y = float(element[0])
-            #d is the distance from observed value to the nearest interval bound
-            d = min(abs(y-lower),abs(y-upper))
+            # d is the distance from observed value to the nearest interval bound
+            # if condition is value = x then interval was set to [x,x]
+            # intervals contain numerical values, but equalities might not
+            try:
+                d = min(abs(y-lower),abs(y-upper))
+            except:
+                # set distance to zero if the equality is satisfied, otherwise distance is 1
+                # might want to change this
+                d = (y != lower)
             #sign=-1 if verdict value=0 and sign=1 if verdict is true
             sign = -1 + 2 * (element[3])
             severity_array.append(sign*d)
@@ -888,7 +893,7 @@ def get_plot_data_mixed(dict):
                 stack_right = formula._rhs._arithmetic_stack
             except:
                 stack_right = []
-                
+
             d = abs(apply_arithmetic_stack(stack_right, elem1) -
                     apply_arithmetic_stack(stack_left, elem0))
             severity_array.append(sign*d)
