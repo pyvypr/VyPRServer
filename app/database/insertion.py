@@ -195,6 +195,7 @@ def insert_property(property_dictionary):
 
         property_is_new = True
     except:
+        print(traceback.format_exc())
         # the property probably already existed, so we skip insertion
         property_is_new = False
 
@@ -208,6 +209,8 @@ def insert_property(property_dictionary):
 
         if property_is_new:
 
+            print("property is new - inserting")
+
             # build up the atom_index_to_db_index map by inserting atoms into the db and taking their IDs
 
             serialised_atom_list = property_dictionary["serialised_atom_list"]
@@ -218,7 +221,11 @@ def insert_property(property_dictionary):
                 )
                 atom_index_to_db_index.append(cursor.lastrowid)
 
+            print(atom_index_to_db_index)
+
         else:
+
+            print("property is not new - getting existing atoms")
 
             # build up the atom_index_to_db_index map by querying for the atoms belonging to this property
             # in order of index_in_atoms
@@ -226,6 +233,7 @@ def insert_property(property_dictionary):
                 "select id from atom where property_hash = ? order by index_in_atoms asc",
                 [property_dictionary["formula_hash"]]
             ).fetchall()
+            print(atoms)
             atoms = map(lambda atom_row : atom_row[0], atoms)
             atom_index_to_db_index = atoms
 
