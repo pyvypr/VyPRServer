@@ -217,6 +217,17 @@ def web_list_functions(tests = None):
 
         hash = function[2]
         prop = pickle.loads(base64.b64decode(json.loads(function[3])["property"]))
+        # arithmetic stack representation doesn't work on properties obtained this way
+
+        # if property contains only one atom, find it and get the serialised structure from there instead
+        atom_structure = cursor.execute("""select atom.serialised_structure
+            from atom inner join property on atom.property_hash==property.hash
+            where property.hash = ?;""", [function[2]]).fetchall()
+        if len(atom_structure) == 1:
+            formula = pickle.loads(base64.b64decode(atom_structure[0][0]))
+            prop = formula
+        # TODO else
+
         # bind_var was decoded in the first step of the loop
 
         global atoms_list
@@ -1805,6 +1816,18 @@ for each type of atom, it should display it similar to how it was given in the s
 if we want to build the HTML on the server side, set HTML_ON to true and the HTMLrepr functions will be
 used, if not, __repr__ methods is used for representation
 """
+
+ArithmeticMultiply.__repr__ = \
+    lambda object: "* %.2f" % object._v
+
+ArithmeticAdd.__repr__ = \
+    lambda object: "+ %.2f" % object._v
+
+ArithmeticTrueDivide.__repr__ = \
+    lambda object: "/ %.2f" % object._v
+
+ArithmeticSubtract.__repr__ = \
+    lambda object: "- %.2f" % object._v
 
 StateValueInInterval.__repr__ = \
     lambda Atom: "%s('%s')._in(%s)" % (Atom._state, Atom._name, Atom._interval)
