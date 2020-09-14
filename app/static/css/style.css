@@ -4,6 +4,10 @@ body {
 	font-family: arial;
 }
 
+.container-fluid.plot {
+  padding: 10px;
+}
+
 div.alert {
   margin: 10px;
 }
@@ -26,7 +30,7 @@ div.alert {
     width: 2rem;
     height: 2rem;
     vertical-align: text-bottom;
-    border: .15em solid black;
+    border: .25em solid black;
     border-right-color: transparent;
     border-radius: 50%;
     -webkit-animation: spinner-border .75s linear infinite;
@@ -65,6 +69,11 @@ div.alert {
 .selection {
 	padding-left: 0px!important;
 	padding-right: 0px!important;
+	height: 100vh!important;
+}
+
+.selection-phases {
+    height: 100vh;
 }
 
 .selection .panel {
@@ -72,8 +81,12 @@ div.alert {
 	margin-bottom: 0px!important;
 }
 
+.panel.panel-success.machine-function-property, .panel.panel-success.function-calls, .panel.panel-success.code-view {
+    min-height: 100vh;
+}
+
 .col-md-4.selection .panel-body .panel-title {
-    font-family: monaco;
+    font-family: arial;
     font-style: normal;
 }
 
@@ -115,17 +128,17 @@ div.please-select {
 
 #verdict-list #specification_listing {
     padding: 10px;
-    border-bottom: 2px solid black;
+    border-bottom: 1px solid grey;
 }
 
 #verdict-list .code_listing_line {
-    font-family: monaco;
+    font-family: courier new;
     padding: 2px;
 }
 
 #function-call-list {
-    max-height: 500px;
     overflow: hidden scroll;
+    max-height: 95vh;
 }
 
 #function-call-list input[type=checkbox] {
@@ -193,10 +206,18 @@ table.function-list-table td {
 	padding: 10px;
 }
 
+#specification_listing .inner-part {
+    padding: 4px;
+    margin: 4px;
+	border-radius: 5px 5px 5px 5px;
+}
+
 .list-group-item-text.code {
-	font-family: monaco;
-	padding: 2px;
+	font-family: courier new;
+	padding: 4px;
 	font-family: 12px;
+	margin: 4px;
+	border-radius: 5px 5px 5px 5px;
 }
 
 .list-group-item .list-group-item-text.code {

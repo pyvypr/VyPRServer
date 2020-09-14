@@ -1,16 +1,17 @@
 """
 Module to provide functions for the web analysis tool to use.
 
-TODO: add quotes where they should be in the specification, other states?
 """
 from .utils import get_connection
 import json
 import dateutil.parser
+from dateutil.parser import isoparse
 import pickle
 import base64
 from VyPR.monitor_synthesis.formula_tree import *
 from VyPR.QueryBuilding.formula_building import *
 from VyPR.SCFG.construction import *
+from VyPR.SCFG.parse_tree import ParseTree
 import app
 import ast
 import os
@@ -20,69 +21,6 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure, locator_params
-
-HTML_ON = False
-
-
-def list_verdicts(function_name):
-    """
-    Given a function name, for each transaction, for each function call, list the verdicts.
-    """
-    connection = get_connection()
-    cursor = connection.cursor()
-
-    function_id = \
-        cursor.execute("select id from function where fully_qualified_name = ?", [function_name]).fetchall()[0][0]
-
-    bindings = cursor.execute("select * from binding where function = ?", [function_id]).fetchall()
-
-    transactions = cursor.execute("select * from trans").fetchall()
-    request_to_verdicts = {}
-    for result in transactions:
-        request_to_verdicts[result[1]] = {}
-        # find the function calls of function_name for this transaction
-        calls = cursor.execute("select * from function_call where trans = ?", [result[0]]).fetchall()
-        for call in calls:
-            request_to_verdicts[result[1]][call[2]] = {}
-            for binding in bindings:
-                verdicts = cursor.execute("select * from verdict where binding = ? and function_call = ?",
-                                          [binding[0], call[0]]).fetchall()
-                request_to_verdicts[result[1]][call[2]][binding[0]] = verdicts
-                truth_map = {1: True, 0: False}
-                request_to_verdicts[result[1]][call[2]][binding[0]] = map(list, request_to_verdicts[result[1]][call[2]][
-                    binding[0]])
-                for n in range(len(request_to_verdicts[result[1]][call[2]][binding[0]])):
-                    request_to_verdicts[result[1]][call[2]][binding[0]][n][1] = truth_map[
-                        request_to_verdicts[result[1]][call[2]][binding[0]][n][1]]
-
-    connection.close()
-
-    return request_to_verdicts
-
-
-def list_transactions(function_id):
-    """
-    Return a list of all transactions - we may eventually want do to this with a time interval bound.
-    """
-    connection = get_connection()
-    cursor = connection.cursor()
-
-    transactions = cursor.execute("select * from trans").fetchall()
-
-    print("getting transactions with function id %s" % function_id)
-
-    # list only the requests for which there is a call to the function with function_id
-    final_requests = []
-    for request in transactions:
-        calls_with_function_id = cursor.execute("select * from function_call where function = ? and trans = ?",
-                                                [function_id, request[0]]).fetchall()
-        if len(calls_with_function_id) > 0:
-            final_requests.append(request)
-
-    connection.close()
-    print(final_requests)
-
-    return final_requests
 
 
 def list_calls_from_id(function_id, tests = None):
@@ -142,22 +80,6 @@ def list_calls_from_id(function_id, tests = None):
     return modified_calls
 
 
-def list_calls_during_request(transaction_id, function_name):
-    """
-    Given an transaction id, list the function calls of the given function during that request.
-    """
-    connection = get_connection()
-    cursor = connection.cursor()
-
-    print("getting calls")
-    function_calls = cursor.execute("select * from function_call where trans = ? and function = ?",
-                                    [transaction_id, function_name]).fetchall()
-
-    connection.close()
-
-    return function_calls
-
-
 def list_calls_in_interval(start, end, function_id, test_names = None):
     """start and end are strings in dd/mm/yyyy hh:mm:ss format"""
     connection = get_connection()
@@ -184,22 +106,6 @@ def list_calls_in_interval(start, end, function_id, test_names = None):
 
     connection.close()
     return function_calls
-
-
-def list_verdicts_from_function_call(function_call_id):
-    """
-    Given a function call id, return all the verdicts reached during this function call.
-    """
-    connection = get_connection()
-    cursor = connection.cursor()
-
-    verdicts = cursor.execute("select binding.binding_statement_lines, verdict.verdict, verdict.time_obtained from " + \
-                              "(verdict inner join binding on verdict.binding=binding.id) where verdict.function_call = ?",
-                              [function_call_id]).fetchall()
-
-    connection.close()
-
-    return verdicts
 
 
 def web_list_tests():
@@ -282,7 +188,8 @@ def web_list_functions(tests = None):
 
         #in case it does not
         if len(machine_rest) == 1:
-            path_rest =machine_rest[0].split(".")
+            path_rest = machine_rest[0].split(".")
+            machine = [""]
         else:
             path_rest = machine_rest[1].split(".")
 
@@ -315,6 +222,10 @@ def web_list_functions(tests = None):
         global atoms_list
         atoms_list = []
         property_to_atoms_list(prop)
+
+
+        #return specification as dict with data based on which the front end will build the HTML
+        HTML_ON = False
 
         if HTML_ON:
             atom_str = prop.HTMLrepr()
@@ -375,67 +286,6 @@ def web_list_functions(tests = None):
     return dictionary_tree_structure
 
 
-def get_transaction_function_call_pairs(verdict, path):
-    """
-    For the given verdict and path pair, find all the function calls inside that path that
-    result in a verdict matching the one given.
-
-    To do this, we first find all the functions that match the path given.
-    """
-    connection = get_connection()
-    cursor = connection.cursor()
-
-    path = "%s%%" % path
-
-    truth_map = {"violating": 0, "not-violating": 1}
-
-    final_map = {}
-
-    # note that a function is unique wrt a property - so each row returned here is coupled with a single property
-    functions = cursor.execute("select * from function where fully_qualified_name like ?", [path]).fetchall()
-
-    # Now, get all the calls to these functions and, for each call, find all the verdicts and organise them by binding
-
-    final_map["functions"] = {}
-    for function in functions:
-        final_map["functions"][function[0]] = {"calls": {}, "property": {}, "fully_qualified_name": function[1]}
-        data_found_for_function = False
-
-        # get the property string representation
-        property_id = function[2]
-        property_info = json.loads(
-            cursor.execute("select * from property where hash = ?", [property_id]).fetchall()[0][1])
-        final_map["functions"][function[0]]["property"] = property_info
-
-        # get the calls
-        calls = cursor.execute("select * from function_call where function = ?", [function[0]]).fetchall()
-        for call in calls:
-            data_found_for_call = False
-            final_map["functions"][function[0]]["calls"][call[0]] = {"bindings": {}, "time": call[2]}
-            bindings = cursor.execute("select * from binding where function = ?", [function[0]]).fetchall()
-            for binding in bindings:
-                verdicts = cursor.execute(
-                    "select * from verdict where binding = ? and function_call = ? and verdict = ?",
-                    [binding[0], call[0], truth_map[verdict]]).fetchall()
-                verdict_tuples = map(lambda row: (row[2], row[3]), verdicts)
-                if len(verdict_tuples) > 0:
-                    final_map["functions"][function[0]]["calls"][call[0]]["bindings"][binding[0]] = {"verdicts": [],
-                                                                                                     "lines": binding[
-                                                                                                         3]}
-                    final_map["functions"][function[0]]["calls"][call[0]]["bindings"][binding[0]][
-                        "verdicts"] = verdict_tuples
-                    data_found_for_call = True
-                    data_found_for_function = True
-
-            if not (data_found_for_call):
-                del final_map["functions"][function[0]]["calls"][call[0]]
-
-        if not (data_found_for_function):
-            del final_map["functions"][function[0]]
-
-    return final_map
-
-
 def get_code(function_id):
 
     connection = get_connection()
@@ -449,7 +299,7 @@ def get_code(function_id):
     #check if the monitored service path was given as an argument
     location = app.monitored_service_path
     if (location==None):
-        error_dict = {"error" : "Please parse the monitored service path as an argument (--path)"}
+        error_dict = {"error" : "Please provide the monitored service source code location (--path)."}
         return error_dict
 
     if "-" in func[0:func.index(".")]:
@@ -459,7 +309,11 @@ def get_code(function_id):
     func = func[func.rindex(".") + 1:]
     file_name = module.replace(".", "/") + ".py.inst"
     # extract asts from the code in the file
-    code = "".join(open(os.path.join(location, file_name), "r").readlines())
+    try:
+        code = "".join(open(os.path.join(location, file_name), "r").readlines())
+    except:
+        error_dict = {"error" : "Monitored service source code not found at given location."}
+        return error_dict
     asts = ast.parse(code)
     qualifier_subsequence = get_qualifier_subsequence(func)
     func = func.replace(":", ".")
@@ -480,13 +334,22 @@ def get_code(function_id):
 
     #we want to now exact line numbers of these ast objects
     start = function_def.lineno - 1
-    end = function_def.body[-1].lineno - 1
-
+    end = function_def.body[-1].lineno
+    #in case last element spans over multiple lines, find the last line number
+    for node in ast.walk(function_def.body[-1]):
+        try:
+            node_line = node.lineno
+            if node_line > end:
+                end = node_line
+        except:
+            pass
+    end = end - 1
     lines = code.split('\n')
+
 
     #take the section of code between the line numbers - this is the source code
     #of the function of interest without the rest of the code
-    f_code = lines[start:end]
+    f_code = lines[start:(end+1)]
 
     dict = {"start_line" : start+1,
             "end_line": end+1,
@@ -646,6 +509,10 @@ def get_calls_data(ids_list, property_hash):
 
         tree[elem[0]][elem[1]][elem[2]].append(dict)
 
+    # in addition to lines at which instrumenation points are, we also need to know
+    # which lines are of interest due to being refered to by the quantifiers
+    # as they are not paired with atoms, we store them within the corresponding binding,
+    # but set the atom and subatom indices to -1 
     for binding_key in tree.keys():
         print(binding_key)
         subtree = tree[binding_key]
@@ -675,11 +542,12 @@ def get_atom_type(atom_index, inst_point_id):
        on observation.verdict==verdict.id) where observation.instrumentation_point=?""",
        [inst_point_id]).fetchone()[0]
 
+    print("%s -> inst point %s" % (prop_hash, inst_point_id))
+
     print(prop_hash)
     atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
         and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
     atom_deserialised = pickle.loads(base64.b64decode(atom_structure))
-    print(type(atom_deserialised))
 
     connection.close()
 
@@ -803,9 +671,18 @@ def get_plot_data_simple(dict):
         atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
             and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
         formula = pickle.loads(base64.b64decode(atom_structure))
-        interval=formula._interval
-        lower=interval[0]
-        upper=interval[1]
+        try:
+            interval = formula._interval
+            lower = interval[0]
+            upper = interval[1]
+        except:
+            #TODO
+            #right now, for simple atoms are either observation in interval or obs = value
+            #hence, inequalities are not covered here
+            #what about non numeric data?
+            value = formula._value
+            lower = value
+            upper = value
 
         x_array = []
         y_array = []
@@ -815,9 +692,9 @@ def get_plot_data_simple(dict):
             x_array.append(element[1])
             y = float(element[0])
             #d is the distance from observed value to the nearest interval bound
-            d=min(abs(y-lower),abs(y-upper))
+            d = min(abs(y-lower),abs(y-upper))
             #sign=-1 if verdict value=0 and sign=1 if verdict is true
-            sign=-1+2*(element[3])
+            sign = -1 + 2 * (element[3])
             severity_array.append(sign*d)
             y_array.append(y)
 
@@ -926,6 +803,742 @@ def get_plot_data_between(dict):
         }
 
 
+def get_plot_data_mixed(dict):
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    # first, check if the plot already exists
+    plot_results = get_plot(cursor, dict)
+    if len(plot_results) > 0:
+        print("existing plot found with hash %s" % plot_results[0][0])
+        # the plot exists, so use the precomputed data
+        final_dictionary = {
+            "plot_hash": plot_results[0][0],
+            "plot_data": json.loads(plot_results[0][2])
+        }
+        return final_dictionary
+    else:
+
+        calls_list = dict["calls"]
+        binding_index = dict["binding"]
+        atom_index = dict["atom"]
+        points_list = dict["points"]
+
+        query_string = """select o1.observed_value, o2.observed_value,
+                                 o1.observation_time, o2.observation_time,
+                                 verdict.verdict, o1.sub_index
+                          from verdict inner join observation o1 on verdict.id==o1.verdict
+                          inner join observation o2 where o1.verdict=o2.verdict
+                          and o1.instrumentation_point<o2.instrumentation_point
+                          and o1.instrumentation_point in %s and o2.instrumentation_point in %s
+                          and o1.verdict in (select verdict.id from verdict inner join binding
+                                             on verdict.binding == binding.id where verdict.function_call in %s and
+                                             binding.binding_space_index=%s)
+                          and o1.atom_index = %s and o2.atom_index = %s;""" % (
+                list_to_sql_string(points_list), list_to_sql_string(points_list),
+                list_to_sql_string(calls_list), binding_index, atom_index, atom_index)
+        result = cursor.execute(query_string).fetchall()
+
+        prop_hash = cursor.execute("""select distinct function_property_pair.property_hash from
+        (((function_property_pair inner join function_call on function_property_pair.function==function_call.function)
+        inner join verdict on function_call.id==verdict.function_call) inner join observation
+           on observation.verdict==verdict.id) where observation.instrumentation_point=?""",
+           [points_list[0]]).fetchone()[0]
+
+        atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
+            and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
+        formula = pickle.loads(base64.b64decode(atom_structure))
+
+        x1_array = []
+        y1_array = []
+        x2_array = []
+        y2_array = []
+        severity_array = []
+
+        for element in result:
+            if element[5] == 0:
+                dict0 = ast.literal_eval(element[0])
+                dict1 = ast.literal_eval(element[1])
+                x1_array.append(element[2])
+                x2_array.append(element[3])
+            else:
+                dict0 = ast.literal_eval(element[1])
+                dict1 = ast.literal_eval(element[0])
+                x1_array.append(element[3])
+                x2_array.append(element[2])
+
+            for key in dict0:
+                elem0 = dict0[key]
+            for key in dict1:
+                elem1 = dict1[key]
+
+            y1_array.append(elem0)
+            y2_array.append(elem1)
+
+            sign = -1 + 2*element[4]
+            d = abs(elem1 - elem0)
+            severity_array.append(sign*d)
+
+        if type(formula) in [StateValueEqualToMixed, StateValueLengthLessThanStateValueLengthMixed]:
+            severity_array = []
+            stack_left = formula._lhs._arithmetic_stack
+            stack_right = formula._rhs._arithmetic_stack
+            for i in range(len(y1_array)):
+                verdict = result[i][4]
+                sign = -1 + 2*verdict
+                d = abs(apply_arithmetic_stack(stack_right, y2_array[i]) -
+                        apply_arithmetic_stack(stack_left, y1_array[i]))
+                severity_array.append(sign*d)
+
+        if type(formula) in [TransitionDurationLessThanStateValueMixed,
+            TransitionDurationLessThanStateValueLengthMixed]:
+            severity_array = []
+            stack_right = formula._rhs._arithmetic_stack
+            for i in range(len(y1_array)):
+                verdict = result[i][4]
+                sign = -1 + 2*verdict
+                d = abs(apply_arithmetic_stack(stack_right, y2_array[i]) - y1_array[i])
+                severity_array.append(sign*d)
+
+
+        # build the final plot data
+        plot_data = {"x1" : x1_array, "mixed-observation-1" : y1_array,
+                     "x2" : x2_array, "mixed-observation-2" : y2_array,
+                     "mixed-severity" : severity_array}
+        # generate a hash of the plot data
+        plot_hash = hashlib.sha1()
+        plot_hash.update(json.dumps(plot_data))
+        plot_hash.update(json.dumps(dict))
+        plot_hash = plot_hash.hexdigest()
+        # store the plot
+        store_plot(cursor, plot_hash, dict, plot_data)
+        connection.commit()
+
+        connection.close()
+
+        return {
+            "plot_hash": plot_hash,
+            "plot_data": plot_data
+        }
+
+
+def get_path_data_between(dict):
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    # first, check if the path data was already calculated
+    path_results = get_plot(cursor, dict)
+    if len(path_results) > 0:
+        print("existing paths found with hash %s" % path_results[0][0])
+        # the plot exists, so use the precomputed data
+        final_dictionary = json.loads(path_results[0][2])
+        final_dictionary["path_hash"] = path_results[0][0]
+        return final_dictionary
+
+    calls_list = dict["calls"]
+    binding_index = dict["binding"]
+    atom_index = dict["atom"]
+    points_list = dict["points"]
+
+    # points_list contains a pair of points - we need the length of path up to each one
+    lengths = cursor.execute("""select reaching_path_length from instrumentation_point
+        where id in %s order by id"""%list_to_sql_string(points_list)).fetchall()
+    path_length_lhs = lengths[0][0]
+    path_length_rhs = lengths[1][0]
+
+    query_string = """select o1.observed_value, o2.observed_value,
+                             o1.observation_time, o2.observation_time,
+                             o1.previous_condition_offset, o2.previous_condition_offset,
+                             verdict.verdict, function_call.path_condition_id_sequence
+                      from ((function_call inner join verdict on function_call.id == verdict.function_call)
+                      inner join observation o1 on verdict.id==o1.verdict
+                      inner join observation o2) where o1.verdict=o2.verdict
+                      and o1.instrumentation_point<o2.instrumentation_point
+                      and o1.instrumentation_point in %s and o2.instrumentation_point in %s
+                      and o1.verdict in (select verdict.id from verdict inner join binding
+                                         on verdict.binding == binding.id where verdict.function_call in %s and
+                                         binding.binding_space_index=%s)
+                      and o1.atom_index = %s and o2.atom_index = %s;""" % (
+            list_to_sql_string(points_list), list_to_sql_string(points_list),
+            list_to_sql_string(calls_list), binding_index, atom_index, atom_index)
+    result = cursor.execute(query_string).fetchall()
+
+    location = app.monitored_service_path
+    if (location==None):
+        error_dict = {"error" : "Please pass the monitored service path as an argument (--path)"}
+        return error_dict
+
+    # get the scfg of the function called by these calls
+    function = cursor.execute("""select function.fully_qualified_name from function inner join
+        function_call on function.id == function_call.function where function_call.id = ?""",
+        [calls_list[0]]).fetchone()
+    func = function[0]
+    scfg = get_scfg(func, location)
+    grammar = scfg.derive_grammar()
+
+    # get the atom from the structure in property to determine the interval
+    prop_hash = cursor.execute("""select distinct function_property_pair.property_hash from
+        (function_property_pair inner join function_call
+            on function_property_pair.function==function_call.function)
+        where function_call.id = ?""", [calls_list[0]]).fetchone()[0]
+
+    atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
+        and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
+    formula = pickle.loads(base64.b64decode(atom_structure))
+    interval=formula._interval
+    lower=interval[0]
+    upper=interval[1]
+
+    parse_trees_obs_value_pairs = []
+
+    for element in result:
+        subchain = []
+        for condition in json.loads(element[7]):
+            query_string = "select serialised_condition from path_condition_structure where id = %s;" % condition
+            condition_string = cursor.execute(query_string).fetchone()[0]
+            subchain.append(condition_string)
+
+        path_condition_list_lhs = subchain[1:(element[4]+1)]
+        path_condition_list_rhs = subchain[1:(element[5]+1)]
+        lhs_path = edges_from_condition_sequence(scfg, path_condition_list_lhs, path_length_lhs)
+        rhs_path = edges_from_condition_sequence(scfg, path_condition_list_rhs, path_length_rhs)
+        if len(lhs_path) <= len(rhs_path):
+            path_difference = rhs_path[len(lhs_path):]
+        else:
+            path_difference = lhs_path[len(rhs_path):]
+        parse_tree = ParseTree(path_difference, grammar, path_difference[0]._source_state)
+        lhs_time = isoparse(ast.literal_eval(element[0])["time"])
+        rhs_time = isoparse(ast.literal_eval(element[1])["time"])
+        time_taken = (rhs_time - lhs_time).total_seconds()
+        #d is the distance from observed value to the nearest interval bound
+        d=min(abs(time_taken-lower),abs(time_taken-upper))
+        #sign=-1 if verdict value=0 and sign=1 if verdict is true
+        sign=-1+2*(element[6])
+
+        parse_trees_obs_value_pairs.append((parse_tree, time_taken, sign*d, element[2]))
+
+    parse_trees, times, severities, x_axis = zip(*parse_trees_obs_value_pairs)
+
+    intersection = parse_trees[0].intersect(parse_trees[1:])
+
+    main_path = intersection.read_leaves()
+    main_lines = []
+    parameter_lines = []
+    for element in main_path:
+        if type(element) is CFGEdge:
+            try:
+                line_number = element._instruction.lineno
+                main_lines.append(line_number)
+            except:
+                try:
+                    line_number = element._structure_obj.lineno
+                    main_lines.append(line_number)
+                except:
+                    pass
+        else:
+
+            try:
+                line_number = element._instruction.lineno
+                parameter_lines.append(line_number)
+            except:
+                try:
+                    line_number = element._structure_obj.lineno
+                    parameter_lines.append(line_number)
+                except:
+                    pass
+
+    path_parameters = []
+    intersection.get_parameter_paths(intersection._root_vertex, [], path_parameters)
+
+    parameter_value_indices_to_times = {}
+    parameter_value_indices_to_severities = {}
+    parameter_value_indices_to_x_axis = {}
+    subpaths = []
+
+    if len(path_parameters) > 0:
+
+        n_of_trees = len(parse_trees)
+        for (n, parse_tree) in enumerate(parse_trees):
+          subtree = parse_tree.get_parameter_subtree(path_parameters[0])
+          subpath = subtree.read_leaves()
+          if subpath in subpaths:
+            subpath_index = subpaths.index(subpath)
+          else:
+            subpaths.append(subpath)
+            subpath_index = len(subpaths)-1
+          if subpath_index not in parameter_value_indices_to_times:
+            parameter_value_indices_to_times[subpath_index] = [times[n]]
+            parameter_value_indices_to_severities[subpath_index] = [severities[n]]
+            parameter_value_indices_to_x_axis[subpath_index] = [x_axis[n]]
+          else:
+            parameter_value_indices_to_times[subpath_index].append(times[n])
+            parameter_value_indices_to_severities[subpath_index].append(severities[n])
+            parameter_value_indices_to_x_axis[subpath_index].append(x_axis[n])
+
+        lines_by_subpaths = []
+
+        for (i, subpath) in enumerate(subpaths):
+            lines = []
+            for element in subpath:
+                try:
+                    line_number = element._instruction.lineno
+                    lines.append(line_number)
+                except:
+                    try:
+                        line_number = element._instruction._structure_obj.lineno
+                        lines.append(line_number)
+                    except:
+                        pass
+
+                # fill in gaps in lines
+                final_lines = []
+                for n in range(len(lines)-1):
+                    final_lines += [m for m in range(lines[n], lines[n+1]+1)]
+
+            if len(lines) == 1: final_lines = lines
+            lines_by_subpaths.append({"lines": final_lines,
+                                      "observations": parameter_value_indices_to_times[i],
+                                      "severities": parameter_value_indices_to_severities[i],
+                                      "x": parameter_value_indices_to_x_axis[i]})
+    else:
+
+        lines_by_subpaths = []
+
+    return_data = {
+        "parameter_values": lines_by_subpaths,
+        "main_lines": main_lines,
+        "parameters": parameter_lines
+    }
+
+    # generate a hash of the data
+    path_hash = hashlib.sha1()
+    path_hash.update(json.dumps(return_data))
+    path_hash.update(json.dumps(dict))
+    path_hash = path_hash.hexdigest()
+    # store the plot
+    store_plot(cursor, path_hash, dict, return_data)
+    connection.commit()
+
+    connection.close()
+    return_data["path_hash"] = path_hash
+    return return_data
+
+
+def get_path_data_simple(dict):
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    # first, check if the path data was already calculated
+    path_results = get_plot(cursor, dict)
+    if len(path_results) > 0:
+        print("existing paths found with hash %s" % path_results[0][0])
+        # the plot exists, so use the precomputed data
+        final_dictionary = json.loads(path_results[0][2])
+        final_dictionary["path_hash"] = path_results[0][0]
+        return final_dictionary
+
+    calls_list = dict["calls"]
+    binding_index = dict["binding"]
+    atom_index = dict["atom"]
+    points_list = dict["points"]
+    # all calls belong to the same function - find its ID
+    function_id = cursor.execute("""select function.id from function inner join
+        function_call on function.id == function_call.function where function_call.id = ?""",
+        [calls_list[0]]).fetchone()[0]
+
+    # inst point should be unique - in case it's not, takes one
+    path_length = cursor.execute("""select reaching_path_length from instrumentation_point
+        where id in %s"""%list_to_sql_string(points_list)).fetchone()[0]
+
+    query_string = """select observation.observed_value, observation.previous_condition_offset,
+                        verdict.verdict, function_call.path_condition_id_sequence,
+                        observation.observation_time
+                      from (observation inner join verdict on observation.verdict == verdict.id)
+                        inner join function_call on verdict.function_call==function_call.id
+                      where observation.instrumentation_point in %s and observation.atom_index=%s
+                        and function_call.id in %s and verdict.binding = (select id
+                        from binding where function=%s and binding_space_index=%s) """ % (
+            list_to_sql_string(points_list), atom_index, list_to_sql_string(calls_list),
+            function_id, binding_index)
+    result = cursor.execute(query_string).fetchall()
+
+    location = app.monitored_service_path
+    if (location==None):
+        error_dict = {"error" : "Please pass the monitored service path as an argument (--path)"}
+        return error_dict
+
+    # get the scfg of the function called by these calls
+    function = cursor.execute("select fully_qualified_name from function where id = ?",
+        [function_id]).fetchone()
+    func = function[0]
+    scfg = get_scfg(func, location)
+    grammar = scfg.derive_grammar()
+
+    # get the atom from the structure in property to determine the interval
+    prop_hash = cursor.execute("""select distinct property_hash from function_property_pair
+        where function = ?""", [function_id]).fetchone()[0]
+
+    # in order to determine the verdict severity, we need the condition set by the specification
+    atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
+        and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
+    formula = pickle.loads(base64.b64decode(atom_structure))
+    try:
+        # in case the formula requires the value to be in interval
+        interval = formula._interval
+        lower = interval[0]
+        upper = interval[1]
+    except:
+        # in case the formula sets an equality
+        value = formula._value
+        lower = value
+        upper = value
+
+    parse_trees_obs_value_pairs = []
+
+    for element in result:
+        subchain = []
+        for condition in json.loads(element[3]):
+            query_string = "select serialised_condition from path_condition_structure where id = %s;" % condition
+            condition_string = cursor.execute(query_string).fetchone()[0]
+            subchain.append(condition_string)
+
+        path_condition_list = subchain[1:(element[1]+1)]
+        path = edges_from_condition_sequence(scfg, path_condition_list, path_length)
+
+        parse_tree = ParseTree(path, grammar, path[0]._source_state)
+        observed_value = json.loads(element[0])
+        #d is the distance from observed value to the nearest interval bound
+        # interval being [x, x] if condition is "observed_value = x"
+        d=min(abs(observed_value-lower),abs(observed_value-upper))
+        #sign=-1 if verdict value=0 and sign=1 if verdict is true
+        sign=-1+2*(element[2])
+
+        parse_trees_obs_value_pairs.append((parse_tree, observed_value, sign*d, element[4]))
+
+    parse_trees, times, severities, x_axis = zip(*parse_trees_obs_value_pairs)
+
+    intersection = parse_trees[0].intersect(parse_trees[1:])
+
+    main_path = intersection.read_leaves()
+    main_lines = []
+    parameter_lines = []
+    for element in main_path:
+        if type(element) is CFGEdge:
+            try:
+                line_number = element._instruction.lineno
+                main_lines.append(line_number)
+            except:
+                try:
+                    line_number = element._structure_obj.lineno
+                    main_lines.append(line_number)
+                except:
+                    pass
+        else:
+
+            try:
+                line_number = element._instruction.lineno
+                parameter_lines.append(line_number)
+            except:
+                try:
+                    line_number = element._structure_obj.lineno
+                    parameter_lines.append(line_number)
+                except:
+                    pass
+
+    path_parameters = []
+    intersection.get_parameter_paths(intersection._root_vertex, [], path_parameters)
+
+    parameter_value_indices_to_times = {}
+    parameter_value_indices_to_severities = {}
+    parameter_value_indices_to_x_axis = {}
+    subpaths = []
+
+    if len(path_parameters) > 0:
+
+        n_of_trees = len(parse_trees)
+        for (n, parse_tree) in enumerate(parse_trees):
+          subtree = parse_tree.get_parameter_subtree(path_parameters[0])
+          subpath = subtree.read_leaves()
+          if subpath in subpaths:
+            subpath_index = subpaths.index(subpath)
+          else:
+            subpaths.append(subpath)
+            subpath_index = len(subpaths)-1
+          if subpath_index not in parameter_value_indices_to_times:
+            parameter_value_indices_to_times[subpath_index] = [times[n]]
+            parameter_value_indices_to_severities[subpath_index] = [severities[n]]
+            parameter_value_indices_to_x_axis[subpath_index] = [x_axis[n]]
+          else:
+            parameter_value_indices_to_times[subpath_index].append(times[n])
+            parameter_value_indices_to_severities[subpath_index].append(severities[n])
+            parameter_value_indices_to_x_axis[subpath_index].append(x_axis[n])
+
+        lines_by_subpaths = []
+
+        for (i, subpath) in enumerate(subpaths):
+            lines = []
+            for element in subpath:
+                try:
+                    line_number = element._instruction.lineno
+                    lines.append(line_number)
+                except:
+                    try:
+                        line_number = element._instruction._structure_obj.lineno
+                        lines.append(line_number)
+                    except:
+                        pass
+
+                # fill in gaps in lines
+                final_lines = []
+                for n in range(len(lines)-1):
+                    final_lines += [m for m in range(lines[n], lines[n+1]+1)]
+
+            if len(lines) == 1: final_lines = lines
+            lines_by_subpaths.append({"lines": final_lines,
+                                      "observations": parameter_value_indices_to_times[i],
+                                      "severities": parameter_value_indices_to_severities[i],
+                                      "x": parameter_value_indices_to_x_axis[i]})
+    else:
+
+        lines_by_subpaths = []
+
+    return_data = {
+        "parameter_values": lines_by_subpaths,
+        "main_lines": main_lines,
+        "parameters": parameter_lines
+    }
+
+    # generate a hash of the data
+    path_hash = hashlib.sha1()
+    path_hash.update(json.dumps(return_data))
+    path_hash.update(json.dumps(dict))
+    path_hash = path_hash.hexdigest()
+    # store the plot
+    store_plot(cursor, path_hash, dict, return_data)
+    connection.commit()
+
+    connection.close()
+    return_data["path_hash"] = path_hash
+    return return_data
+
+
+def get_path_data_mixed(dict):
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    # first, check if the path data was already calculated
+    path_results = get_plot(cursor, dict)
+    if len(path_results) > 0:
+        print("existing paths found with hash %s" % path_results[0][0])
+        # the plot exists, so use the precomputed data
+        final_dictionary = json.loads(path_results[0][2])
+        final_dictionary["path_hash"] = path_results[0][0]
+        return final_dictionary
+
+    calls_list = dict["calls"]
+    binding_index = dict["binding"]
+    atom_index = dict["atom"]
+    points_list = dict["points"]
+
+    lengths = cursor.execute("""select reaching_path_length from instrumentation_point
+        where id in %s order by id"""%list_to_sql_string(points_list)).fetchall()
+    path_length_lhs = lengths[0][0]
+    path_length_rhs = lengths[1][0]
+
+    query_string = """select o1.observed_value, o2.observed_value,
+                             o1.observation_time, o2.observation_time,
+                             o1.previous_condition_offset, o2.previous_condition_offset,
+                             verdict.verdict, function_call.path_condition_id_sequence
+                      from ((function_call inner join verdict on function_call.id == verdict.function_call)
+                      inner join observation o1 on verdict.id==o1.verdict
+                      inner join observation o2) where o1.verdict=o2.verdict
+                      and o1.instrumentation_point<o2.instrumentation_point
+                      and o1.instrumentation_point in %s and o2.instrumentation_point in %s
+                      and o1.verdict in (select verdict.id from verdict inner join binding
+                                         on verdict.binding == binding.id where verdict.function_call in %s and
+                                         binding.binding_space_index=%s)
+                      and o1.atom_index = %s and o2.atom_index = %s;""" % (
+            list_to_sql_string(points_list), list_to_sql_string(points_list),
+            list_to_sql_string(calls_list), binding_index, atom_index, atom_index)
+    result = cursor.execute(query_string).fetchall()
+
+    location = app.monitored_service_path
+    if (location==None):
+        error_dict = {"error" : "Please pass the monitored service path as an argument (--path)"}
+        return error_dict
+
+    # get the scfg of the function called by these calls
+    function = cursor.execute("""select function.fully_qualified_name from function inner join
+        function_call on function.id == function_call.function where function_call.id = ?""",
+        [calls_list[0]]).fetchone()
+    func = function[0]
+    scfg = get_scfg(func, location)
+    grammar = scfg.derive_grammar()
+
+    # get the atom from the structure in property to determine the interval
+    prop_hash = cursor.execute("""select distinct function_property_pair.property_hash from
+        (function_property_pair inner join function_call
+            on function_property_pair.function==function_call.function)
+        where function_call.id = ?""", [calls_list[0]]).fetchone()[0]
+
+    atom_structure = cursor.execute("""select serialised_structure from atom where index_in_atoms=?
+        and property_hash=?""", [atom_index, prop_hash]).fetchone()[0]
+    formula = pickle.loads(base64.b64decode(atom_structure))
+
+    parse_trees_obs_value_pairs = []
+
+    for element in result:
+        subchain = []
+        for condition in json.loads(element[7]):
+            query_string = "select serialised_condition from path_condition_structure where id = %s;" % condition
+            condition_string = cursor.execute(query_string).fetchone()[0]
+            subchain.append(condition_string)
+
+        path_condition_list_lhs = subchain[1:(element[4]+1)]
+        path_condition_list_rhs = subchain[1:(element[5]+1)]
+        lhs_path = edges_from_condition_sequence(scfg, path_condition_list_lhs, path_length_lhs)
+        rhs_path = edges_from_condition_sequence(scfg, path_condition_list_rhs, path_length_rhs)
+        path = rhs_path if (path_length_lhs < path_length_rhs) else lhs_path
+        parse_tree = ParseTree(path, grammar, path[0]._source_state)
+
+        lhs_obs = ast.literal_eval(element[0])
+        rhs_obs = ast.literal_eval(element[1])
+        for key in lhs_obs:
+            lhs_value = lhs_obs[key]
+        for key in rhs_obs:
+            rhs_value = rhs_obs[key]
+        observed_difference = rhs_value - lhs_value
+        #d is the distance from observed value to the nearest interval bound
+        d=abs(observed_difference)
+        if type(formula) in [StateValueEqualToMixed, StateValueLengthLessThanStateValueLengthMixed]:
+
+            stack_left = formula._lhs._arithmetic_stack
+            stack_right = formula._rhs._arithmetic_stack
+            d = abs(apply_arithmetic_stack(stack_right, rhs_value) -
+                        apply_arithmetic_stack(stack_left, lhs_value))
+
+        if type(formula) in [TransitionDurationLessThanStateValueMixed,
+            TransitionDurationLessThanStateValueLengthMixed]:
+
+            stack_right = formula._rhs._arithmetic_stack
+            d = abs(apply_arithmetic_stack(stack_right, rhs_value) - y1_array[i])
+
+        #sign=-1 if verdict value=0 and sign=1 if verdict is true
+        sign=-1+2*(element[6])
+
+        parse_trees_obs_value_pairs.append((parse_tree, lhs_value, rhs_value, sign*d, element[2]))
+
+    parse_trees, value1, value2, severities, x_axis = zip(*parse_trees_obs_value_pairs)
+
+    intersection = parse_trees[0].intersect(parse_trees[1:])
+
+    main_path = intersection.read_leaves()
+    main_lines = []
+    parameter_lines = []
+    for element in main_path:
+        if type(element) is CFGEdge:
+            try:
+                line_number = element._instruction.lineno
+                main_lines.append(line_number)
+            except:
+                try:
+                    line_number = element._structure_obj.lineno
+                    main_lines.append(line_number)
+                except:
+                    pass
+        else:
+
+            try:
+                line_number = element._instruction.lineno
+                parameter_lines.append(line_number)
+            except:
+                try:
+                    line_number = element._structure_obj.lineno
+                    parameter_lines.append(line_number)
+                except:
+                    pass
+
+    path_parameters = []
+    intersection.get_parameter_paths(intersection._root_vertex, [], path_parameters)
+
+    parameter_value_indices_to_lhs_obs = {}
+    parameter_value_indices_to_rhs_obs = {}
+    parameter_value_indices_to_severities = {}
+    parameter_value_indices_to_x_axis = {}
+    subpaths = []
+
+    if len(path_parameters) > 0:
+
+        n_of_trees = len(parse_trees)
+        for (n, parse_tree) in enumerate(parse_trees):
+          subtree = parse_tree.get_parameter_subtree(path_parameters[0])
+          subpath = subtree.read_leaves()
+          if subpath in subpaths:
+            subpath_index = subpaths.index(subpath)
+          else:
+            subpaths.append(subpath)
+            subpath_index = len(subpaths)-1
+          if subpath_index not in parameter_value_indices_to_times:
+            parameter_value_indices_to_lhs_obs[subpath_index] = [value1[n]]
+            parameter_value_indices_to_rhs_obs[subpath_index] = [value2[n]]
+            parameter_value_indices_to_severities[subpath_index] = [severities[n]]
+            parameter_value_indices_to_x_axis[subpath_index] = [x_axis[n]]
+          else:
+            parameter_value_indices_to_lhs_obs[subpath_index].append(value1[n])
+            parameter_value_indices_to_rhs_obs[subpath_index].append(value2[n])
+            parameter_value_indices_to_severities[subpath_index].append(severities[n])
+            parameter_value_indices_to_x_axis[subpath_index].append(x_axis[n])
+
+        lines_by_subpaths = []
+
+        for (i, subpath) in enumerate(subpaths):
+            lines = []
+            for element in subpath:
+                try:
+                    line_number = element._instruction.lineno
+                    lines.append(line_number)
+                except:
+                    try:
+                        line_number = element._instruction._structure_obj.lineno
+                        lines.append(line_number)
+                    except:
+                        pass
+
+                # fill in gaps in lines
+                final_lines = []
+                for n in range(len(lines)-1):
+                    final_lines += [m for m in range(lines[n], lines[n+1]+1)]
+
+            if len(lines) == 1: final_lines = lines
+            lines_by_subpaths.append({"lines": final_lines,
+                                      "observations_lhs": parameter_value_indices_to_lhs_obs[i],
+                                      "observations_rhs": parameter_value_indices_to_rhs_obs[i],
+                                      "severities": parameter_value_indices_to_severities[i],
+                                      "x": parameter_value_indices_to_x_axis[i]})
+    else:
+
+        lines_by_subpaths = []
+
+    return_data = {
+        "parameter_values": lines_by_subpaths,
+        "main_lines": main_lines,
+        "parameters": parameter_lines
+    }
+
+    # generate a hash of the data
+    path_hash = hashlib.sha1()
+    path_hash.update(json.dumps(return_data))
+    path_hash.update(json.dumps(dict))
+    path_hash = path_hash.hexdigest()
+    # store the plot
+    store_plot(cursor, path_hash, dict, return_data)
+    connection.commit()
+
+    connection.close()
+    return_data["path_hash"] = path_hash
+    return return_data
+
+
 """
 Auxiliary functions for path reconstruction
 """
@@ -964,6 +1577,24 @@ def list_to_sql_string(ids_list):
         ids = ids + str(id)
     ids = ids + ")"
     return ids
+
+
+def stack_repr(op_list):
+    str = ""
+    for o in op_list:
+        str += "%s " % o
+    return str
+
+
+def logical_repr(op_list, HTML):
+    if HTML:
+        str = "%s" % op_list[0].HTMLrepr()
+        for op in op_list[1:]:
+            str += ", %s" % op.HTMLrepr()
+    else:
+        str = "%s" % op_list[0]
+        for op in op_list[1:]:
+            str += ", %s" % op
 
 
 def get_qualifier_subsequence(function_qualifier):
@@ -1202,7 +1833,7 @@ StateValueLessThanEqualStateValueMixed.__repr__ = \
     lambda Atom: "%s(%s) <= %s(%s)" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
 """
 StateValueLengthLessThanStateValueLengthMixed.__repr__ = \
-    lambda Atom: "%s(%s).length() < %s(%s).length()" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+    lambda Atom: "%s('%s').length() < %s('%s').length()" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
 """
 StateValueLengthLessThanEqualStateValueLengthMixed.__repr__ = \
     lambda Atom: "%s(%s).length() <= %s(%s).length()" % (Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
@@ -1241,10 +1872,10 @@ TimeBetweenInOpenInterval.__repr__ = \
     lambda Atom: "timeBetween(%s, %s)._in(%s)" % (Atom._lhs, Atom._rhs, str(Atom._interval))
 
 LogicalAnd.__repr__= \
-    lambda object: ('land(%s' % (object.operands[0])) + (', %s'%str for str in object.operands[1:]) + ')'
+    lambda object: 'land(%s)' % logical_repr(object.operands, HTML = False)
 
 LogicalOr.__repr__= \
-    lambda object: ('lor(%s' % (object.operands[0])) + (', %s'%str for str in object.operands[1:]) + ')'
+    lambda object: 'lor(%s' % logical_repr(object.operands, HTML = False)
 
 LogicalNot.__repr__ = \
     lambda object: 'lnot(%s)' % object.operand
@@ -1253,62 +1884,72 @@ LogicalNot.__repr__ = \
 
 StateValueInInterval.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>._in(%s)
+        <span class="subatom" subatom-index="0">%s('%s')</span>._in(%s)
         </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
 
 StateValueInOpenInterval.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>._in(%s)
+        <span class="subatom" subatom-index="0">%s('%s')</span>._in(%s)
         </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
 
 StateValueEqualTo.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>.equals(%s)
+        <span class="subatom" subatom-index="0">%s('%s')</span>.equals(%s)
         </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._value)
 
 StateValueTypeEqualTo.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>.type().equals(%s)
+        <span class="subatom" subatom-index="0">%s('%s')</span>.type().equals(%s)
         </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._value)
 
 StateValueEqualToMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>.equals(
-        <span class="subatom" subatom-index="1">%s(%s)</span>)
-        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+        <span class="subatom" subatom-index="0">%s('%s') %s</span>.equals(
+        <span class="subatom" subatom-index="1">%s('%s') %s</span>)
+        </span>""" % (atoms_list.index(Atom),
+            Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
+            Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 #StateValueLessThanStateValueMixed.HTMLrepr = \
 #    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="subatom" subatom-index="0">%s(%s)</span> <
-#        <span class="subatom" subatom-index="1">%s(%s)</span>
-#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+#        <span class="subatom" subatom-index="0">%s('%s') %s</span> <
+#        <span class="subatom" subatom-index="1">%s('%s') %s</span>
+#        </span>""" % (atoms_list.index(Atom),
+#           Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
+#           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 #StateValueLessThanEqualStateValueMixed.HTMLrepr = \
 #    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="subatom" subatom-index="0">%s(%s)</span> <=
-#        <span class="subatom" subatom-index="1">%s(%s)</span>
-#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+#        <span class="subatom" subatom-index="0">%s('%s') %s</span> <=
+#        <span class="subatom" subatom-index="1">%s('%s') %s</span>
+#        </span>""" % (atoms_list.index(Atom),
+#           Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
+#           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 StateValueLengthLessThanStateValueLengthMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>.length() <
-        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
-        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+        <span class="subatom" subatom-index="0">%s('%s')</span>.length() %s<
+        <span class="subatom" subatom-index="1">%s('%s')</span>.length() %s
+        </span>""" % (atoms_list.index(Atom),
+            Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
+            Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 #StateValueLengthLessThanEqualStateValueLengthMixed.HTMLrepr = \
 #    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="subatom" subatom-index="0">%s(%s)</span>.length() <=
-#        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
-#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._lhs_name, Atom._rhs, Atom._rhs_name)
+#        <span class="subatom" subatom-index="0">%s('%s')</span>.length() %s <=
+#        <span class="subatom" subatom-index="1">%s('%s')</span>.length() %s
+#        </span>""" % (atoms_list.index(Atom),
+#           Atom._lhs, Atom._lhs_name, stack_repr(Atom._lhs._arithmetic_stack),
+#           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 StateValueLengthInInterval.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
-        <span class="subatom" subatom-index="0">%s(%s)</span>.length()._in(%s)
+        <span class="subatom" subatom-index="0">%s('%s')</span>.length()._in(%s)
         </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
 
 #StateValueLengthInOpenInterval.HTMLrepr = \
 #    lambda Atom: """<span class="atom" atom-index="%i">
-#        <span class="subatom" subatom-index="0">%s(%s)</span>.length()._in(%s)
+#        <span class="subatom" subatom-index="0">%s('%s')</span>.length()._in(%s)
 #        </span>""" % (atoms_list.index(Atom), Atom._state, Atom._name, Atom._interval)
 
 TransitionDurationInInterval.HTMLrepr=\
@@ -1336,26 +1977,30 @@ TransitionDurationLessThanTransitionDurationMixed.HTMLrepr=\
 TransitionDurationLessThanStateValueMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
         <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <
-        <span class="subatom" subatom-index="1">%s(%s) </span>
-        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
+        <span class="subatom" subatom-index="1">%s('%s') %s </span>
+        </span>""" % (atoms_list.index(Atom), Atom._lhs,
+            Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 #TransitionDurationLessThanEqualStateValueMixed.HTMLrepr = \
 #    lambda Atom: """<span class="atom" atom-index="%i">
 #        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
-#        <span class="subatom" subatom-index="1">%s(%s) </span>
-#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
+#        <span class="subatom" subatom-index="1">%s('%s') %s </span>
+#        </span>""" % (atoms_list.index(Atom), Atom._lhs,
+#           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 TransitionDurationLessThanStateValueLengthMixed.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">
         <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <
-        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
-        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
+        <span class="subatom" subatom-index="1">%s('%s')</span>.length() %s
+        </span>""" % (atoms_list.index(Atom), Atom._lhs,
+            Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 #TransitionDurationLessThanEqualStateValueLengthMixed.HTMLrepr = \
 #    lambda Atom: """<span class="atom" atom-index="%i">
 #        <span class="duration"><span class="subatom" subatom-index="0">%s</span>.duration()</span> <=
-#        <span class="subatom" subatom-index="1">%s(%s)</span>.length()
-#        </span>""" % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, Atom._rhs_name)
+#        <span class="subatom" subatom-index="1">%s('%s')</span>.length() %s
+#        </span>""" % (atoms_list.index(Atom), Atom._lhs,
+#           Atom._rhs, Atom._rhs_name, stack_repr(Atom._rhs._arithmetic_stack))
 
 TimeBetweenInInterval.HTMLrepr = \
     lambda Atom: """<span class="atom" atom-index="%i">timeBetween(
@@ -1370,10 +2015,10 @@ TimeBetweenInOpenInterval.HTMLrepr = \
         </span> """ % (atoms_list.index(Atom), Atom._lhs, Atom._rhs, str(Atom._interval))
 
 LogicalAnd.HTMLrepr= \
-    lambda object: ('land(%s' % (object.operands[0].HTMLrepr())) + (', %s'%str.HTMLrepr() for str in object.operands[1:]) + ')'
+    lambda object: 'land(%s)' % logical_repr(object.operands, HTML = True)
 
 LogicalOr.HTMLrepr= \
-    lambda object: ('lor(%s' % (object.operands[0].HTMLrepr())) + (', %s'%str.HTMLrepr() for str in object.operands[1:]) + ')'
+    lambda object: 'lor(%s)' % logical_repr(object.operands, HTML = True)
 
 LogicalNot.HTMLrepr = \
     lambda object: 'lnot(%s)' % object.operand.HTMLrepr()

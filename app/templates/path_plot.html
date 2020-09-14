@@ -7,12 +7,13 @@
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet" />
     <link href="{{ url_for('static', filename='css/plot.css') }}" rel="stylesheet" />
     <link rel="stylesheet" type="text/css" href="https://raw.github.com/novus/nvd3/master/src/nv.d3.css"/>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/default.min.css">
 
 </head>
 
 <body>
     <div id="app">
-        <plot hash="{{plot_hash}}"></plot>
+        <page hash="{{plot_hash}}" quantity="{{quantity}}"></page>
     </div>
 </body>
 
@@ -23,8 +24,9 @@
 <script src="https://cdn.rawgit.com/novus/nvd3/v1.8.1/build/nv.d3.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js" integrity="sha256-Kg2zTcFO9LXOc7IwcBx1YeUBJmekycsnTsq2RuFHSZU=" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-jquery-mask"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.debug.js" integrity="sha384-NaWTHo/8YCBYJ59830LTz/P4aQZK1sS0SneOgAvhsIl3zBu8r9RevNg5lHCHAuQ/" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.5.0-alpha1/html2canvas.min.js"></script>
-<script type="text/javascript" src="{{ url_for('static', filename='js/plotting.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/path_plotting.js') }}"></script>
 
 </html>

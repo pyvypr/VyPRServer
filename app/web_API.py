@@ -113,6 +113,13 @@ def get_plot_data_between():
     return json.dumps(return_data)
 
 
+@app_object.route("/get_plot_data_mixed/", methods=["GET", "POST"])
+def get_plot_data_mixed():
+    result_dict = json.loads(request.data)
+    return_data = database.get_plot_data_mixed(result_dict)
+    return json.dumps(return_data)
+
+
 @app_object.route("/get_plot_data_from_hash/<plot_hash>/", methods=["GET"])
 def get_plot_data_from_hash(plot_hash):
     plot_data = database.get_plot_data_from_hash(plot_hash)
@@ -127,6 +134,16 @@ def display_plot(plot_hash):
     """
     return render_template("plot.html", plot_hash=plot_hash)
 
+
+@app_object.route("/display_path_plot/<plot_hash>/<quantity>/", methods=["GET"])
+def display_path_plot(plot_hash, quantity):
+    """
+    Given a uniquely identifying path plot hash and a quantity indicating either observation or severity,
+    return the plotting page to the user, which will render the plot in the same way as the inline case.
+    """
+    return render_template("path_plot.html", plot_hash=plot_hash, quantity=quantity)
+
+
 @app_object.route("/download_plot/<plot_hash>/", methods=["GET"])
 def download_plot(plot_hash):
     """
@@ -134,3 +151,24 @@ def download_plot(plot_hash):
     """
     filename = database.write_plot(plot_hash)
     return send_file("../generated_plots/%s" % filename, mimetype='application/pdf', as_attachment=True)
+
+
+@app_object.route("/get_path_data_between/", methods=["GET", "POST"])
+def get_path_data_between():
+    result_dict = json.loads(request.data)
+    return_data = database.get_path_data_between(result_dict)
+    return json.dumps(return_data)
+
+
+@app_object.route("/get_path_data_simple/", methods=["GET", "POST"])
+def get_path_data_simple():
+    result_dict = json.loads(request.data)
+    return_data = database.get_path_data_simple(result_dict)
+    return json.dumps(return_data)
+
+
+@app_object.route("/get_path_data_mixed/", methods=["GET", "POST"])
+def get_path_data_mixed():
+    result_dict = json.loads(request.data)
+    return_data = database.get_path_data_mixed(result_dict)
+    return json.dumps(return_data)

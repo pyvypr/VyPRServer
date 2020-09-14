@@ -8,19 +8,19 @@
 
     <div class="container-fluid">
 
-        <div class="row">
+        <div class="row align-items-center">
 
-            <div class="col-md-4 selection">
+            <div class="col-md-3 selection">
 
                 <div class="fluid-container">
-                    <test-data></test-data>
-                    <machine-function-property v-bind:tree="{{functions}}"></machine-function-property>
-                    <function-calls></function-calls>
+
+                    <selection-tabs v-bind:tree="{{functions}}"></selection-tabs>
+
                 </div>
 
             </div>
 
-            <div class="col-md-8 selection">
+            <div class="col-md-9 selection">
 
                 <div class="fluid-container">
                     <code-view></code-view>
