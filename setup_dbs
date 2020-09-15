@@ -1,0 +1,4 @@
+rm -f verdicts.db events.db;
+sqlite3 verdicts.db < verdict-schema.sql;
+sqlite3 events.db < app/events/events.sql;
+echo "Databases prepared.";
