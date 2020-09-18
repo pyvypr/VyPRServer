@@ -1157,13 +1157,26 @@ Vue.component("code-view", {
           }
         }
 
-      show_lines = show_lines.sort();
+      show_lines = show_lines.sort(function(a, b){return a - b});
 
       //in addition to the lines stored in leaves, we want to display the first line
       // and in this case, three lines around each instrumentation point
       var more_lines = [that.start_line];
       for (var i=0; i<show_lines.length; i++){
         var current_line_number = show_lines[i];
+        if (current_line_number - 1 <= that.start_line) {
+          more_lines.push(current_line_number + 1);
+          more_lines.push(current_line_number + 2);
+          continue
+        }
+        if (current_line_number >= that.start_line + whole_code.length - 2) {
+          more_lines.push(current_line_number - 1);
+          more_lines.push(current_line_number - 2);
+          if (current_line_number == that.start_line + whole_code.length - 2) {
+            more_lines.push(current_line_number + 1);
+          }
+          continue
+        }
         for (var j=1; j<3; j++){
           more_lines.push(current_line_number+j);
           more_lines.push(current_line_number-j);
@@ -1171,6 +1184,7 @@ Vue.component("code-view", {
       }
       show_lines = show_lines.concat(more_lines);
 
+      // go through the code and set 'show' paramater of each line to 'true' if it's in show_lines
       for (var i=0; i<whole_code.length; i++){
         var line_id = whole_code[i].id.split("-");
         var id_line_number = line_id[line_id.length-1];
