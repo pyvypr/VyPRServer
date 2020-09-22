@@ -93,17 +93,39 @@ var generate_plot = function(root_obj) {
 };
 
 Vue.component("plot", {
-  template: `<div id="plot-wrapper" class="plot">
-  <p><a href="#" @click="downloadPDF($event)">Download PDF</a></p>
-  <!--<div id="plot-description" v-html="this.description"></div>-->
-  <div id="plot-filters" v-if="is_severity_plot">Filters:
-    <a href="#" id="violations" class="filter" v-bind:class="{active : violationFilterActive}"
-      @click="toggleViolationFilter($event)">Violations</a>
-    <a href="#" id="successes" class="filter" v-bind:class="{active : successFilterActive}"
-      @click="toggleSuccessFilter($event)">Successes</a>
-  </div>
-  <svg id="plot-svg" height="800px" width="1250px"></svg>
-  </div>`,
+  template: `
+    <div class="container-fluid plot">
+      <div class="col-md-12" id="plot-column">
+        <div class="panel panel-success">
+          <div class="panel-heading">
+            <h3 class="panel-title">Plot</h3>
+          </div>
+          <div class="panel-body">
+            <div id="plot-wrapper" class="plot">
+              <!--<div id="plot-description" v-html="this.description"></div>-->
+              <div id="plot-filters" v-if="is_severity_plot">Filters:
+                <a href="#" id="violations" class="filter" v-bind:class="{active : violationFilterActive}"
+                @click="toggleViolationFilter($event)">Violations</a>
+                <a href="#" id="successes" class="filter" v-bind:class="{active : successFilterActive}"
+                @click="toggleSuccessFilter($event)">Successes</a>
+              </div>
+              <svg id="plot-svg" height="700px" width="1200px"></svg>
+            </div>
+          </div>
+        </div>
+        <div class="panel panel-success">
+          <div class="panel-heading">
+            <h3 class="panel-title">Options</h3>
+          </div>
+          <div class="panel-body">
+            <ul class="nav nav-pills nav-stacked">
+              <li role="presentation"><a href="#" @click="downloadPDF($event)">Download PDF</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    `,
   props : ["hash"],
   data() {
     return {
@@ -168,7 +190,7 @@ Vue.component("plot", {
   methods:{
     downloadPDF : function(e) {
       e.preventDefault();
-      var quality = 3; // can be improved but we don't want the pdf to take up too much memory
+      var quality = 4; // can be improved but we don't want the pdf to take up too much memory
       const filename  = 'plot.pdf';
 
       // converting the svg to img to prevent the labels from doubling when converting to canvas
@@ -185,8 +207,8 @@ Vue.component("plot", {
       // draw image on canvas and add the canvas to pdf (couldn't be done directly with svg)
       html2canvas(document.querySelector('#image-plot'),
 								{scale: quality}).then(canvas => {
-			  let pdf = new jsPDF('l', 'mm', [600,450]);
-			  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 211, 150);
+			  let pdf = new jsPDF('l', 'mm', [850,500]);
+			  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 290, 170);
 			  pdf.save(filename);
         $("#image-plot").remove();
       });
