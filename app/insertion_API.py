@@ -94,6 +94,11 @@ def get_property_from_hash(hash):
     return database.get_property_byhash(hash)
 
 
+@app_object.route("/get_function_property_pairs/", methods=["get"])
+def get_function_property_pairs():
+    return json.dumps(database.get_function_property_pairs())
+
+
 @app_object.route("/insert_test_data/", methods=["post"])
 def insert_test_data():
     """

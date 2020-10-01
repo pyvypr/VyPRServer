@@ -266,6 +266,7 @@ def web_list_functions(tests = None):
 
         else:
             atom_str = prop.HTMLrepr()
+            print(prop.operands[0].HTMLrepr())
             vars = ''
             foralls = []
 
@@ -1601,6 +1602,7 @@ def logical_repr(op_list, HTML):
         str = "%s" % op_list[0]
         for op in op_list[1:]:
             str += ", %s" % op
+    return str
 
 
 def get_qualifier_subsequence(function_qualifier):

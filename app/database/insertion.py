@@ -7,6 +7,27 @@ import traceback
 import pickle
 
 
+def get_function_property_pairs():
+    """
+    Construct a dictionary mapping fully qualified function names to lists of hashes of properties monitored
+    over that function.
+    """
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    functions = cursor.execute("select id, fully_qualified_name from function").fetchall()
+    function_to_property_map = {}
+    for (id, fully_qualified_name) in functions:
+        # get all properties monitored over this function
+        property_hashes = map(lambda row : row[0],
+                                  cursor.execute("select property.hash from (property inner join function_property_pair"
+                                                 " on function_property_pair.property_hash = property.hash)"
+                                                 " where function_property_pair.function = ?", [id]).fetchall()
+                              )
+        function_to_property_map[fully_qualified_name] = property_hashes
+    return function_to_property_map
+
+
 def insert_function_call_data(call_data):
     """
     Given function call data, create the transaction, function call and program path.
