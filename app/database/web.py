@@ -266,7 +266,7 @@ def web_list_functions(tests = None):
 
         else:
             atom_str = prop.HTMLrepr()
-            print(prop.operands[0].HTMLrepr())
+            #print(prop.operands[0].HTMLrepr())
             vars = ''
             foralls = []
 
