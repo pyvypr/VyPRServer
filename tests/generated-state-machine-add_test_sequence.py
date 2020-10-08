@@ -35,7 +35,7 @@ def transition_function_page_load(runner):
 
 def transition_function_1(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=3]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=3]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=3]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=3]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -44,7 +44,7 @@ def transition_function_1(runner):
 
 def transition_function_2(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=4]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=4]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=4]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=4]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -53,7 +53,7 @@ def transition_function_2(runner):
 
 def transition_function_3(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=12]/*[position()=3]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=12]/*[position()=3]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -62,7 +62,7 @@ def transition_function_3(runner):
 
 def transition_function_4(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -71,7 +71,7 @@ def transition_function_4(runner):
 
 def transition_function_5(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=22]/*[position()=3]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=22]/*[position()=3]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -80,7 +80,7 @@ def transition_function_5(runner):
 
 def transition_function_6(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=22]/*[position()=6]/*[position()=3]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=22]/*[position()=6]/*[position()=3]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -89,7 +89,7 @@ def transition_function_6(runner):
 
 def transition_function_7(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=3]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=3]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=3]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=3]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -98,7 +98,7 @@ def transition_function_7(runner):
 
 def transition_function_8(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=4]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=4]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=4]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=4]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -107,7 +107,7 @@ def transition_function_8(runner):
 
 def transition_function_9(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=4]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=5]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=4]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=5]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -116,7 +116,7 @@ def transition_function_9(runner):
 
 def transition_function_10(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=13]/*[position()=3]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=13]/*[position()=3]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -125,7 +125,7 @@ def transition_function_10(runner):
 
 def transition_function_11(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=1]/*[position()=3]/*[position()=3]/*[position()=1]/*[position()=1]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=1]/*[position()=3]/*[position()=3]/*[position()=1]/*[position()=1]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -134,7 +134,7 @@ def transition_function_11(runner):
 
 def transition_function_12(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=14]/*[position()=3]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=14]/*[position()=3]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -143,7 +143,7 @@ def transition_function_12(runner):
 
 def transition_function_13(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=14]/*[position()=6]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=14]/*[position()=6]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -152,7 +152,7 @@ def transition_function_13(runner):
 
 def transition_function_14(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=76]/*[position()=3]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=76]/*[position()=3]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -161,7 +161,7 @@ def transition_function_14(runner):
 
 def transition_function_15(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=76]/*[position()=6]/*[position()=3]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=76]/*[position()=6]/*[position()=3]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -170,7 +170,7 @@ def transition_function_15(runner):
 
 def transition_function_16(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=13]/*[position()=3]/*[position()=2]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=13]/*[position()=3]/*[position()=2]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -179,7 +179,7 @@ def transition_function_16(runner):
 
 def transition_function_17(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=1]/*[position()=3]/*[position()=3]/*[position()=1]/*[position()=1]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=2]/*[position()=1]/*[position()=3]/*[position()=3]/*[position()=1]/*[position()=1]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -188,7 +188,7 @@ def transition_function_17(runner):
 
 def transition_function_18(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=14]/*[position()=3]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=14]/*[position()=3]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -197,7 +197,7 @@ def transition_function_18(runner):
 
 def transition_function_19(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=14]/*[position()=6]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=14]/*[position()=6]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -206,7 +206,7 @@ def transition_function_19(runner):
 
 def transition_function_20(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=89]/*[position()=3]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=89]/*[position()=3]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -215,7 +215,7 @@ def transition_function_20(runner):
 
 def transition_function_21(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=89]/*[position()=6]/*[position()=3]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=89]/*[position()=6]/*[position()=3]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
@@ -224,7 +224,7 @@ def transition_function_21(runner):
 
 def transition_function_22(runner):
   driver = runner.driver()
-  locator = (By.XPATH, '/html/body/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=20]/*[position()=3]/*[position()=1]')
+  locator = (By.XPATH, '/html/body/*[position()=1]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=1]/*[position()=1]/*[position()=2]/*[position()=3]/*[position()=20]/*[position()=3]/*[position()=1]')
   wait = WebDriverWait(driver, 10)
   element = wait.until(EC.presence_of_element_located(locator))
   time.sleep(5)
