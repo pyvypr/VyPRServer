@@ -21,6 +21,7 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure, locator_params
+from pprint import pprint
 
 
 def list_calls_from_id(function_id, tests = None):
@@ -998,6 +999,7 @@ def get_path_data_between(dict):
     upper=interval[1]
 
     parse_trees_obs_value_pairs = []
+    paths = []
 
     for element in result:
         subchain = []
@@ -1014,6 +1016,10 @@ def get_path_data_between(dict):
             path_difference = rhs_path[len(lhs_path):]
         else:
             path_difference = lhs_path[len(rhs_path):]
+
+        if path_difference not in paths:
+            paths.append(path_difference)
+
         parse_tree = ParseTree(path_difference, grammar, path_difference[0]._source_state)
         lhs_time = isoparse(ast.literal_eval(element[0])["time"])
         rhs_time = isoparse(ast.literal_eval(element[1])["time"])
@@ -1026,6 +1032,8 @@ def get_path_data_between(dict):
         parse_trees_obs_value_pairs.append((parse_tree, time_taken, sign*d, element[2]))
 
     parse_trees, times, severities, x_axis = zip(*parse_trees_obs_value_pairs)
+
+    pprint(transform_paths_to_intersection_dict(paths, grammar))
 
     intersection = parse_trees[0].intersect(parse_trees[1:])
 
@@ -1202,6 +1210,7 @@ def get_path_data_simple(dict):
         upper = value
 
     parse_trees_obs_value_pairs = []
+    paths = []
 
     for element in result:
         subchain = []
@@ -1212,6 +1221,8 @@ def get_path_data_simple(dict):
 
         path_condition_list = subchain[1:(element[1]+1)]
         path = edges_from_condition_sequence(scfg, path_condition_list, path_length)
+        if path not in paths:
+            paths.append(path)
 
         parse_tree = ParseTree(path, grammar, path[0]._source_state)
         observed_value = json.loads(element[0])
@@ -1224,6 +1235,8 @@ def get_path_data_simple(dict):
         parse_trees_obs_value_pairs.append((parse_tree, observed_value, sign*d, element[4]))
 
     parse_trees, times, severities, x_axis = zip(*parse_trees_obs_value_pairs)
+
+    print(transform_paths_to_intersection_dict(paths, grammar))
 
     intersection = parse_trees[0].intersect(parse_trees[1:])
 
@@ -1809,6 +1822,64 @@ def edges_from_condition_sequence(scfg, path_subchain, instrumentation_point_pat
     #path.append(curr)
 
     return path
+
+
+def transform_paths_to_intersection_dict(paths, grammar):
+    parse_trees = []
+    for path in paths:
+        parse_tree = ParseTree(path, grammar, path[0]._source_state)
+        parse_trees.append(parse_tree)
+
+    intersection = parse_trees[0].intersect(parse_trees[1:])
+    main_path = intersection.read_leaves()
+    path_parameters = []
+    intersection.get_parameter_paths(intersection._root_vertex, [], path_parameters)
+
+    parameter_dict = {}
+    # note that if there are no parameters, this loop will complete no iterations
+    # no parameters is the recursive base case
+    index = 0
+    for parameter in path_parameters:
+        print(parameter)
+        subpaths = []
+        for parse_tree in parse_trees:
+            subtree = parse_tree.get_parameter_subtree(parameter)
+            subpath = subtree.read_leaves()
+            subpaths.append(subpath)
+        subpaths_grouped = group_subpaths(subpaths)
+        # recursion happens here
+        parameter_dict[index] = []
+        for parameter_values in subpaths_grouped:
+            parameter_dict[index].append(transform_paths_to_intersection_dict(parameter_values, grammar))
+        index = index + 1
+
+    # if there are no parameters, this dictionary just describes a normal path
+    # if there are parameters, this dictionary describes a parametric path
+    # with a mapping from each parameter to another dictionary with a similar structure
+    final_dict = {
+        "path" : main_path,
+        "parameters" : parameter_dict
+    }
+    return final_dict
+
+
+def group_subpaths(paths_list):
+    first_elements = []
+    for path in paths_list:
+        first_element = path[0]
+        if first_element not in first_elements:
+            first_elements.append(first_element)
+
+    groups = [[] for el in first_elements]
+    index = 0
+    for first_element in first_elements:
+        for path in paths_list:
+            if path[0] == first_element:
+                groups[index].append(path)
+        index = index + 1
+
+    return groups
+
 
 
 """
