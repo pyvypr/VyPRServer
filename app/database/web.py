@@ -1790,6 +1790,18 @@ def edges_from_condition_sequence(scfg, path_subchain, instrumentation_point_pat
 
 
 def transform_paths_to_intersection_dict(paths, grammar, indices):
+    """
+    Returns the paths arranged in a tree dictionary structure as
+    { "path" : intersection of all given paths,
+      "parameters" : dictionary with parameter indices as keys, they represent
+                    a branching point in the code, for each key a list of dicts* is stored
+                    representing a subpath taken from that branching further through the code
+                    * dicts have the same structure as described here - recursion
+      "indices" : list of indices of the full paths in the initial paths list, contains only
+                    the indices of the paths corresponding to the branch on the current level
+                  used to group the data (observations and severities) by path
+    }
+    """
     parse_trees = []
     for path in paths:
         parse_tree = ParseTree(path, grammar, path[0]._source_state)
@@ -1832,6 +1844,10 @@ def transform_paths_to_intersection_dict(paths, grammar, indices):
 
 
 def group_subpaths(paths_list, indices_list):
+    """
+    When given a list of paths and their indices in the intial paths list, returns a pair of lists
+    that group the paths which have the same first element (non-empty intersection)
+    """
     first_elements = []
     for path in paths_list:
         first_element = path[0]
@@ -1852,6 +1868,10 @@ def group_subpaths(paths_list, indices_list):
 
 
 def intersection_dict_to_lines_dict(dict):
+    """
+    When given a dictionary returned by transform_paths_to_intersection_dict function, returns
+    a dictionary with the same structure, but showing paths by line numbers instead of scfg elements
+    """
     path = dict["path"]
     new_path = []
     for path_elem in path:
