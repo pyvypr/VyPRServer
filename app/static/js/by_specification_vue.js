@@ -1050,6 +1050,8 @@ Vue.component("code-view", {
       $(".panel.panel-success.code-view").find(".panel-heading").first().outerHeight() -
       $("#specification_listing").outerHeight());
     this.$root.$on('tests-selected', function(tree){
+      // if there are test cases, when one is selected, in case code data was displayed before
+      // reset the code view - the specification and calls selection will reload the appropriate content
       that.message = "Select a function and then one or more calls, first.";
       that.specification_code = "";
       that.code_lines = [];
@@ -1060,7 +1062,8 @@ Vue.component("code-view", {
       that.no_paths = false;
     })
     this.$root.$on('calls-loaded', function(dict){
-
+      // when a function is selected, calls are loaded and the entire code is displayed
+      // quantifiers and corresponding lines are paired by colour-coded highlighting
       start_loading();
 
       // reset values
@@ -1131,6 +1134,7 @@ Vue.component("code-view", {
       })
     })
     this.$root.$on('calls-selected', function(tree){
+      // when calls are selected, code view is adjusted to display the points of interest for those calls
       that.tree = tree;
       path_highlight_mode_on = false;
 
@@ -1594,6 +1598,14 @@ Vue.component("dropdown", {
   },
   methods: {
     selectOption: function(data){
+      /* an option was clicked, depending on which one it was and for which atom type, proceed
+      by either adding menu to another line in the code or invoking functions that fetch the data
+      about plots/pahts from the server side
+
+      every option stores all the data required in order to know how to proceed in the 'data' prop
+      which also contains information that needs to be sent to the server side
+      'action' is the string that indicates what needs to be done next
+      */
       start_loading();
       if (data["action"] == "simple-severity-plot"){
         // set the plot data globally
