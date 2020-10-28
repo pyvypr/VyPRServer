@@ -21,6 +21,7 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure, locator_params
+from pprint import pprint
 
 
 def list_calls_from_id(function_id, tests = None):
@@ -998,6 +999,7 @@ def get_path_data_between(dict):
     upper=interval[1]
 
     parse_trees_obs_value_pairs = []
+    paths = []
 
     for element in result:
         subchain = []
@@ -1014,6 +1016,11 @@ def get_path_data_between(dict):
             path_difference = rhs_path[len(lhs_path):]
         else:
             path_difference = lhs_path[len(rhs_path):]
+
+        if path_difference not in paths:
+            paths.append(path_difference)
+        path_index = paths.index(path_difference)
+
         parse_tree = ParseTree(path_difference, grammar, path_difference[0]._source_state)
         lhs_time = isoparse(ast.literal_eval(element[0])["time"])
         rhs_time = isoparse(ast.literal_eval(element[1])["time"])
@@ -1023,9 +1030,12 @@ def get_path_data_between(dict):
         #sign=-1 if verdict value=0 and sign=1 if verdict is true
         sign=-1+2*(element[6])
 
-        parse_trees_obs_value_pairs.append((parse_tree, time_taken, sign*d, element[2]))
+        parse_trees_obs_value_pairs.append((parse_tree, time_taken, sign*d, element[2], path_index))
 
-    parse_trees, times, severities, x_axis = zip(*parse_trees_obs_value_pairs)
+    parse_trees, times, severities, x_axis, path_indicators = zip(*parse_trees_obs_value_pairs)
+
+    intersection_dict = transform_paths_to_intersection_dict(paths, grammar, [n for n in range(len(paths))])
+    lines_intersection_dict = intersection_dict_to_lines_dict(intersection_dict)
 
     intersection = parse_trees[0].intersect(parse_trees[1:])
 
@@ -1061,61 +1071,45 @@ def get_path_data_between(dict):
     parameter_value_indices_to_times = {}
     parameter_value_indices_to_severities = {}
     parameter_value_indices_to_x_axis = {}
-    subpaths = []
+    parameter_value_indices_to_path_index = {}
+    lines_by_subpaths = []
+    subpath_index = 0
 
-    if len(path_parameters) > 0:
 
-        n_of_trees = len(parse_trees)
-        for (n, parse_tree) in enumerate(parse_trees):
-          subtree = parse_tree.get_parameter_subtree(path_parameters[0])
-          subpath = subtree.read_leaves()
-          if subpath in subpaths:
-            subpath_index = subpaths.index(subpath)
-          else:
-            subpaths.append(subpath)
-            subpath_index = len(subpaths)-1
-          if subpath_index not in parameter_value_indices_to_times:
-            parameter_value_indices_to_times[subpath_index] = [times[n]]
-            parameter_value_indices_to_severities[subpath_index] = [severities[n]]
-            parameter_value_indices_to_x_axis[subpath_index] = [x_axis[n]]
-          else:
-            parameter_value_indices_to_times[subpath_index].append(times[n])
-            parameter_value_indices_to_severities[subpath_index].append(severities[n])
-            parameter_value_indices_to_x_axis[subpath_index].append(x_axis[n])
+    for parameter_index in lines_intersection_dict["parameters"]:
 
-        lines_by_subpaths = []
+        parameter_values = lines_intersection_dict["parameters"][parameter_index]
+        for parameter_dict in parameter_values:
+            lines = parameter_dict["path"]
+            parameter_value_indices_to_times[subpath_index] = []
+            parameter_value_indices_to_severities[subpath_index] = []
+            parameter_value_indices_to_x_axis[subpath_index] = []
+            parameter_value_indices_to_path_index[subpath_index] = []
+            for (n, parse_tree) in enumerate(parse_trees):
+                if path_indicators[n] in parameter_dict["indices"]:
+                    parameter_value_indices_to_times[subpath_index].append(times[n])
+                    parameter_value_indices_to_severities[subpath_index].append(severities[n])
+                    parameter_value_indices_to_x_axis[subpath_index].append(x_axis[n])
+                    parameter_value_indices_to_path_index[subpath_index].append(path_indicators[n])
 
-        for (i, subpath) in enumerate(subpaths):
-            lines = []
-            for element in subpath:
-                try:
-                    line_number = element._instruction.lineno
-                    lines.append(line_number)
-                except:
-                    try:
-                        line_number = element._instruction._structure_obj.lineno
-                        lines.append(line_number)
-                    except:
-                        pass
-
-                # fill in gaps in lines
-                final_lines = []
-                for n in range(len(lines)-1):
-                    final_lines += [m for m in range(lines[n], lines[n+1]+1)]
+            # fill in gaps in lines
+            final_lines = []
+            for n in range(len(lines)-1):
+                final_lines += [m for m in range(lines[n], lines[n+1]+1)]
 
             if len(lines) == 1: final_lines = lines
             lines_by_subpaths.append({"lines": final_lines,
-                                      "observations": parameter_value_indices_to_times[i],
-                                      "severities": parameter_value_indices_to_severities[i],
-                                      "x": parameter_value_indices_to_x_axis[i]})
-    else:
-
-        lines_by_subpaths = []
+                                      "observations": parameter_value_indices_to_times[subpath_index],
+                                      "severities": parameter_value_indices_to_severities[subpath_index],
+                                      "x": parameter_value_indices_to_x_axis[subpath_index],
+                                      "path_index": parameter_value_indices_to_path_index[subpath_index] })
+            subpath_index = subpath_index + 1
 
     return_data = {
         "parameter_values": lines_by_subpaths,
         "main_lines": main_lines,
-        "parameters": parameter_lines
+        "parameters": parameter_lines,
+        "intersection_dict": lines_intersection_dict
     }
 
     # generate a hash of the data
@@ -1202,6 +1196,7 @@ def get_path_data_simple(dict):
         upper = value
 
     parse_trees_obs_value_pairs = []
+    paths = []
 
     for element in result:
         subchain = []
@@ -1212,6 +1207,9 @@ def get_path_data_simple(dict):
 
         path_condition_list = subchain[1:(element[1]+1)]
         path = edges_from_condition_sequence(scfg, path_condition_list, path_length)
+        if path not in paths:
+            paths.append(path)
+        path_index = paths.index(path)
 
         parse_tree = ParseTree(path, grammar, path[0]._source_state)
         observed_value = json.loads(element[0])
@@ -1221,9 +1219,14 @@ def get_path_data_simple(dict):
         #sign=-1 if verdict value=0 and sign=1 if verdict is true
         sign=-1+2*(element[2])
 
-        parse_trees_obs_value_pairs.append((parse_tree, observed_value, sign*d, element[4]))
+        parse_trees_obs_value_pairs.append((parse_tree, observed_value, sign*d, element[4], path_index))
 
-    parse_trees, times, severities, x_axis = zip(*parse_trees_obs_value_pairs)
+    parse_trees, times, severities, x_axis, path_indicators = zip(*parse_trees_obs_value_pairs)
+
+    intersection_dict = transform_paths_to_intersection_dict(paths, grammar, [n for n in range(len(paths))])
+    lines_intersection_dict = intersection_dict_to_lines_dict(intersection_dict)
+    #pprint(intersection_dict)
+    #pprint(lines_intersection_dict)
 
     intersection = parse_trees[0].intersect(parse_trees[1:])
 
@@ -1259,61 +1262,45 @@ def get_path_data_simple(dict):
     parameter_value_indices_to_times = {}
     parameter_value_indices_to_severities = {}
     parameter_value_indices_to_x_axis = {}
-    subpaths = []
+    parameter_value_indices_to_path_index = {}
+    lines_by_subpaths = []
+    subpath_index = 0
 
-    if len(path_parameters) > 0:
+    for parameter_index in lines_intersection_dict["parameters"]:
 
-        n_of_trees = len(parse_trees)
-        for (n, parse_tree) in enumerate(parse_trees):
-          subtree = parse_tree.get_parameter_subtree(path_parameters[0])
-          subpath = subtree.read_leaves()
-          if subpath in subpaths:
-            subpath_index = subpaths.index(subpath)
-          else:
-            subpaths.append(subpath)
-            subpath_index = len(subpaths)-1
-          if subpath_index not in parameter_value_indices_to_times:
-            parameter_value_indices_to_times[subpath_index] = [times[n]]
-            parameter_value_indices_to_severities[subpath_index] = [severities[n]]
-            parameter_value_indices_to_x_axis[subpath_index] = [x_axis[n]]
-          else:
-            parameter_value_indices_to_times[subpath_index].append(times[n])
-            parameter_value_indices_to_severities[subpath_index].append(severities[n])
-            parameter_value_indices_to_x_axis[subpath_index].append(x_axis[n])
+        parameter_values = lines_intersection_dict["parameters"][parameter_index]
+        for parameter_dict in parameter_values:
+            lines = parameter_dict["path"]
+            parameter_value_indices_to_times[subpath_index] = []
+            parameter_value_indices_to_severities[subpath_index] = []
+            parameter_value_indices_to_x_axis[subpath_index] = []
+            parameter_value_indices_to_path_index[subpath_index] = []
+            for (n, parse_tree) in enumerate(parse_trees):
+                if path_indicators[n] in parameter_dict["indices"]:
+                    parameter_value_indices_to_times[subpath_index].append(times[n])
+                    parameter_value_indices_to_severities[subpath_index].append(severities[n])
+                    parameter_value_indices_to_x_axis[subpath_index].append(x_axis[n])
+                    parameter_value_indices_to_path_index[subpath_index].append(path_indicators[n])
 
-        lines_by_subpaths = []
-
-        for (i, subpath) in enumerate(subpaths):
-            lines = []
-            for element in subpath:
-                try:
-                    line_number = element._instruction.lineno
-                    lines.append(line_number)
-                except:
-                    try:
-                        line_number = element._instruction._structure_obj.lineno
-                        lines.append(line_number)
-                    except:
-                        pass
-
-                # fill in gaps in lines
-                final_lines = []
-                for n in range(len(lines)-1):
-                    final_lines += [m for m in range(lines[n], lines[n+1]+1)]
+            # fill in gaps in lines
+            final_lines = []
+            for n in range(len(lines)-1):
+                final_lines += [m for m in range(lines[n], lines[n+1]+1)]
 
             if len(lines) == 1: final_lines = lines
             lines_by_subpaths.append({"lines": final_lines,
-                                      "observations": parameter_value_indices_to_times[i],
-                                      "severities": parameter_value_indices_to_severities[i],
-                                      "x": parameter_value_indices_to_x_axis[i]})
-    else:
+                                      "observations": parameter_value_indices_to_times[subpath_index],
+                                      "severities": parameter_value_indices_to_severities[subpath_index],
+                                      "x": parameter_value_indices_to_x_axis[subpath_index],
+                                      "path_index": parameter_value_indices_to_path_index[subpath_index] })
+            subpath_index = subpath_index + 1
 
-        lines_by_subpaths = []
 
     return_data = {
         "parameter_values": lines_by_subpaths,
         "main_lines": main_lines,
-        "parameters": parameter_lines
+        "parameters": parameter_lines,
+        "intersection_dict": lines_intersection_dict
     }
 
     # generate a hash of the data
@@ -1394,6 +1381,7 @@ def get_path_data_mixed(dict):
     formula = pickle.loads(base64.b64decode(atom_structure))
 
     parse_trees_obs_value_pairs = []
+    paths = []
 
     for element in result:
         subchain = []
@@ -1407,6 +1395,11 @@ def get_path_data_mixed(dict):
         lhs_path = edges_from_condition_sequence(scfg, path_condition_list_lhs, path_length_lhs)
         rhs_path = edges_from_condition_sequence(scfg, path_condition_list_rhs, path_length_rhs)
         path = rhs_path if (path_length_lhs < path_length_rhs) else lhs_path
+
+        if path not in paths:
+            paths.append(path)
+        path_index = paths.index(path)
+
         parse_tree = ParseTree(path, grammar, path[0]._source_state)
 
         lhs_obs = ast.literal_eval(element[0])
@@ -1432,11 +1425,13 @@ def get_path_data_mixed(dict):
         #sign=-1 if verdict value=0 and sign=1 if verdict is true
         sign=-1+2*(element[6])
 
-        parse_trees_obs_value_pairs.append((parse_tree, lhs_value, rhs_value, sign*d, element[2]))
+        parse_trees_obs_value_pairs.append((parse_tree, lhs_value, rhs_value, sign*d, element[2], path_index))
 
-    parse_trees, value1, value2, severities, x_axis = zip(*parse_trees_obs_value_pairs)
+    parse_trees, value1, value2, severities, x_axis, path_indicators = zip(*parse_trees_obs_value_pairs)
 
     intersection = parse_trees[0].intersect(parse_trees[1:])
+    intersection_dict = transform_paths_to_intersection_dict(paths, grammar, [n for n in range(len(paths))])
+    lines_intersection_dict = intersection_dict_to_lines_dict(intersection_dict)
 
     main_path = intersection.read_leaves()
     main_lines = []
@@ -1471,64 +1466,47 @@ def get_path_data_mixed(dict):
     parameter_value_indices_to_rhs_obs = {}
     parameter_value_indices_to_severities = {}
     parameter_value_indices_to_x_axis = {}
-    subpaths = []
+    parameter_value_indices_to_path_index = {}
+    lines_by_subpaths = []
+    subpath_index = 0
 
-    if len(path_parameters) > 0:
+    for parameter_index in lines_intersection_dict["parameters"]:
 
-        n_of_trees = len(parse_trees)
-        for (n, parse_tree) in enumerate(parse_trees):
-          subtree = parse_tree.get_parameter_subtree(path_parameters[0])
-          subpath = subtree.read_leaves()
-          if subpath in subpaths:
-            subpath_index = subpaths.index(subpath)
-          else:
-            subpaths.append(subpath)
-            subpath_index = len(subpaths)-1
-          if subpath_index not in parameter_value_indices_to_times:
-            parameter_value_indices_to_lhs_obs[subpath_index] = [value1[n]]
-            parameter_value_indices_to_rhs_obs[subpath_index] = [value2[n]]
-            parameter_value_indices_to_severities[subpath_index] = [severities[n]]
-            parameter_value_indices_to_x_axis[subpath_index] = [x_axis[n]]
-          else:
-            parameter_value_indices_to_lhs_obs[subpath_index].append(value1[n])
-            parameter_value_indices_to_rhs_obs[subpath_index].append(value2[n])
-            parameter_value_indices_to_severities[subpath_index].append(severities[n])
-            parameter_value_indices_to_x_axis[subpath_index].append(x_axis[n])
+        parameter_values = lines_intersection_dict["parameters"][parameter_index]
+        for parameter_dict in parameter_values:
+            lines = parameter_dict["path"]
+            parameter_value_indices_to_times[subpath_index] = []
+            parameter_value_indices_to_severities[subpath_index] = []
+            parameter_value_indices_to_x_axis[subpath_index] = []
+            parameter_value_indices_to_path_index[subpath_index] = []
+            for (n, parse_tree) in enumerate(parse_trees):
+                if path_indicators[n] in parameter_dict["indices"]:
+                    parameter_value_indices_to_lhs_obs[subpath_index].append(value1[n])
+                    parameter_value_indices_to_rhs_obs[subpath_index].append(value2[n])
+                    parameter_value_indices_to_severities[subpath_index].append(severities[n])
+                    parameter_value_indices_to_x_axis[subpath_index].append(x_axis[n])
+                    parameter_value_indices_to_path_index[subpath_index].append(path_indicators[n])
 
-        lines_by_subpaths = []
-
-        for (i, subpath) in enumerate(subpaths):
-            lines = []
-            for element in subpath:
-                try:
-                    line_number = element._instruction.lineno
-                    lines.append(line_number)
-                except:
-                    try:
-                        line_number = element._instruction._structure_obj.lineno
-                        lines.append(line_number)
-                    except:
-                        pass
-
-                # fill in gaps in lines
-                final_lines = []
-                for n in range(len(lines)-1):
-                    final_lines += [m for m in range(lines[n], lines[n+1]+1)]
+            # fill in gaps in lines
+            final_lines = []
+            for n in range(len(lines)-1):
+                final_lines += [m for m in range(lines[n], lines[n+1]+1)]
 
             if len(lines) == 1: final_lines = lines
             lines_by_subpaths.append({"lines": final_lines,
-                                      "observations_lhs": parameter_value_indices_to_lhs_obs[i],
-                                      "observations_rhs": parameter_value_indices_to_rhs_obs[i],
-                                      "severities": parameter_value_indices_to_severities[i],
-                                      "x": parameter_value_indices_to_x_axis[i]})
-    else:
+                                      "observations_lhs": parameter_value_indices_to_lhs_obs[subpath_index],
+                                      "observations_rhs": parameter_value_indices_to_rhs_obs[subpath_index],
+                                      "severities": parameter_value_indices_to_severities[subpath_index],
+                                      "x": parameter_value_indices_to_x_axis[subpath_index],
+                                      "path_index": parameter_value_indices_to_path_index[subpath_index] })
+            subpath_index = subpath_index + 1
 
-        lines_by_subpaths = []
 
     return_data = {
         "parameter_values": lines_by_subpaths,
         "main_lines": main_lines,
-        "parameters": parameter_lines
+        "parameters": parameter_lines,
+        "intersection_dict": lines_intersection_dict
     }
 
     # generate a hash of the data
@@ -1809,6 +1787,115 @@ def edges_from_condition_sequence(scfg, path_subchain, instrumentation_point_pat
     #path.append(curr)
 
     return path
+
+
+def transform_paths_to_intersection_dict(paths, grammar, indices):
+    """
+    Returns the paths arranged in a tree dictionary structure as
+    { "path" : intersection of all given paths,
+      "parameters" : dictionary with parameter indices as keys, they represent
+                    a branching point in the code, for each key a list of dicts* is stored
+                    representing a subpath taken from that branching further through the code
+                    * dicts have the same structure as described here - recursion
+      "indices" : list of indices of the full paths in the initial paths list, contains only
+                    the indices of the paths corresponding to the branch on the current level
+                  used to group the data (observations and severities) by path
+    }
+    """
+    parse_trees = []
+    for path in paths:
+        parse_tree = ParseTree(path, grammar, path[0]._source_state)
+        parse_trees.append(parse_tree)
+
+    intersection = parse_trees[0].intersect(parse_trees[1:])
+    #intersection.write_to_file("intersection_%i_%i" %(level,k))
+    main_path = intersection.read_leaves()
+    path_parameters = []
+    intersection.get_parameter_paths(intersection._root_vertex, [], path_parameters)
+
+    parameter_dict = {}
+    # note that if there are no parameters, this loop will complete no iterations
+    # no parameters is the recursive base case
+    index = 0
+    for parameter in path_parameters:
+        subpaths = []
+        for parse_tree in parse_trees:
+            subtree = parse_tree.get_parameter_subtree(parameter)
+            subpath = subtree.read_leaves()
+            subpaths.append(subpath)
+        subpaths_grouped_pairs = group_subpaths(subpaths, indices)
+        subpaths_grouped = subpaths_grouped_pairs[0]
+        indices_grouped = subpaths_grouped_pairs[1]
+        # recursion happens here
+        parameter_dict[index] = []
+        for (i, parameter_values) in enumerate(subpaths_grouped):
+            parameter_dict[index].append(transform_paths_to_intersection_dict(parameter_values, grammar, indices_grouped[i]))
+        index = index + 1
+
+    # if there are no parameters, this dictionary just describes a normal path
+    # if there are parameters, this dictionary describes a parametric path
+    # with a mapping from each parameter to another dictionary with a similar structure
+    final_dict = {
+        "path" : main_path,
+        "parameters" : parameter_dict,
+        "indices" : indices
+    }
+    return final_dict
+
+
+def group_subpaths(paths_list, indices_list):
+    """
+    When given a list of paths and their indices in the intial paths list, returns a pair of lists
+    that group the paths which have the same first element (non-empty intersection)
+    """
+    first_elements = []
+    for path in paths_list:
+        first_element = path[0]
+        if first_element not in first_elements:
+            first_elements.append(first_element)
+
+    groups = [[] for el in first_elements]
+    index_groups = [[] for el in first_elements]
+    index = 0
+    for first_element in first_elements:
+        for (i, path) in enumerate(paths_list):
+            if path[0] == first_element:
+                groups[index].append(path)
+                index_groups[index].append(indices_list[i])
+        index = index + 1
+
+    return [groups, index_groups]
+
+
+def intersection_dict_to_lines_dict(dict):
+    """
+    When given a dictionary returned by transform_paths_to_intersection_dict function, returns
+    a dictionary with the same structure, but showing paths by line numbers instead of scfg elements
+    """
+    path = dict["path"]
+    new_path = []
+    for path_elem in path:
+        try:
+            line_number = path_elem._instruction.lineno
+            new_path.append(line_number)
+        except:
+            try:
+                line_number = path_elem._instruction._structure_obj.lineno
+                new_path.append(line_number)
+            except:
+                pass
+
+    parameters = dict["parameters"]
+    new_parameters = {}
+    for index in parameters:
+        list = parameters[index]
+        new_parameters[index] = []
+        for element in list:
+            element_new = intersection_dict_to_lines_dict(element)
+            new_parameters[index].append(element_new)
+
+    return {'path' : new_path, 'parameters' : new_parameters, 'indices' : dict["indices"]}
+
 
 
 """

@@ -249,6 +249,7 @@ Vue.use(VueResize);
 
 
 Vue.component("alert", {
+  /* for now, commented out, can be used as a tooltip to guide the user through the selection sequence */
   template : `
   <!--<div class="alert alert-info alert-dismissible" role="alert" v-if="is_open">
     <button type="button" class="close" data-dismiss="alert" aria-label="Close" @click="close()">
@@ -272,6 +273,7 @@ Vue.component("alert", {
 
 
 Vue.component("loading-spinner", {
+  /* indicates that data is being loaded */
   template : `
   <div class="loading-spinner" role="status" v-if="in_progress"></div>
   `,
@@ -289,6 +291,8 @@ Vue.component("loading-spinner", {
 
 
 Vue.component("selection-tabs", {
+  /* defines the content in the left column - first stage is showing functions, then calls
+    or test cases, then functions, then calls */
   props : ["tree"],
   template : `
     <div class="selection-phases">
@@ -348,6 +352,11 @@ Vue.component("selection-tabs", {
 
 
 Vue.component("test-data", {
+  /* this panel is only displayed in case any data about test cases is detected in the database
+  which indicates that the data refers to the CI
+  - tests are displayed by name, only one can be selected
+  - in order to make finding the test of interest easier, searching by name is enabled
+  */
   template : `
   <div v-if="tests_exist" class="panel panel-success">
     <div class="panel-heading">
@@ -463,6 +472,14 @@ Vue.component("test-data", {
 
 
 Vue.component("machine-function-property", {
+  /* component that contains the list of all specification for which the service was monitored
+  at runtime, selecting one results in displaying the calls of the selected function
+
+  function names in the database: machine-module.module.name(:optional_name)
+  in case the names of the functions in the database contain the machine name separated by a hyphen,
+  the machines' names will be displayed as clickable tabs on the first level, selecting one
+  results in displaying the list of the functions that contain the selected machine name
+  */
   props: ['tree'],
   template : `
     <div class="panel panel-success machine-function-property">
@@ -534,6 +551,7 @@ Vue.component("machine-function-property", {
 
 
 Vue.component("subtree",{
+  /*functions are listed as a tree structure, this is the first level within a selected tab*/
   props: ['id', 'content'],
   template:  `
     <div class="tabcontent" :id=this.tabid>
@@ -658,6 +676,12 @@ Vue.component("subtreelevel", {
 
 
 Vue.component("function-calls", {
+  /*this panel is displayed on the left side upon the seletion of a monitored function
+  displays the list of the calls of the selected function, and a select all option, as well as
+  the option to select calls by specifying a time interval
+
+  the selected calls are stored in the checkedCalls array which is being watched and every change
+  to this array updates the data displayed on the right side to match the new selection*/
   template : `
     <div class="panel panel-success function-calls">
       <div class="panel-heading">
@@ -742,6 +766,7 @@ Vue.component("function-calls", {
       e.preventDefault();
 
       if(is_before(this.filter_to, this.filter_from)) {
+        // in case the time entered in 'from' is after the time in 'to', show an alert
         this.date_input_error = true;
       }
 
@@ -881,7 +906,9 @@ Vue.component("code-view", {
   of the function and the calls, some data is displayed. When the user selects a function,
   the specification and the source code of the selected function are shown. Additionally,
   the lines in the code that quantifiers in the specification refer to are highlighted.
-  When the calls are also selected, more data is displayed and some code lines are hidden.*/
+  When the calls are also selected, more data is displayed and some code lines are hidden.
+  As we progress through the selection sequence, the displayed data is updated to match the
+  filtered data.*/
   template : `
     <div class="panel panel-success code-view">
       <div class="panel-heading">
@@ -1432,9 +1459,9 @@ Vue.component("specification", {
 
 
 Vue.component("dropdown", {
-  // is displayed when hovering above the corresponding line in the code
-  // requires data about all the previously selected levels in order to get the filtered verdict
-  // and observation values from the server
+  /* is displayed when hovering above the corresponding line in the code
+   requires data about all the previously selected levels in order to get the filtered verdict
+   and observation values from the server */
   props: ["tree", "dict", "binding", "line"],
   template: `
     <div class="dropdown-content">
