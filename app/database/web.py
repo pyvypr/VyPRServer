@@ -291,8 +291,6 @@ def web_list_functions(tests = None):
         else:
             current_hierarchy_step[path[-1]] = [[function[0], hash, spec]]
 
-    # pprint(dictionary_tree_structure)
-    #dictionary_tree_structure["client"] = {"app": [[function[0], hash, spec]]}
     connection.close()
 
     return dictionary_tree_structure
@@ -1571,6 +1569,8 @@ def stack_repr(op_list):
 
 
 def logical_repr(op_list, HTML):
+    #HTML indicates the version of the repr functions we want to be used
+    #for now, this is the HTMLrepr version
     if HTML:
         str = "%s" % op_list[0].HTMLrepr()
         for op in op_list[1:]:
