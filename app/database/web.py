@@ -174,7 +174,7 @@ def web_list_functions(tests = None):
         #  because the specification given by the user was empty
         bind_var = pickle.loads(base64.b64decode(json.loads(function[3])["bind_variables"]))
         var = bind_var.items()[0]
-        print(type(var[1]))
+        
         if (type(var[1]) is StaticState):
             if (var[1]._name_changed == 'fake_vypr_var'): continue
 
