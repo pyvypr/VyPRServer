@@ -41,6 +41,10 @@ var generate_plot = function(quantity, root_obj) {
       Store.agreeing_lines = response.data.data.main_lines;
       Store.parameter_lines = response.data.data.parameters;
       Store.parameter_values = response.data.data.parameter_values;
+      /* interesection_dict has a tree structure that reflects the branchings in the code
+       TODO: use it to reveal parameter lines within a selected branch in order to filter
+       the observation/severity plot to show only the data that took a certain path */
+      Store.intersection_dict = response.data.data.intersection_dict;
 
       var data_per_path = [];
       for(var path_index=0; path_index<Store.parameter_values.length; path_index++) {
